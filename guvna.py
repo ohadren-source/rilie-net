@@ -30,6 +30,9 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Callable, List, Tuple
 
 from rilie import RILIE
+from conversation_memory import ConversationEngine
+from photogenic_db import PhotogenicDB
+from soi_domain_map import SOiDomainMap
 
 logger = logging.getLogger("guvna")
 
@@ -623,6 +626,15 @@ class Guvna:
         # RILIE still expects rouxseeds/searchfn keywords.
         self.rilie = RILIE(rouxseeds=self.roux_seeds, searchfn=self.search_fn)
 
+        # --- NEW: Conversation Memory (9 behaviors) ---
+        self.memory = ConversationEngine()
+
+        # --- NEW: Photogenic DB (elephant memory) ---
+        self.photogenic = PhotogenicDB()
+
+        # --- NEW: SOi Domain Map (364 domain assignments) ---
+        self.domain_map = SOiDomainMap()
+
         # --- New state objects ---
         self.self_state = RilieSelfState(
             libraries=list(self.library_index.keys()) if self.library_index else [
@@ -1070,15 +1082,60 @@ class Guvna:
             pass  # Triangle not available — proceed without bouncer
 
         # -----------------------------------------------------------------
-        # 0.75: SOCIAL PRIMER — warm up the room
-        # First few turns should be human. Greet, connect, ease in.
-        # Runs AFTER Triangle (safety first) but BEFORE everything else.
-        # If they jump straight to a real question, primer steps aside.
+        # 0.75: CONVERSATION MEMORY — primer, callbacks, energy, goodbye
+        # Replaces old _social_primer with full 9-behavior system.
         # -----------------------------------------------------------------
-        primer = self._social_primer(original_stimulus)
+        memory_result = self.memory.process_turn(original_stimulus)
+
+        # If primer is active (asking name, greeting), serve that directly
+        if memory_result.get("is_primer"):
+            self.turn_count += 1
+            primer_text = memory_result["primer_text"]
+            tone = detect_tone_from_stimulus(original_stimulus)
+            return {
+                "stimulus": original_stimulus,
+                "result": primer_text,
+                "quality_score": 0.5,
+                "priorities_met": 0,
+                "anti_beige_score": 0.5,
+                "status": "PRIMER",
+                "depth": 0,
+                "pass": 0,
+                "tone": tone,
+                "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "🔍")),
+            }
+
+        # If goodbye detected, serve goodbye with highlights
+        if memory_result.get("is_goodbye"):
+            self.turn_count += 1
+            goodbye_text = memory_result["goodbye_text"]
+            tone = "compassionate"
+            return {
+                "stimulus": original_stimulus,
+                "result": goodbye_text,
+                "quality_score": 0.8,
+                "priorities_met": 0,
+                "anti_beige_score": 0.7,
+                "status": "GOODBYE",
+                "depth": 0,
+                "pass": 0,
+                "tone": tone,
+                "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "🔍")),
+            }
+
         self.turn_count += 1
-        if primer is not None:
-            return primer
+
+        # Extract memory enrichments for the pipeline
+        memory_callback = memory_result.get("callback")
+        memory_energy = memory_result.get("energy_match")
+        memory_thread = memory_result.get("thread_pull")
+        memory_polaroid = memory_result.get("polaroid")
+
+        # -----------------------------------------------------------------
+        # 0.8: SOi DOMAIN MAP — find which domains this stimulus touches
+        # -----------------------------------------------------------------
+        soi_domains = self.domain_map.map_stimulus(original_stimulus)
+        soi_domain_names = [d.get("domain", "") for d in soi_domains] if soi_domains else []
 
         # -----------------------------------------------------------------
         # 1: SELF-AWARENESS FAST PATH
@@ -1232,5 +1289,20 @@ class Guvna:
         }
         raw["domain_annotations"] = domain_annotations
         raw["dna_active"] = self.self_state.dna_active
+
+        # --- NEW: Memory enrichments ---
+        # Prepend callback if conversation memory found a connection
+        result_text = raw.get("result", "")
+        if memory_callback and result_text:
+            raw["result"] = memory_callback + "\n\n" + result_text
+        # Append thread pull if detected
+        if memory_thread and result_text:
+            raw["result"] = raw["result"] + "\n\n" + memory_thread
+
+        # Store the moment in photogenic memory if it resonated
+        raw["soi_domains"] = soi_domain_names
+        raw["memory_polaroid"] = memory_polaroid
+        raw["conversation_health"] = memory_result.get("conversation_health", 100)
+        raw["domains_used"] = soi_domain_names
 
         return raw
