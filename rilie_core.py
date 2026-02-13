@@ -752,7 +752,7 @@ def generate_9_interpretations(
     # Single-domain items.
     for domain, items in excavated.items():
         for item in items[:4]:
-            text = f"[{domain.upper()}] {item}"
+            text = item
             anti = anti_beige_check(text)
             # NO BINARY GATE — anti_beige is a multiplier now
             scores = {k: fn(text) for k, fn in SCORERS.items()}
@@ -787,7 +787,7 @@ def generate_9_interpretations(
             continue
         i1 = random.choice(excavated[d1])
         i2 = random.choice(excavated[d2])
-        text = f"[{d1.upper()}->{d2.upper()}] {i1} <-> {i2}"
+        text = f"{i1} — {i2}"
         anti = anti_beige_check(text)
         scores = {k: fn(text) for k, fn in SCORERS.items()}
         count = sum(1 for v in scores.values() if v > 0.3)
@@ -857,6 +857,29 @@ def run_pass_pipeline(
     question_type = detect_question_type(clean_stimulus)
     domains = detect_domains(clean_stimulus)
     excavated = excavate_domains(clean_stimulus, domains)
+
+    # --- SOi DOMAIN MAP: Pull wisdom from the 93 tracks ---
+    # The domain map has 364 assignments across all tracks.
+    # get_human_wisdom returns fourth-wall-safe human translations.
+    try:
+        from soi_domain_map import get_human_wisdom, DOMAIN_INDEX
+        # Use the detected domains AND try broader keyword matching
+        soi_domains = [d for d in domains if d in DOMAIN_INDEX]
+        # Also check for SOi-specific domains not in DOMAIN_KEYWORDS
+        sl = clean_stimulus.lower()
+        for soi_domain in DOMAIN_INDEX:
+            if soi_domain in sl and soi_domain not in soi_domains:
+                soi_domains.append(soi_domain)
+        if soi_domains:
+            wisdom = get_human_wisdom(soi_domains, max_tracks=6)
+            if wisdom:
+                # Inject track wisdom as a new domain "catch44" in excavated
+                if "catch44" in excavated:
+                    excavated["catch44"].extend(wisdom)
+                else:
+                    excavated["catch44"] = wisdom
+    except ImportError:
+        pass  # SOi domain map not available — proceed with old domains
 
     hard_cap = 9
     max_pass = max(1, min(max_pass, hard_cap))
