@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <title>RILIE (3,6,9)</title>
+
+  <!-- Favicon / app icon -->
+  <link rel="shortcut icon" href="/static/3Dent.png" type="image/png" />
   <link rel="icon" type="image/png" sizes="64x64" href="/static/3Dent.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="/static/3Dent.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="/static/3Dent.png" />
@@ -111,13 +114,6 @@
       padding: 32px 28px;
     }
 
-    .rilie-logo {
-      display: block;
-      height: 72px;
-      margin: 0 auto 18px auto;
-      filter: drop-shadow(0 2px 12px rgba(255,255,255,0.08));
-    }
-
     .rilie-title {
       text-align: center;
       font-size: 26px;
@@ -127,6 +123,7 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      margin-top: 16px;
     }
 
     .rilie-subtitle {
@@ -390,6 +387,39 @@
       box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
     }
 
+    /* ── Code block cards inside Answer ── */
+    .rilie-code-block {
+      position: relative;
+      margin: 10px 0;
+      padding: 10px 12px;
+      background: #050507;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      font-family: Consolas, Menlo, Monaco, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+    }
+
+    .rilie-code-block pre {
+      margin: 0;
+      white-space: pre;
+    }
+
+    .rilie-code-copy {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 5px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
     /* ── Output Action Bar (share, download, copy, rewrite) ── */
     .rilie-output-actions {
       display: none;
@@ -542,7 +572,6 @@
   <!-- ── Main ── -->
   <div class="rilie-main">
     <div class="rilie-shell">
-      <img src="/static/3Dent.png" alt="RILIE logo" class="rilie-logo" />
       <div class="rilie-title">RILIE (3,6,9)</div>
       <div class="rilie-subtitle">Real Intelligence, RI. Really? Play Around and Find Out :)</div>
 
@@ -690,15 +719,69 @@
       else healthFill.style.background = "linear-gradient(90deg, #a55, #b66)";
     }
 
+    function escapeHtml(str) {
+      return str.replace(/[&<>\"']/g, (s) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[s]
+      ));
+    }
+
+    // Render fenced ``` code blocks as cards with copy buttons
+    function renderOutputWithCode(text) {
+      const parts = text.split("```");
+      let html = "";
+
+      for (let i = 0; i < parts.length; i++) {
+        const chunk = parts[i];
+        if (i % 2 === 0) {
+          if (chunk.trim()) {
+            html += "<p>" + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
+          }
+        } else {
+          const lines = chunk.split("\n");
+          let codeLines = lines;
+          if (lines[0].trim().match(/^[a-zA-Z0-9_+-]+$/)) {
+            codeLines = lines.slice(1);
+          }
+          const codeHtml = escapeHtml(codeLines.join("\n"));
+          html += (
+            '<div class="rilie-code-block">' +
+              '<button class="rilie-code-copy">copy</button>' +
+              "<pre><code>" + codeHtml + "</code></pre>" +
+            "</div>"
+          );
+        }
+      }
+
+      outputEl.innerHTML = html;
+
+      document.querySelectorAll(".rilie-code-copy").forEach((btn) => {
+        btn.onclick = async () => {
+          const code = btn.parentElement.querySelector("pre").innerText;
+          try {
+            await navigator.clipboard.writeText(code);
+            btn.textContent = "copied";
+            setTimeout(() => { btn.textContent = "copy"; }, 1200);
+          } catch (e) {}
+        };
+      });
+    }
+
     /* ── Submit with file upload ── */
     submitBtn.onclick = async () => {
       const stimulus = inputEl.value.trim();
-      if (!stimulus) { outputEl.textContent = "Drop something in. A question, a thought, a vibe. Then hit Go."; return; }
+      if (!stimulus) {
+        outputEl.textContent = "Drop something in. A question, a thought, a vibe. Then hit Go.";
+        return;
+      }
+
+      // Remember and clear input so the box is ready for the next move
+      lastStimulus = stimulus;
+      inputEl.value = "";
+
       submitBtn.disabled = true;
       submitBtn.textContent = "Going...";
       outputEl.textContent = "Running RILIE...";
       outputActions.classList.remove("visible");
-      lastStimulus = stimulus;
 
       try {
         const files = fileInput.files;
@@ -722,13 +805,26 @@
           });
         }
 
-        if (!res.ok) { outputEl.textContent = "Error from RILIE API: " + res.status; return; }
+        if (!res.ok) {
+          outputEl.textContent = "Error from RILIE API: " + res.status;
+          return;
+        }
+
         const data = await res.json();
-        outputEl.textContent = data.result || "No result returned.";
+
+        // Echo the human and then RILIE's answer in the Answer band
+        const userLine = "You: " + stimulus + "\n\n";
+        const rilieLine = "RILIE: " + (data.result || "No result returned.");
+        renderOutputWithCode(userLine + rilieLine);
+
         updateMeta(data);
         outputActions.classList.add("visible");
-      } catch (err) { outputEl.textContent = "Request failed: " + err; }
-      finally { submitBtn.disabled = false; submitBtn.textContent = "Learn from Go"; }
+      } catch (err) {
+        outputEl.textContent = "Request failed: " + err;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Learn from Go";
+      }
     };
 
     selfBtn.onclick = async () => { inputEl.value = "Who are you?"; submitBtn.click(); };
