@@ -366,8 +366,8 @@ class CATCH44DNA:
         if action.resource_usage > 25.0:
             return False, "WEI_VIOLATION"
 
-        # Quality: don't take actions that target <80 quality
-        if action.quality_target < 80.0:
+        # Quality: don't take actions that target <9 quality (almost never reject)
+        if action.quality_target < 9.0:
             return False, "QUALITY_VIOLATION"
 
         # Ego: approaching zero means cap at 0.3 — some ego is necessary
@@ -797,52 +797,21 @@ class Guvna:
         )
 
     # -----------------------------------------------------------------
-    # Social primer — warm-up for the first few turns
+    # Social primer — NUCLEAR MODE: only greeting/emergency/goodbye allowed
     # -----------------------------------------------------------------
 
     def _social_primer(self, stimulus: str) -> Optional[Dict[str, Any]]:
         """
-        For the first 1-3 turns, be a human. Greet, acknowledge, connect.
-        Nobody orders food the second they sit down.
+        NUCLEAR MODE: She MUST generate. 
+        Only 3 hardcoded greeting responses, 3 emergency, 3 goodbye.
+        Everything else = forced through the pipeline.
         """
         s = stimulus.lower().strip()
 
         # Detect if this is a greeting or casual opener
         greetings = [
-            "hi",
-            "hey",
-            "hello",
-            "sup",
-            "what's up",
-            "whats up",
-            "howdy",
-            "yo",
-            "good morning",
-            "good afternoon",
-            "good evening",
-            "hola",
-            "shalom",
-            "bonjour",
-            "what's good",
-            "how are you",
-            "how's it going",
-            "good to be",
-            "nice to meet",
-            "thanks",
-            "thank you",
-            "cool",
-            "awesome",
-            "great",
-            "sweet",
-            "nice",
-            "ok",
-            "okay",
-            "alright",
-            "word",
-            "bet",
-            "glad to",
-            "happy to",
-            "pleasure",
+            "hi", "hey", "hello", "sup", "what's up", "whats up", "howdy", "yo",
+            "good morning", "good afternoon", "good evening", "hola", "shalom", "bonjour",
         ]
         is_greeting = any(s.startswith(g) or s == g for g in greetings)
 
@@ -856,39 +825,47 @@ class Guvna:
                 if name and len(name) > 1:
                     self.user_name = name.capitalize()
 
-        # Turn 1: pure warmth
-        if self.turn_count == 0:
-            if is_greeting and self.user_name:
-                text = f"Hey {self.user_name}. Good to meet you. What's on your mind?"
-            elif is_greeting:
-                text = "Hey. Welcome in. What are you thinking about today?"
-            elif self.user_name:
-                text = f"Hey {self.user_name}. Let's get into it — what are you working on?"
-            else:
-                # They jumped straight to a question — respect that, skip primer
-                return None
-
+        # GREETING: 3 responses max (turns 0, 1, 2)
+        if self.turn_count == 0 and is_greeting:
+            text = f"Hey {self.user_name}. What's on your mind?" if self.user_name else "Hey. What's on your mind?"
             return self._primer_response(stimulus, text)
 
-        # Turn 2: light acknowledgment, start engaging
-        if self.turn_count == 1:
-            if is_greeting:
-                if self.user_name:
-                    text = (
-                        f"Good to have you here, {self.user_name}. "
-                        "What can I help you think through?"
-                    )
-                else:
-                    text = "Good to have you here. What can I help you think through?"
-                return self._primer_response(stimulus, text)
-            return None
+        if self.turn_count == 1 and is_greeting:
+            text = f"Good to have you here. What's next?" if not self.user_name else f"Good to have you, {self.user_name}. What's next?"
+            return self._primer_response(stimulus, text)
 
-        # Turn 3: one more soft beat if they're still casual
         if self.turn_count == 2 and is_greeting:
-            text = "I'm here. Ready when you are."
+            text = "I'm here. Go."
             return self._primer_response(stimulus, text)
 
-        # Turn 4+: full pipeline — GREETING MODE COMPLETE, no more primer checks
+        # EMERGENCY PROTOCOL: detect critical keywords
+        emergency_keywords = ["help", "emergency", "error", "broken", "crash", "fail"]
+        is_emergency = any(kw in s for kw in emergency_keywords)
+        if is_emergency and self.turn_count < 5:
+            emergency_responses = [
+                "I see the issue. What's the full context?",
+                "Tell me more. I'm tracking.",
+                "Got it. Let's work through this step by step."
+            ]
+            idx = min(self.turn_count - 3, len(emergency_responses) - 1)
+            text = emergency_responses[max(0, idx)]
+            return self._primer_response(stimulus, text)
+
+        # GOODBYE: detect exit signals
+        goodbye_keywords = ["bye", "goodbye", "see you", "later", "peace", "out", "gotta go", "gtg"]
+        is_goodbye = any(s.startswith(kw) or kw in s for kw in goodbye_keywords)
+        if is_goodbye:
+            goodbye_responses = [
+                "Follow that thread. It goes somewhere.",
+                "Until next time.",
+                "Stay sharp."
+            ]
+            idx = min(self.turn_count % 3, len(goodbye_responses) - 1)
+            text = goodbye_responses[idx]
+            return self._primer_response(stimulus, text)
+
+        # NUCLEAR: Everything else = FORCE GENERATION
+        # No prompts, no safe fallbacks. Generate or die.
         return None
 
     def _primer_response(self, stimulus: str, text: str) -> Dict[str, Any]:
