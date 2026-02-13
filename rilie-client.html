@@ -145,19 +145,21 @@
       width: 100%;
       margin-top: 8px;
       margin-bottom: 18px;
-      padding: 14px 16px;
+      padding: 14px 16px 50px 16px;
       background: linear-gradient(180deg, #0e0e10 0%, #141418 100%);
       color: #ddd;
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 10px;
       resize: vertical;
-      min-height: 120px;
+      min-height: 80px;
+      max-height: 120px;
       font-family: inherit;
       font-size: 14px;
       line-height: 1.6;
       outline: none;
       transition: border-color 0.25s ease, box-shadow 0.25s ease;
       box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+      position: relative;
     }
     .rilie-textarea:focus {
       border-color: rgba(255,255,255,0.18);
@@ -316,6 +318,48 @@
         0 1px 2px rgba(0,0,0,0.3);
       text-shadow: 0 -1px 1px rgba(0,0,0,0.4);
     }
+
+    /* Button inside textarea */
+    .rilie-textarea-button {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      padding: 8px 14px;
+      font-size: 12px;
+      z-index: 10;
+    }
+
+    /* File upload button — bottom-left of textarea */
+    .rilie-textarea-file-btn {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.08);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+
+    .rilie-textarea-file-btn:hover {
+      background: rgba(255,255,255,0.12);
+    }
+
+    .rilie-textarea-file-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: rgba(255,255,255,0.6);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
     .rilie-button::before {
       content: '';
       position: absolute;
@@ -407,18 +451,19 @@
     }
     .rilie-output-wrap { position: relative; }
     .rilie-output {
-      padding: 16px 18px;
-      background: linear-gradient(180deg, #08080a 0%, #0c0c10 100%);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 10px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 0;
       font-family: 'Outfit', Consolas, Menlo, monospace;
-      font-size: 13px;
-      line-height: 1.65;
-      color: rgba(255,255,255,0.75);
-      min-height: 60px;
-      max-height: 500px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.85);
+      min-height: 200px;
+      max-height: 70vh;
       overflow-y: auto;
-      box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
+      box-shadow: none;
+      margin-bottom: 24px;
     }
 
     .rilie-output::-webkit-scrollbar {
@@ -436,11 +481,12 @@
     }
 
     .rilie-output > div {
-      margin-bottom: 12px;
+      margin-bottom: 16px;
+      padding: 0;
     }
 
     .rilie-output strong {
-      color: rgba(255,255,255,0.9);
+      color: rgba(255,255,255,0.95);
     }
 
     /* ── Code block cards inside Answer ── */
@@ -665,28 +711,17 @@
       <!-- INPUT AT BOTTOM WITH SIDEBAR CONTROLS -->
       <label class="rilie-label" for="rilie-input">Your Turn</label>
       <div class="rilie-input-section">
-        <textarea id="rilie-input" class="rilie-textarea" placeholder="What's on your mind?"></textarea>
+        <div style="flex: 1; position: relative;">
+          <textarea id="rilie-input" class="rilie-textarea" placeholder="What's on your mind?"></textarea>
+          <label for="rilie-files" class="rilie-textarea-file-btn">
+            <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </label>
+          <input id="rilie-files" type="file" multiple style="display: none;" />
+          <button class="rilie-button rilie-textarea-button" id="rilie-submit">Learn from Go</button>
+        </div>
         
         <div class="rilie-input-sidebar">
-          <!-- Custom file upload — no more ugly Choose Files -->
-          <div class="rilie-file">
-            <label class="rilie-label">Attach Context</label>
-            <div class="rilie-file-row">
-              <label for="rilie-files" class="rilie-file-btn">
-                <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                Attach Files
-              </label>
-              <input id="rilie-files" type="file" multiple />
-              <span id="rilie-file-names" class="rilie-file-names"></span>
-              <button id="rilie-file-clear" class="rilie-file-clear">&times; clear</button>
-            </div>
-          </div>
-
-          <div class="rilie-btn-wrap">
-            <button class="rilie-button" id="rilie-submit">Learn from Go</button>
-            <span class="rilie-lfg">LFG</span>
-            <button class="rilie-button-sm" id="rilie-self">Who is RILIE?</button>
-          </div>
+          <button class="rilie-button-sm" id="rilie-self">Who is RILIE?</button>
 
           <div class="rilie-health-bar">
             <span>conversation health</span>
@@ -699,27 +734,6 @@
       </div>
 
       <div id="rilie-meta" class="rilie-meta" style="display: none;">
-        <div class="rilie-meta-row"><span class="rilie-meta-key">status</span><span class="rilie-meta-val" id="meta-status">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">quality</span><span class="rilie-meta-val" id="meta-quality">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">priorities</span><span class="rilie-meta-val" id="meta-priorities">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">anti-beige</span><span class="rilie-meta-val" id="meta-beige">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">depth / pass</span><span class="rilie-meta-val" id="meta-depth">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">tone</span><span class="rilie-meta-val" id="meta-tone">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">domains</span><span class="rilie-meta-val" id="meta-domains">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">wit</span><span class="rilie-meta-val" id="meta-wit">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">language</span><span class="rilie-meta-val" id="meta-language">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">social</span><span class="rilie-meta-val" id="meta-social">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">curiosity</span><span class="rilie-meta-val" id="meta-curiosity">—</span></div>
-        <div class="rilie-meta-row"><span class="rilie-meta-key">triangle</span><span class="rilie-meta-val" id="meta-triangle">—</span></div>
-      </div>
-
-      <div class="rilie-health-bar">
-        <span>conversation health</span>
-        <div class="rilie-health-track">
-          <div class="rilie-health-fill" id="health-fill" style="width: 100%"></div>
-        </div>
-        <span id="health-pct">100</span>
-      </div>
 
       <div class="rilie-footer">
         Inspired by those who gave without expecting anything in return (3),
