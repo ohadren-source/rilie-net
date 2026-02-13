@@ -763,6 +763,7 @@
   </div>
 
   <script>
+    document.addEventListener("DOMContentLoaded", function() {
     const submitBtn = document.getElementById("rilie-submit");
     const selfBtn = document.getElementById("rilie-self");
     const inputEl = document.getElementById("rilie-input");
@@ -1079,6 +1080,7 @@
       outputEl.textContent = "Finance — coming soon. Real intelligence meets real numbers.";
       outputActions.classList.remove("visible");
     };
+    }); // Close DOMContentLoaded
   </script>
 </body>
 </html>
