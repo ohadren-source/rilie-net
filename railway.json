@@ -1,0 +1,3 @@
+{
+  "build": {"nixpacksPlan": {"providers": [{"nixPkgs": ["python"]}]}}
+}
