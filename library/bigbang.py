@@ -112,8 +112,7 @@ if __name__ == "__main__":
         if i % 250000 == 0:
             print(f"Step {i}: {state} | a(t)={scale_factor:.2e} | m={mass:.2e} | H={horizon:.2e}")
     
-    print("
-" + "=" * 60)
+    print("\n" + "=" * 60)
     print("BOOLEAN STATES:")
     print(f"  Bang: {bang}")
     print(f"  Exists: {universe_exists}")
