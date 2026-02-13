@@ -30,9 +30,9 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Callable, List, Tuple
 
 from rilie import RILIE
-from conversation_memory import ConversationEngine
+from conversation_memory import ConversationMemory
 from photogenic_db import PhotogenicDB
-from soi_domain_map import SOiDomainMap
+from soi_domain_map import build_domain_index, get_tracks_for_domains, get_human_wisdom
 
 logger = logging.getLogger("guvna")
 
@@ -627,13 +627,13 @@ class Guvna:
         self.rilie = RILIE(rouxseeds=self.roux_seeds, searchfn=self.search_fn)
 
         # --- NEW: Conversation Memory (9 behaviors) ---
-        self.memory = ConversationEngine()
+        self.memory = ConversationMemory()
 
         # --- NEW: Photogenic DB (elephant memory) ---
         self.photogenic = PhotogenicDB()
 
         # --- NEW: SOi Domain Map (364 domain assignments) ---
-        self.domain_map = SOiDomainMap()
+        self.domain_index = build_domain_index()
 
         # --- New state objects ---
         self.self_state = RilieSelfState(
@@ -1134,7 +1134,7 @@ class Guvna:
         # -----------------------------------------------------------------
         # 0.8: SOi DOMAIN MAP — find which domains this stimulus touches
         # -----------------------------------------------------------------
-        soi_domains = self.domain_map.map_stimulus(original_stimulus)
+        soi_domains = get_tracks_for_domains([original_stimulus])
         soi_domain_names = [d.get("domain", "") for d in soi_domains] if soi_domains else []
 
         # -----------------------------------------------------------------
