@@ -1,12 +1,12 @@
 """
-CHOMSKYATTHEBIT.py — GRAMMAR BRAIN 2.0
+CHOMSKYATTHEBIT.py â€” GRAMMAR BRAIN 2.0
 ======================================
 
 Discourse dictates disclosure:
 - RILIE only commits to what the *question* forces her to reveal.
 - For grammar, that means:
-    1) Who/what is involved?    → SUBJECT / OBJECT / FOCUS
-    2) When is this happening?  → PAST / PRESENT / FUTURE time bucket
+    1) Who/what is involved?    â†’ SUBJECT / OBJECT / FOCUS
+    2) When is this happening?  â†’ PAST / PRESENT / FUTURE time bucket
 
 Everything else (perfect vs progressive vs historic present, etc.)
 is Stanford classroom gymnastics we don't need in production.

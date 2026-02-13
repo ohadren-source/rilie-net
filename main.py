@@ -72,3 +72,8 @@ def search_banks(q: str, limit: int = 40, session: Session = Depends(get_session
     )
     results = session.exec(stmt).all()
     return results
+from rilie_core import RILIE
+@app.post("/v1/rilie") 
+def rilie_endpoint(request: dict):
+    rilie = RILIE()
+    return rilie.process(request["stimulus"])

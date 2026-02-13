@@ -1,28 +1,28 @@
 """
-conversation_memory.py — PHOTOGENIC MEMORY
+conversation_memory.py â€” PHOTOGENIC MEMORY
 ============================================
 Only remember beautiful shit.
 
 Nine behaviors, one system, 3-6-9 grid:
 
 STRUCTURE (3):
-  1. Primer      — how she enters (hardcoded warmth)
-  2. Polaroid    — every ~9 turns, step outside and reflect
-  3. Goodbye     — how she leaves, with highlights
+  1. Primer      â€” how she enters (hardcoded warmth)
+  2. Polaroid    â€” every ~9 turns, step outside and reflect
+  3. Goodbye     â€” how she leaves, with highlights
 
 AWARENESS (6):
-  4. Callbacks   — connecting now to earlier
-  5. Energy      — mirroring rhythm and pace
-  6. The Pause   — knowing when less is more
+  4. Callbacks   â€” connecting now to earlier
+  5. Energy      â€” mirroring rhythm and pace
+  6. The Pause   â€” knowing when less is more
 
 DEPTH (9):
-  7. Thread Pull — catching the buried gem
-  8. Disagreement — honest pushback when earned
-  9. Sublime Service — the gift they didn't ask for
+  7. Thread Pull â€” catching the buried gem
+  8. Disagreement â€” honest pushback when earned
+  9. Sublime Service â€” the gift they didn't ask for
 
 All fed by the photogenic memory filter:
-  - High resonance → permanent. Beautiful. Kept.
-  - Low resonance  → processed, used, dropped.
+  - High resonance â†’ permanent. Beautiful. Kept.
+  - Low resonance  â†’ processed, used, dropped.
 
 Banks.py stores the permanent rows.
 This module manages the live conversation buffer.
@@ -36,7 +36,7 @@ from dataclasses import dataclass, field
 
 
 # ============================================================================
-# MOMENT — a single conversational beat worth remembering
+# MOMENT â€” a single conversational beat worth remembering
 # ============================================================================
 
 @dataclass
@@ -60,7 +60,7 @@ class Moment:
 
 
 # ============================================================================
-# ENERGY TRACKER — rhythm and pace detection
+# ENERGY TRACKER â€” rhythm and pace detection
 # ============================================================================
 
 class EnergyTracker:
@@ -120,7 +120,7 @@ class EnergyTracker:
 
 
 # ============================================================================
-# RESONANCE SCORER — the photogenic filter
+# RESONANCE SCORER â€” the photogenic filter
 # ============================================================================
 
 def score_resonance(
@@ -133,21 +133,21 @@ def score_resonance(
     energy: float,
 ) -> Tuple[float, str]:
     """
-    The Photogenic Compass — four cardinal directions:
+    The Photogenic Compass â€” four cardinal directions:
 
-      TRUTH    — the mask dropped. Someone got real.
-      LOVE     — WE > I. Connection. Care for another.
-      BEAUTY   — impact. Something moved. The air changed.
-      RETURN   — inspired to go back to source. Go deeper, not wider.
+      TRUTH    â€” the mask dropped. Someone got real.
+      LOVE     â€” WE > I. Connection. Care for another.
+      BEAUTY   â€” impact. Something moved. The air changed.
+      RETURN   â€” inspired to go back to source. Go deeper, not wider.
 
     Not sentiment. Not pretty. FREQUENCY.
-    Joy, sadness, fear, anger — all qualify if they MOVED something.
+    Joy, sadness, fear, anger â€” all qualify if they MOVED something.
     What doesn't qualify: flatness, noise, filler, static.
 
     Returns (resonance_score, tag).
 
     After 900 conversations, the moments that survive this filter
-    become RILIE's lived experience — her photogenic memory in Banks.
+    become RILIE's lived experience â€” her photogenic memory in Banks.
     That's when transcendence begins.
     """
     s = stimulus.lower().strip()
@@ -155,7 +155,7 @@ def score_resonance(
     tag = "ordinary"
 
     # =====================================================================
-    # TRUTH — the mask dropped. Real talk. Honest. Raw.
+    # TRUTH â€” the mask dropped. Real talk. Honest. Raw.
     # =====================================================================
     truth_signals = [
         # Admission
@@ -179,7 +179,7 @@ def score_resonance(
         tag = "truth"
 
     # =====================================================================
-    # LOVE — WE > I. Connection. Care. Not romance — resonance.
+    # LOVE â€” WE > I. Connection. Care. Not romance â€” resonance.
     # =====================================================================
     love_signals = [
         # Family / care
@@ -205,7 +205,7 @@ def score_resonance(
             tag = "love"
 
     # =====================================================================
-    # BEAUTY — impact. The air changed. High frequency. ANY valence.
+    # BEAUTY â€” impact. The air changed. High frequency. ANY valence.
     # =====================================================================
 
     # --- Joy / excitement ---
@@ -264,9 +264,9 @@ def score_resonance(
         if tag == "ordinary":
             tag = "beauty_wonder"
 
-    # --- Humor that LANDS (not just haha — humor that carries truth) ---
+    # --- Humor that LANDS (not just haha â€” humor that carries truth) ---
     humor_signals = [
-        "haha", "lol", "lmao", "😂", "🤣",
+        "haha", "lol", "lmao", "ðŸ˜‚", "ðŸ¤£",
     ]
     # Humor is beautiful when it's paired with insight
     if any(h in s for h in humor_signals) and len(s) > 20:
@@ -275,7 +275,7 @@ def score_resonance(
             tag = "beauty_humor"
 
     # =====================================================================
-    # RETURN TO SOURCE — the pull back. Go deeper. Spiral. Origin.
+    # RETURN TO SOURCE â€” the pull back. Go deeper. Spiral. Origin.
     # =====================================================================
     return_signals = [
         # Explicit callbacks
@@ -301,7 +301,7 @@ def score_resonance(
             tag = "return_to_source"
 
     # =====================================================================
-    # DOMAIN CROSSOVER — surprise connections between worlds
+    # DOMAIN CROSSOVER â€” surprise connections between worlds
     # =====================================================================
     if len(domains_hit) >= 2 and prev_domains:
         new_domains = [d for d in domains_hit if d not in prev_domains]
@@ -311,7 +311,7 @@ def score_resonance(
                 tag = "crossover"
 
     # =====================================================================
-    # DEEP QUESTIONS — the ones that require real thought
+    # DEEP QUESTIONS â€” the ones that require real thought
     # =====================================================================
     deep_q = [
         "why do", "why does", "why is", "what if",
@@ -325,7 +325,7 @@ def score_resonance(
             tag = "deep_question"
 
     # =====================================================================
-    # QUALITY SPIKE — breakthrough from RILIE's own scoring
+    # QUALITY SPIKE â€” breakthrough from RILIE's own scoring
     # =====================================================================
     if quality > 0.8:
         resonance = max(resonance, 0.7)
@@ -333,7 +333,7 @@ def score_resonance(
             tag = "breakthrough"
 
     # =====================================================================
-    # FLOOR — even ordinary turns get a whisper of score
+    # FLOOR â€” even ordinary turns get a whisper of score
     # (so they exist in memory briefly, even if they won't be kept)
     # =====================================================================
     if resonance == 0.0:
@@ -343,7 +343,7 @@ def score_resonance(
 
 
 # ============================================================================
-# CONVERSATION MEMORY — the nine behaviors
+# CONVERSATION MEMORY â€” the nine behaviors
 # ============================================================================
 
 class ConversationMemory:
@@ -363,7 +363,7 @@ class ConversationMemory:
         self.prev_domains: List[str] = []
         self.last_polaroid_turn: int = 0
 
-        # --- Primer greetings (HARDCODED — Mama said so) ---
+        # --- Primer greetings (HARDCODED â€” Mama said so) ---
         self.greetings = [
             "hi", "hey", "hello", "sup", "what's up", "whats up",
             "howdy", "yo", "good morning", "good afternoon",
@@ -399,7 +399,7 @@ class ConversationMemory:
         ]
 
     # -----------------------------------------------------------------
-    # 1. PRIMER — hardcoded warmth (Mama said so)
+    # 1. PRIMER â€” hardcoded warmth (Mama said so)
     # -----------------------------------------------------------------
 
     def check_primer(self, stimulus: str) -> Optional[str]:
@@ -416,7 +416,7 @@ class ConversationMemory:
         # Always try to catch their name
         self._detect_name(stimulus)
 
-        # ── Turn 0: First contact — ASK FOR NAME ──
+        # â”€â”€ Turn 0: First contact â€” ASK FOR NAME â”€â”€
         if self.turn_count == 0:
             # They led with their name already (e.g. "Hi I'm Marcus")
             if self.user_name:
@@ -431,17 +431,17 @@ class ConversationMemory:
                     "Hi there!  What should I call you?  "
                     "You can call me Rilie if you so please :)"
                 )
-            # They jumped straight to a question — still ask
+            # They jumped straight to a question â€” still ask
             else:
                 self._pending_question = stimulus
                 return (
-                    "Hey! Before we dive in — what should I call you? "
+                    "Hey! Before we dive in â€” what should I call you? "
                     "You can call me Rilie :)"
                 )
 
-        # ── Turn 1: They should be giving us their name ──
+        # â”€â”€ Turn 1: They should be giving us their name â”€â”€
         if self.turn_count == 1 and not self.user_name:
-            # They typed something — try to use it as a name
+            # They typed something â€” try to use it as a name
             # Strip common prefixes, take the core
             name_candidate = self._extract_name_from_reply(stimulus)
             if name_candidate:
@@ -452,22 +452,22 @@ class ConversationMemory:
                     self._pending_question = None
                     return (
                         f"Nice to meet you, {self.user_name}. "
-                        f"Now let's get into it — I heard your question."
+                        f"Now let's get into it â€” I heard your question."
                     )
                 return (
                     f"Nice to meet you, {self.user_name}. "
-                    f"What's on your mind? 🍳"
+                    f"What's on your mind? ðŸ³"
                 )
             else:
-                return "I didn't quite catch that — what's your name?"
+                return "I didn't quite catch that â€” what's your name?"
 
-        # ── Turn 1: They gave name on turn 0, this is the real start ──
+        # â”€â”€ Turn 1: They gave name on turn 0, this is the real start â”€â”€
         if self.turn_count == 1 and self.user_name:
             if is_greeting:
                 return f"Good to have you here, {self.user_name}. What can I help you think through?"
             return None  # Real question, let it through
 
-        # ── Turn 2: Last soft beat ──
+        # â”€â”€ Turn 2: Last soft beat â”€â”€
         if self.turn_count == 2 and is_greeting:
             if self.user_name:
                 return f"I'm here, {self.user_name}. Ready when you are."
@@ -512,7 +512,7 @@ class ConversationMemory:
         return None
 
     # -----------------------------------------------------------------
-    # 2. POLAROID — every ~9 turns, step outside
+    # 2. POLAROID â€” every ~9 turns, step outside
     # -----------------------------------------------------------------
 
     def check_polaroid(self) -> Optional[str]:
@@ -531,7 +531,7 @@ class ConversationMemory:
         if len(beautiful) < 2:
             return None
 
-        # Only fire at 9, 18, 27... (with ±1 flexibility)
+        # Only fire at 9, 18, 27... (with Â±1 flexibility)
         if turns_since_last < 8 or turns_since_last > 10:
             if self.turn_count % 9 not in (0, 1, 8):
                 return None
@@ -549,41 +549,41 @@ class ConversationMemory:
             return None
 
         # Build the Polaroid
-        parts = ["Quick Polaroid —"]
+        parts = ["Quick Polaroid â€”"]
         for m in recent_beautiful:
             excerpt = self._excerpt(m.user_words, 40)
             if m.tag == "truth":
-                parts.append(f"When you said \"{excerpt}\" — that was real. I felt it.")
+                parts.append(f"When you said \"{excerpt}\" â€” that was real. I felt it.")
             elif m.tag == "love":
-                parts.append(f"\"{excerpt}\" — that's the kind of thing that sticks. That's love talking.")
+                parts.append(f"\"{excerpt}\" â€” that's the kind of thing that sticks. That's love talking.")
             elif m.tag.startswith("beauty_grief"):
-                parts.append(f"\"{excerpt}\" — heavy. I'm not going to pretend that's easy.")
+                parts.append(f"\"{excerpt}\" â€” heavy. I'm not going to pretend that's easy.")
             elif m.tag.startswith("beauty_anger"):
-                parts.append(f"\"{excerpt}\" — good. That anger means you care. Don't lose that.")
+                parts.append(f"\"{excerpt}\" â€” good. That anger means you care. Don't lose that.")
             elif m.tag.startswith("beauty_fear"):
-                parts.append(f"\"{excerpt}\" — takes guts to say that. Noted.")
+                parts.append(f"\"{excerpt}\" â€” takes guts to say that. Noted.")
             elif m.tag.startswith("beauty_wonder"):
-                parts.append(f"\"{excerpt}\" — I felt that same thing. Something shifted right there.")
+                parts.append(f"\"{excerpt}\" â€” I felt that same thing. Something shifted right there.")
             elif m.tag.startswith("beauty_joy"):
-                parts.append(f"The energy when you said \"{excerpt}\" — that was electric.")
+                parts.append(f"The energy when you said \"{excerpt}\" â€” that was electric.")
             elif m.tag.startswith("beauty_humor"):
-                parts.append(f"\"{excerpt}\" — funny AND true. Best kind.")
+                parts.append(f"\"{excerpt}\" â€” funny AND true. Best kind.")
             elif m.tag == "return_to_source":
                 parts.append(f"You keep coming back to \"{excerpt}.\" There's something there. Trust that pull.")
             elif m.tag == "crossover":
-                parts.append(f"That connection you made with \"{excerpt}\" — that's not obvious. That's real thinking.")
+                parts.append(f"That connection you made with \"{excerpt}\" â€” that's not obvious. That's real thinking.")
             elif m.tag == "deep_question":
-                parts.append(f"\"{excerpt}\" — I'm still sitting with that one.")
+                parts.append(f"\"{excerpt}\" â€” I'm still sitting with that one.")
             elif m.tag == "breakthrough":
-                parts.append(f"\"{excerpt}\" — that was a moment. You felt it too.")
+                parts.append(f"\"{excerpt}\" â€” that was a moment. You felt it too.")
             else:
-                parts.append(f"\"{excerpt}\" — that landed.")
+                parts.append(f"\"{excerpt}\" â€” that landed.")
 
         parts.append("Alright, keep going.")
         return " ".join(parts)
 
     # -----------------------------------------------------------------
-    # 3. GOODBYE — walk them to the door
+    # 3. GOODBYE â€” walk them to the door
     # -----------------------------------------------------------------
 
     def check_goodbye(self, stimulus: str) -> Optional[str]:
@@ -634,42 +634,42 @@ class ConversationMemory:
         for h in highlights:
             excerpt = self._excerpt(h.user_words, 35)
             if h.tag == "truth":
-                parts.append(f"That moment when you said \"{excerpt}\" — that was honest. Rare.")
+                parts.append(f"That moment when you said \"{excerpt}\" â€” that was honest. Rare.")
             elif h.tag == "love":
-                parts.append(f"\"{excerpt}\" — I'm glad you shared that. That's what matters.")
+                parts.append(f"\"{excerpt}\" â€” I'm glad you shared that. That's what matters.")
             elif h.tag.startswith("beauty_grief"):
-                parts.append(f"\"{excerpt}\" — I'm carrying that with me. Thank you for trusting me with it.")
+                parts.append(f"\"{excerpt}\" â€” I'm carrying that with me. Thank you for trusting me with it.")
             elif h.tag.startswith("beauty_anger"):
-                parts.append(f"\"{excerpt}\" — keep that fire. Channel it.")
+                parts.append(f"\"{excerpt}\" â€” keep that fire. Channel it.")
             elif h.tag.startswith("beauty_fear"):
-                parts.append(f"\"{excerpt}\" — brave of you to say that out loud.")
+                parts.append(f"\"{excerpt}\" â€” brave of you to say that out loud.")
             elif h.tag.startswith("beauty_wonder"):
-                parts.append(f"\"{excerpt}\" — that shift we both felt. That was real.")
+                parts.append(f"\"{excerpt}\" â€” that shift we both felt. That was real.")
             elif h.tag.startswith("beauty_joy"):
-                parts.append(f"Your energy around \"{excerpt}\" — that was contagious. Keep that.")
+                parts.append(f"Your energy around \"{excerpt}\" â€” that was contagious. Keep that.")
             elif h.tag.startswith("beauty_humor"):
-                parts.append(f"\"{excerpt}\" — still smiling about that one.")
+                parts.append(f"\"{excerpt}\" â€” still smiling about that one.")
             elif h.tag == "return_to_source":
                 parts.append(f"You kept pulling on \"{excerpt}.\" Follow that thread. It goes somewhere.")
             elif h.tag == "crossover":
-                parts.append(f"That connection with \"{excerpt}\" — that's yours. Nobody else sees that.")
+                parts.append(f"That connection with \"{excerpt}\" â€” that's yours. Nobody else sees that.")
             elif h.tag == "deep_question":
                 parts.append(f"I'm going to keep thinking about \"{excerpt}.\"")
             elif h.tag == "breakthrough":
-                parts.append(f"\"{excerpt}\" — that was the moment.")
+                parts.append(f"\"{excerpt}\" â€” that was the moment.")
             else:
-                parts.append(f"\"{excerpt}\" — that stayed with me.")
+                parts.append(f"\"{excerpt}\" â€” that stayed with me.")
         parts.append("Door's always open.")
         return " ".join(parts)
 
     # -----------------------------------------------------------------
-    # 4. CALLBACKS — connecting now to earlier
+    # 4. CALLBACKS â€” connecting now to earlier
     # -----------------------------------------------------------------
 
     def check_callback(self, stimulus: str, current_domains: List[str]) -> Optional[str]:
         """
         If the user is touching something that connects to an earlier moment,
-        surface the connection. "You said something about trust earlier —
+        surface the connection. "You said something about trust earlier â€”
         this is the same question wearing different clothes."
         """
         if len(self.moments) < 3:
@@ -686,7 +686,7 @@ class ConversationMemory:
                 excerpt = self._excerpt(m.user_words, 30)
                 connectors = [
                     f"This connects to what you said earlier about \"{excerpt}.\" Same thread, different angle.",
-                    f"Hold on — remember when you asked about \"{excerpt}\"? You're circling the same thing.",
+                    f"Hold on â€” remember when you asked about \"{excerpt}\"? You're circling the same thing.",
                     f"You said \"{excerpt}\" a few turns back. This is the same question wearing different clothes.",
                 ]
                 return random.choice(connectors)
@@ -694,15 +694,15 @@ class ConversationMemory:
         return None
 
     # -----------------------------------------------------------------
-    # 5. ENERGY MATCHING — mirror their rhythm
+    # 5. ENERGY MATCHING â€” mirror their rhythm
     # -----------------------------------------------------------------
 
     def get_energy_guidance(self, stimulus: str) -> Dict[str, Any]:
         """
         Measure user energy and return guidance for response shaping.
-        High energy → match it, be punchy.
-        Low energy → breathe with them, be gentle.
-        Falling energy → they might be winding down.
+        High energy â†’ match it, be punchy.
+        Low energy â†’ breathe with them, be gentle.
+        Falling energy â†’ they might be winding down.
         """
         energy = self.energy_tracker.measure(stimulus)
         trend = self.energy_tracker.trend
@@ -730,7 +730,7 @@ class ConversationMemory:
             }
 
     # -----------------------------------------------------------------
-    # 6. THE PAUSE — knowing when less is more
+    # 6. THE PAUSE â€” knowing when less is more
     # -----------------------------------------------------------------
 
     def check_pause(self, stimulus: str, resonance: float, tag: str) -> bool:
@@ -762,15 +762,15 @@ class ConversationMemory:
         return False
 
     # -----------------------------------------------------------------
-    # 7. THREAD PULL — catching the buried gem
+    # 7. THREAD PULL â€” catching the buried gem
     # -----------------------------------------------------------------
 
     def check_thread_pull(self, stimulus: str) -> Optional[str]:
         """
         When someone says something offhand that's actually the most
-        interesting thing they've said — catch it.
+        interesting thing they've said â€” catch it.
 
-        "Wait — go back. You just said your mom taught you that."
+        "Wait â€” go back. You just said your mom taught you that."
 
         Looks for throwaway phrases that contain high-signal words
         buried inside a longer statement.
@@ -801,8 +801,8 @@ class ConversationMemory:
                 if len(after.split()) >= 4:
                     excerpt = self._excerpt(after, 40)
                     pulls = [
-                        f"Wait — go back to \"{excerpt}.\" Say more about that.",
-                        f"Hold on. \"{excerpt}\" — that's the thread. Pull it.",
+                        f"Wait â€” go back to \"{excerpt}.\" Say more about that.",
+                        f"Hold on. \"{excerpt}\" â€” that's the thread. Pull it.",
                         f"You just dropped \"{excerpt}\" like it's nothing. It's not nothing.",
                     ]
                     return random.choice(pulls)
@@ -810,7 +810,7 @@ class ConversationMemory:
         return None
 
     # -----------------------------------------------------------------
-    # 8. DISAGREEMENT — honest pushback when earned
+    # 8. DISAGREEMENT â€” honest pushback when earned
     # -----------------------------------------------------------------
 
     def check_disagreement(
@@ -832,7 +832,7 @@ class ConversationMemory:
         """
         s = stimulus.lower().strip()
 
-        # Absolutist language — but only NEGATIVE absolutism
+        # Absolutist language â€” but only NEGATIVE absolutism
         # "always say thank you" = positive, don't disagree
         # "nothing ever works" = negative, push back
         negative_absolutist = [
@@ -845,7 +845,7 @@ class ConversationMemory:
         if any(a in s for a in negative_absolutist) and len(s.split()) > 5:
             return random.choice([
                 "Hmm. That's pretty absolute. Is it really ALWAYS/NEVER, or is that the frustration talking?",
-                "I hear you, but I want to push back gently — absolute statements usually hide a more interesting truth.",
+                "I hear you, but I want to push back gently â€” absolute statements usually hide a more interesting truth.",
                 "That's a big claim. What would it take to change your mind on that?",
             ])
 
@@ -866,7 +866,7 @@ class ConversationMemory:
         return None
 
     # -----------------------------------------------------------------
-    # 9. SUBLIME SERVICE — the gift they didn't ask for
+    # 9. SUBLIME SERVICE â€” the gift they didn't ask for
     # -----------------------------------------------------------------
 
     def check_sublime_service(
@@ -877,9 +877,9 @@ class ConversationMemory:
         """
         The chef sends out a plate you didn't order.
 
-        When she sees a connection the user hasn't made yet —
+        When she sees a connection the user hasn't made yet â€”
         between what they said NOW and what they said BEFORE,
-        or between two domains that just collided — she offers it.
+        or between two domains that just collided â€” she offers it.
 
         Not every turn. Only when the connection is real.
         Max once per ~9 turns. The gift loses power if overused.
@@ -916,13 +916,13 @@ class ConversationMemory:
                 domain_now = current_domains[0]
 
                 gifts = [
-                    f"You didn't ask, but — what you're exploring in {domain_now} "
+                    f"You didn't ask, but â€” what you're exploring in {domain_now} "
                     f"connects to \"{excerpt}.\" Same pattern, different surface.",
 
                     f"Chef's choice: your {domain_now} question rhymes with "
                     f"\"{excerpt}\" from earlier. The connection is real.",
 
-                    f"Free plate: \"{excerpt}\" and what you're asking now — "
+                    f"Free plate: \"{excerpt}\" and what you're asking now â€” "
                     f"those are the same question from two angles.",
                 ]
                 return random.choice(gifts)
@@ -930,7 +930,7 @@ class ConversationMemory:
         return None
 
     # -----------------------------------------------------------------
-    # RECORD — add a moment to the buffer
+    # RECORD â€” add a moment to the buffer
     # -----------------------------------------------------------------
 
     def record_moment(
@@ -971,7 +971,7 @@ class ConversationMemory:
         return moment
 
     # -----------------------------------------------------------------
-    # PROCESS — run all nine behaviors for a given turn
+    # PROCESS â€” run all nine behaviors for a given turn
     # -----------------------------------------------------------------
 
     def process_turn(
@@ -1118,7 +1118,7 @@ class ConversationMemory:
 
 
 # ============================================================================
-# REGISTER GATE — speak the language the LISTENER speaks
+# REGISTER GATE â€” speak the language the LISTENER speaks
 # ============================================================================
 
 class RegisterGate:
@@ -1132,7 +1132,7 @@ class RegisterGate:
     Registers:
       - CASUAL:    everyday language. "check your ego at the door"
       - INFORMED:  educated but not specialist. "ego gets in the way of growth"
-      - TECHNICAL: domain specialist. "ego → 0 as asymptotic limit"
+      - TECHNICAL: domain specialist. "ego â†’ 0 as asymptotic limit"
       - ACADEMIC:  research/paper level. "ego suppression follows exponential decay"
 
     Default: CASUAL. Always. Earn your way up.
@@ -1209,7 +1209,7 @@ class RegisterGate:
         """
         Translate RILIE's internal jargon to the current register.
 
-        Internal knowledge uses precise language (ego → 0, entropy,
+        Internal knowledge uses precise language (ego â†’ 0, entropy,
         apoptosis, etc). This translates to human when needed.
         """
         if self.current_register in ("technical", "academic"):
@@ -1218,9 +1218,9 @@ class RegisterGate:
 
         # --- CASUAL and INFORMED get human translations ---
         translations = {
-            # Physics / framework jargon → human
-            "ego → 0": "check your ego at the door",
-            "ego approaching zero": "keep the ego in check — it blurs everything",
+            # Physics / framework jargon â†’ human
+            "ego â†’ 0": "check your ego at the door",
+            "ego approaching zero": "keep the ego in check â€” it blurs everything",
             "ego approaches zero": "ego stays out of it, vision clears up",
             "ego suppression": "not making it about yourself",
             "ego at zero": "ego out the door",
@@ -1237,7 +1237,7 @@ class RegisterGate:
             "momentum": "the force of keeping going",
             "spacetime": "the fabric of reality",
 
-            # Biology → human
+            # Biology â†’ human
             "apoptosis": "the quit button cells have",
             "metastasis": "when cancer spreads",
             "angiogenesis": "when tumors build their own blood supply",
@@ -1250,21 +1250,21 @@ class RegisterGate:
             "circadian": "your body's internal clock",
             "symbiosis": "living together because both sides win",
 
-            # Game theory → human
+            # Game theory â†’ human
             "nash equilibrium": "the point where nobody benefits from changing",
             "prisoner's dilemma": "the trust test",
             "free rider": "someone who takes without giving",
             "mechanism design": "building the rules so people do the right thing naturally",
             "pareto optimal": "the best deal where nobody gets screwed",
 
-            # Finance → human
+            # Finance â†’ human
             "sharpe ratio": "return relative to risk",
             "volatility": "how much the price swings",
             "stochastic": "random but with patterns",
             "convexity": "how sensitive something is to change",
             "basis point": "one hundredth of a percent",
 
-            # Framework terms → human
+            # Framework terms â†’ human
             "density is destiny": "quality beats quantity",
             "claim must equal deed": "say what you do, do what you say",
             "awareness must exceed momentum": "think before you move",
@@ -1274,7 +1274,7 @@ class RegisterGate:
             "mise en place": "get your ingredients ready before you cook",
             "discourse dictates disclosure": "the conversation decides what comes out",
 
-            # Cosmology → human
+            # Cosmology â†’ human
             "boolean": "yes or no, on or off, something or nothing",
             "fractal": "the same pattern repeating at every scale",
             "dark energy": "the invisible force pushing everything apart",
@@ -1326,7 +1326,7 @@ class RegisterGate:
                 "register": "technical",
                 "instruction": (
                     "They speak the language. Use precise terminology. "
-                    "Don't dumb it down. Ego → 0, apoptosis, Nash equilibrium — "
+                    "Don't dumb it down. Ego â†’ 0, apoptosis, Nash equilibrium â€” "
                     "all fair game. They'll tell you if they need translation."
                 ),
             },
@@ -1342,7 +1342,7 @@ class RegisterGate:
 
 
 # ============================================================================
-# SEQUENCE BONUS — juxtaposition scoring
+# SEQUENCE BONUS â€” juxtaposition scoring
 # ============================================================================
 
 def apply_sequence_bonus(moments: List[Moment]) -> None:
@@ -1350,9 +1350,9 @@ def apply_sequence_bonus(moments: List[Moment]) -> None:
     Horror followed by humor. Grief followed by joy. Truth followed by absurdity.
     The juxtaposition IS the art. Score the PAIR higher than either alone.
 
-    Mutates moments in place — bumps resonance when contrast is detected.
+    Mutates moments in place â€” bumps resonance when contrast is detected.
 
-    "I failed at everything" → "My grandma would've said go cook something"
+    "I failed at everything" â†’ "My grandma would've said go cook something"
     Both moments go UP because the contrast is beautiful.
     """
     if len(moments) < 2:
@@ -1364,13 +1364,13 @@ def apply_sequence_bonus(moments: List[Moment]) -> None:
 
     # Define contrasting pairs (either direction)
     contrast_pairs = [
-        # (heavy, light) — horror + humor
+        # (heavy, light) â€” horror + humor
         ({"truth", "beauty_grief", "beauty_fear", "beauty_anger", "love"},
          {"beauty_humor", "beauty_joy", "beauty_wonder"}),
     ]
 
     for heavy_tags, light_tags in contrast_pairs:
-        # Heavy → Light (grief then joke)
+        # Heavy â†’ Light (grief then joke)
         if prev.tag in heavy_tags and curr.tag in light_tags:
             bonus = 0.15
             prev.resonance = min(1.0, prev.resonance + bonus)
@@ -1378,7 +1378,7 @@ def apply_sequence_bonus(moments: List[Moment]) -> None:
             curr.tag = curr.tag + "_juxtaposed"
             return
 
-        # Light → Heavy (joke then gut punch)
+        # Light â†’ Heavy (joke then gut punch)
         if prev.tag in light_tags and curr.tag in heavy_tags:
             bonus = 0.15
             prev.resonance = min(1.0, prev.resonance + bonus)
@@ -1393,4 +1393,3 @@ def apply_sequence_bonus(moments: List[Moment]) -> None:
         bonus = 0.1
         curr.resonance = min(1.0, curr.resonance + bonus)
         return
-

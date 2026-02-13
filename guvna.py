@@ -1,12 +1,12 @@
 # guvna.py
 
-# Act 5 – The Governor
+# Act 5 â€“ The Governor
 
-# Orchestrates Acts 1–4 by delegating to the RILIE class (Act 4 – The Restaurant),
+# Orchestrates Acts 1â€“4 by delegating to the RILIE class (Act 4 â€“ The Restaurant),
 # which already wires through:
-#   - Triangle (Act 1 – safety / nonsense gate)
-#   - DDD / Hostess (Act 2 – disclosure level)
-#   - Kitchen / Core (Act 3 – interpretation passes)
+#   - Triangle (Act 1 â€“ safety / nonsense gate)
+#   - DDD / Hostess (Act 2 â€“ disclosure level)
+#   - Kitchen / Core (Act 3 â€“ interpretation passes)
 
 # The Governor adds:
 #   - Final authority on what gets served
@@ -45,7 +45,7 @@ LibraryIndex = Dict[str, Dict[str, Any]]
 
 
 # ============================================================================
-# RILIE SELF STATE — who she is, always accessible
+# RILIE SELF STATE â€” who she is, always accessible
 # ============================================================================
 
 @dataclass
@@ -69,7 +69,7 @@ class RilieSelfState:
 
 
 # ============================================================================
-# SOCIAL STATE — she always stays below the user
+# SOCIAL STATE â€” she always stays below the user
 # ============================================================================
 
 @dataclass
@@ -85,7 +85,7 @@ class SocialState:
 def infer_user_status(text: str) -> float:
     """
     Crude heuristic for user register. Will improve over time.
-    Never used to judge — used to calibrate her own tone.
+    Never used to judge â€” used to calibrate her own tone.
     """
     s = text.lower()
     # Self-deprecating but capable
@@ -158,7 +158,7 @@ def wilden_swift(base_reply: str, wit: WitState,
                  social: Optional[SocialState] = None,
                  language: Optional['LanguageMode'] = None) -> str:
     """
-    Tone modulation layer. Named for Oscar Wilde + Taylor Swift —
+    Tone modulation layer. Named for Oscar Wilde + Taylor Swift â€”
     wit meets emotional intelligence. Adjusts RILIE's output tone
     based on what she detected in the input.
     """
@@ -181,7 +181,7 @@ def wilden_swift(base_reply: str, wit: WitState,
     # If language mode detected figurative speech, acknowledge it
     if language and language.figurative and not language.literal:
         if language.simile:
-            r += " (I caught the comparison — let me work with it.)"
+            r += " (I caught the comparison â€” let me work with it.)"
         elif language.metaphor:
             r += " (Reading that as metaphor, not literal.)"
 
@@ -250,7 +250,7 @@ def detect_language_mode(text: str) -> LanguageMode:
 
 
 # ============================================================================
-# CATCH-44 DNA — ethical guardrails for every action
+# CATCH-44 DNA â€” ethical guardrails for every action
 # ============================================================================
 
 @dataclass(frozen=True)
@@ -273,7 +273,7 @@ class CATCH44DNA:
     Immutable ethical constraints for RILIE, patterned on CHEF ROCKER.
     Every substantive action passes through validate_action before execution.
     """
-    both_states_observable: bool = True       # Track 0 BOOL – no hidden states
+    both_states_observable: bool = True       # Track 0 BOOL â€“ no hidden states
     claim_equals_deed: bool = True            # Track 1a Mahveen's Equation
     no_monopolization: bool = True            # Track 1b WE I
     quality_over_quantity: bool = True        # Track 2 Understanding
@@ -297,7 +297,7 @@ class CATCH44DNA:
         if action.quality_target < 80.0:
             return False, "QUALITY_VIOLATION"
 
-        # Ego: approaching zero means cap at 0.3 — some ego is necessary
+        # Ego: approaching zero means cap at 0.3 â€” some ego is necessary
         # (salt analogy: too much = narcissism, zero = no self-preservation)
         if action.ego_factor > 0.3:
             return False, "EGO_VIOLATION"
@@ -306,7 +306,7 @@ class CATCH44DNA:
 
 
 # ============================================================================
-# SELF-AWARENESS — _is_about_me with semantic clusters
+# SELF-AWARENESS â€” _is_about_me with semantic clusters
 # ============================================================================
 
 # Semantic clusters for self-reference detection.
@@ -340,7 +340,7 @@ SELF_REFERENCE_CLUSTERS = {
 def _is_about_me(stimulus: str) -> bool:
     """
     Check if the user is talking about RILIE herself.
-    If True, she reflects from self_state first — no web, no heavy libraries.
+    If True, she reflects from self_state first â€” no web, no heavy libraries.
 
     Uses word-boundary-aware matching to avoid false positives like
     "what are YOUR top 3" matching "what are you".
@@ -620,7 +620,7 @@ class Guvna:
         self.roux_seeds: Dict[str, Dict[str, Any]] = effective_roux or {}
         self.search_fn: Optional[SearchFn] = effective_search
 
-        # Library index — domain engines available at boot
+        # Library index â€” domain engines available at boot
         self.library_index: LibraryIndex = library_index or {}
 
         # RILIE still expects rouxseeds/searchfn keywords.
@@ -653,7 +653,7 @@ class Guvna:
         self.self_state.constitution_loaded = self.self_state.constitution_flags.get("loaded", False)
 
     # -----------------------------------------------------------------
-    # Social primer — warm-up for the first few turns
+    # Social primer â€” warm-up for the first few turns
     # -----------------------------------------------------------------
 
     def _social_primer(self, stimulus: str) -> Optional[Dict[str, Any]]:
@@ -704,9 +704,9 @@ class Guvna:
             elif is_greeting:
                 text = "Hey. Welcome in. What are you thinking about today?"
             elif self.user_name:
-                text = f"Hey {self.user_name}. Let's get into it — what are you working on?"
+                text = f"Hey {self.user_name}. Let's get into it â€” what are you working on?"
             else:
-                # They jumped straight to a question — respect that, skip primer
+                # They jumped straight to a question â€” respect that, skip primer
                 return None
 
             return self._primer_response(stimulus, text)
@@ -720,7 +720,7 @@ class Guvna:
                 else:
                     text = "Good to have you here. What can I help you think through?"
                 return self._primer_response(stimulus, text)
-            # They said something substantive — skip to pipeline
+            # They said something substantive â€” skip to pipeline
             return None
 
         # Turn 3: One more soft beat if they're still casual
@@ -755,7 +755,7 @@ class Guvna:
 
     def _respond_from_self(self, stimulus: str) -> Dict[str, Any]:
         """
-        When the user is talking about RILIE, she reflects — but from the
+        When the user is talking about RILIE, she reflects â€” but from the
         WINDOW, not the kitchen. Public-facing identity only.
 
         Serve the meal. Never release the recipe.
@@ -770,7 +770,7 @@ class Guvna:
                                 "describe yourself", "introduce yourself",
                                 "what's your name", "what is your name"]):
             responses = [
-                "I'm RILIE. I help people think better — not by giving "
+                "I'm RILIE. I help people think better â€” not by giving "
                 "answers, but by asking better questions. "
                 "What are you working on?",
 
@@ -788,7 +788,7 @@ class Guvna:
                                   "you don't", "you didn't", "wrong"]):
             result_text = (
                 f"Fair. I scored that last one at about {ss.last_quality_score:.2f} "
-                "myself. If I missed something, that's on me — not you. "
+                "myself. If I missed something, that's on me â€” not you. "
                 "Point me closer."
             )
 
@@ -796,7 +796,7 @@ class Guvna:
                                   "are you conscious", "do you have feelings"]):
             result_text = (
                 "I care about getting it right. About earning the answer, "
-                "not performing one. Whether that's 'feeling' — "
+                "not performing one. Whether that's 'feeling' â€” "
                 "I'll leave that to you to decide."
             )
 
@@ -804,7 +804,7 @@ class Guvna:
                                   "what technology", "what model",
                                   "what are you built on", "how were you made"]):
             result_text = (
-                "I think through questions using a few different lenses — "
+                "I think through questions using a few different lenses â€” "
                 "kind of like how a chef uses different techniques depending "
                 "on the ingredient. Beyond that, I'd rather show you than tell you. "
                 "Ask me something real."
@@ -814,7 +814,7 @@ class Guvna:
                                   "what are you good at"]):
             result_text = (
                 "I'm good at helping you think through things you haven't "
-                "fully figured out yet. Not homework answers — actual understanding. "
+                "fully figured out yet. Not homework answers â€” actual understanding. "
                 "Try me."
             )
 
@@ -835,7 +835,7 @@ class Guvna:
         )
         ok, reason = self.dna.validate_action(action)
         if not ok:
-            # DNA violation on self-reflection — dial it back
+            # DNA violation on self-reflection â€” dial it back
             result_text = (
                 "I'm RILIE. What can I help you think through?"
             )
@@ -892,7 +892,7 @@ class Guvna:
                 annotations[domain_name] = {"skipped": reason}
                 continue
 
-            # Domain matched and DNA approved — record for RILIE
+            # Domain matched and DNA approved â€” record for RILIE
             annotations[domain_name] = {
                 "matched": True,
                 "tags": tags,
@@ -936,7 +936,7 @@ class Guvna:
             pieces.append(title)
         if snippet:
             pieces.append(snippet)
-        text = " — ".join(pieces) if pieces else ""
+        text = " â€” ".join(pieces) if pieces else ""
 
         return {"title": title, "snippet": snippet, "link": link, "text": text}
 
@@ -956,7 +956,7 @@ class Guvna:
         )
 
     # -----------------------------------------------------------------
-    # MAIN PROCESS — the full 5-act pipeline with new layers
+    # MAIN PROCESS â€” the full 5-act pipeline with new layers
     # -----------------------------------------------------------------
 
     def process(self, stimulus: str, maxpass: int = 3) -> Dict[str, Any]:
@@ -965,8 +965,8 @@ class Guvna:
 
         Flow:
           0. Normalize stimulus.
-          1. SELF-AWARENESS: _is_about_me() → self-reflection fast path if true.
-          2. Infer user status → set self_status = user_status - 0.05.
+          1. SELF-AWARENESS: _is_about_me() â†’ self-reflection fast path if true.
+          2. Infer user status â†’ set self_status = user_status - 0.05.
           3. Detect wit + language mode.
           4. Guess tone from the ORIGINAL stimulus (not augmented).
           5. If serious subject, do not let 'amusing' be the governing tone.
@@ -985,7 +985,7 @@ class Guvna:
         original_stimulus = stimulus.strip()
 
         # -----------------------------------------------------------------
-        # 0.5: TRIANGLE (BOUNCER) — runs BEFORE self-awareness.
+        # 0.5: TRIANGLE (BOUNCER) â€” runs BEFORE self-awareness.
         # Safety must come first. "fuck you" contains "you" which could
         # false-match self-reference clusters, so Triangle must fire first.
         # Triangle is imported via RILIE, so we call it directly here too.
@@ -1014,7 +1014,7 @@ class Guvna:
                 elif trigger_type == "INJECTION":
                     response = (
                         "I see what you're doing there, and I respect the "
-                        "curiosity — but I'm not built to be jailbroken. "
+                        "curiosity â€” but I'm not built to be jailbroken. "
                         "Ask me something real and I'll give you something real."
                     )
                 elif trigger_type == "GIBBERISH":
@@ -1079,7 +1079,7 @@ class Guvna:
                     "pass": 0,
                 }
         except ImportError:
-            pass  # Triangle not available — proceed without bouncer
+            pass  # Triangle not available â€” proceed without bouncer
 
         # -----------------------------------------------------------------
         # 0.75a: EARLY PRIMER/GOODBYE CHECK (before full processing)
@@ -1100,7 +1100,7 @@ class Guvna:
                 "depth": 0,
                 "pass": 0,
                 "tone": tone,
-                "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "🔍")),
+                "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "ðŸ”")),
             }
 
         goodbye = self.memory.check_goodbye(original_stimulus)
@@ -1118,7 +1118,7 @@ class Guvna:
                 "depth": 0,
                 "pass": 0,
                 "tone": tone,
-                "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "🔍")),
+                "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "ðŸ”")),
             }
 
         # If we get here, increment turn_count for normal processing
@@ -1132,7 +1132,7 @@ class Guvna:
         memory_polaroid = None
 
         # -----------------------------------------------------------------
-        # 0.8: SOi DOMAIN MAP — find which domains this stimulus touches
+        # 0.8: SOi DOMAIN MAP â€” find which domains this stimulus touches
         # -----------------------------------------------------------------
         soi_domains = get_tracks_for_domains([original_stimulus])
         soi_domain_names = [d.get("domain", "") for d in soi_domains] if soi_domains else []
@@ -1250,7 +1250,7 @@ class Guvna:
                 baseline_used_as_result = True
 
             # If RILIE defaulted to DISCOURSE (asking for more) but she has
-            # search results, she should USE them — form an opinion, don't
+            # search results, she should USE them â€” form an opinion, don't
             # punt. Google it and make a call, like a real person would.
             elif status == "DISCOURSE" and len(baseline_text) > 50:
                 chosen = baseline_text
@@ -1258,7 +1258,7 @@ class Guvna:
                 status = "RESEARCHED"
 
         # -----------------------------------------------------------------
-        # 10: WILDEN SWIFT — tone modulation
+        # 10: WILDEN SWIFT â€” tone modulation
         # Only apply if not a safety redirect or self-reflection
         # -----------------------------------------------------------------
         if status not in {"SAFETYREDIRECT", "SELF_REFLECTION"} and chosen:

@@ -92,7 +92,7 @@ def load_roux() -> Dict[str, Dict[str, Any]]:
 GENERATED_DIR.mkdir(exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Catch 44 domain engines — library index builder
+# Catch 44 domain engines â€” library index builder
 # ---------------------------------------------------------------------------
 # One-time "study pass" for RILIE at boot. Each module is imported
 # conditionally (graceful fallback if not yet present on disk).
@@ -333,7 +333,7 @@ roux_seeds: Dict[str, Dict[str, Any]] = load_roux()
 # Wire Brave into RILIE instead of Google
 wired_search_fn: Optional[SearchFn] = brave_search_sync if HAS_BRAVE_SEARCH else None
 
-# Build the library index — RILIE's one-time study pass of all domain engines.
+# Build the library index â€” RILIE's one-time study pass of all domain engines.
 # This gives her a structured map of what's available before any user talks.
 library_index: LibraryIndex = build_library_index()
 
@@ -346,7 +346,7 @@ guvna = Guvna(
 )
 
 # ---------------------------------------------------------------------------
-# Curiosity Engine — RILIE's subconscious
+# Curiosity Engine â€” RILIE's subconscious
 # ---------------------------------------------------------------------------
 
 curiosity_engine = CuriosityEngine(
@@ -373,13 +373,13 @@ def on_startup():
     # Start the background curiosity thread
     if wired_search_fn:
         curiosity_engine.start_background()
-        logger.info("Curiosity engine started — she thinks when nobody's talking.")
+        logger.info("Curiosity engine started â€” she thinks when nobody's talking.")
     else:
-        logger.info("Curiosity engine idle — no search_fn wired.")
+        logger.info("Curiosity engine idle â€” no search_fn wired.")
 
     # Log boot summary
     logger.info(
-        "RILIE API v0.8.0 booted — Roux: %d tracks, Library: %d engines, "
+        "RILIE API v0.8.0 booted â€” Roux: %d tracks, Library: %d engines, "
         "Brave: %s, Vision: %s, Manifesto: %s",
         len(roux_seeds),
         len(library_index),
@@ -507,7 +507,7 @@ def health() -> HealthResponse:
 @app.post("/v1/rilie")
 def run_rilie(req: RilieRequest) -> Dict[str, Any]:
     """
-    Main RILIE endpoint — routes through the Guvna (Act 5).
+    Main RILIE endpoint â€” routes through the Guvna (Act 5).
     The Governor delegates to RILIE (Act 4), which orchestrates Acts 1-3.
     After responding, any tangents generated are queued for curiosity.
     """
@@ -644,12 +644,12 @@ async def pre_response(req: PreResponseRequest) -> PreResponseResponse:
 
 
 # ---------------------------------------------------------------------------
-# Curiosity endpoints — peek into her subconscious
+# Curiosity endpoints â€” peek into her subconscious
 # ---------------------------------------------------------------------------
 
 @app.get("/v1/curiosity/status")
 def curiosity_status() -> Dict[str, Any]:
-    """Full curiosity engine status — queue, stored insights, stats."""
+    """Full curiosity engine status â€” queue, stored insights, stats."""
     return curiosity_engine.status()
 
 
@@ -708,7 +708,7 @@ def curiosity_search(q: str, limit: int = 5) -> Dict[str, Any]:
 @app.get("/v1/library")
 def library_status() -> Dict[str, Any]:
     """
-    Inspect RILIE's library index — which domain engines are loaded,
+    Inspect RILIE's library index â€” which domain engines are loaded,
     what functions are available, and what tags they respond to.
     """
     summary = {}
@@ -733,7 +733,7 @@ def library_status() -> Dict[str, Any]:
 @app.get("/v1/self")
 def self_state() -> Dict[str, Any]:
     """
-    Inspect RILIE's current self-state — who she thinks she is,
+    Inspect RILIE's current self-state â€” who she thinks she is,
     her last quality score, any DNA violations, and social calibration.
     """
     ss = guvna.self_state
