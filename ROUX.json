@@ -1,0 +1,47 @@
+{
+  "track_1_everything": {
+    "file": "0_NoOmega.txt",
+    "weight": 1.0,
+    "role": "parallel_processing"
+  },
+  "track_2_compression": {
+    "file": "1_FeelinGood.txt",
+    "weight": 1.0,
+    "role": "compression_at_speed"
+  },
+  "track_3_infinity": {
+    "file": "2_NighteDayenu.txt",
+    "weight": 1.0,
+    "role": "infinite_recursion"
+  },
+  "track_4_nourishment": {
+    "file": "3_Everything.txt",
+    "weight": 1.0,
+    "role": "nourishment_emergence"
+  },
+  "track_5_integration": {
+    "file": "4_isEverything.txt",
+    "weight": 1.0,
+    "role": "complete_integration"
+  },
+  "track_6_enemy": {
+    "file": "5_1L0ve.txt",
+    "weight": 1.0,
+    "role": "anti_beige_enemy"
+  },
+  "track_7_solution": {
+    "file": "6_McLuhanSinger.txt",
+    "weight": 1.0,
+    "role": "everything_in_its_right_place"
+  },
+  "track_8_customer_love": {
+    "file": "7_RilieClose.txt",
+    "weight": 1.0,
+    "role": "customer_love_memory"
+  },
+  "track_9_clavement": {
+    "file": "8_CucumberFondue.txt",
+    "weight": 1.0,
+    "role": "clavement_anchor"
+  }
+}

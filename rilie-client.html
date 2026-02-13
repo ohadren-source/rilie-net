@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RILIE (3,6,9)</title>
+  <link rel="icon" type="image/png" href="/static/3Dent.png" />
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #000;
+      color: #fff;
+      font-family: Calibri, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .rilie-shell {
+      width: 100%;
+      max-width: 720px;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .rilie-logo {
+      display: block;
+      height: 72px;
+      margin: 0 auto 16px auto;
+    }
+    .rilie-title {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+    .rilie-subtitle {
+      text-align: center;
+      font-size: 13px;
+      opacity: 0.75;
+      margin-bottom: 24px;
+    }
+    .rilie-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.8;
+    }
+    .rilie-textarea {
+      width: 100%;
+      margin-top: 8px;
+      margin-bottom: 16px;
+      padding: 12px;
+      box-sizing: border-box;
+      background: #111;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 4px;
+      resize: vertical;
+      min-height: 120px;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    .rilie-file {
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+    .rilie-btn-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .rilie-button {
+      display: inline-block;
+      padding: 10px 18px;
+      background: #fff;
+      color: #000;
+      border: none;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .rilie-button:hover {
+      background: #ddd;
+    }
+    .rilie-button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .rilie-button-sm {
+      display: inline-block;
+      padding: 6px 12px;
+      background: #222;
+      color: #888;
+      border: 1px solid #333;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .rilie-button-sm:hover {
+      background: #333;
+      color: #fff;
+    }
+    .rilie-lfg {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      opacity: 0.4;
+    }
+    .rilie-output-label {
+      margin-top: 24px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.8;
+    }
+    .rilie-output-tagline {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-bottom: 8px;
+    }
+    .rilie-output {
+      margin-top: 0;
+      padding: 12px;
+      background: #070707;
+      border-radius: 4px;
+      font-family: Consolas, Menlo, Monaco, monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+    .rilie-meta {
+      margin-top: 16px;
+      padding: 10px;
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: Consolas, Menlo, Monaco, monospace;
+      color: #666;
+      display: none;
+    }
+    .rilie-meta.visible {
+      display: block;
+    }
+    .rilie-meta-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+    }
+    .rilie-meta-key {
+      color: #555;
+    }
+    .rilie-meta-val {
+      color: #888;
+    }
+    .rilie-meta-val.green { color: #4a4; }
+    .rilie-meta-val.yellow { color: #aa4; }
+    .rilie-meta-val.orange { color: #a84; }
+    .rilie-meta-val.red { color: #a44; }
+    .rilie-health-bar {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      opacity: 0.5;
+    }
+    .rilie-health-track {
+      flex: 1;
+      height: 3px;
+      background: #222;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .rilie-health-fill {
+      height: 100%;
+      background: #4a4;
+      transition: width 0.4s ease, background 0.4s ease;
+    }
+    .rilie-footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 10px;
+      opacity: 0.3;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="rilie-shell">
+    <img src="/static/3Dent.png" alt="RILIE logo" class="rilie-logo" />
+
+    <div class="rilie-title">RILIE (3,6,9)</div>
+    <div class="rilie-subtitle">
+      Real Intelligence, RI. Really? Play Around and Find Out :)
+    </div>
+
+    <label class="rilie-label" for="rilie-input">Discourse</label>
+    <textarea
+      id="rilie-input"
+      class="rilie-textarea"
+      placeholder="What are you thinking about? Questions, ideas, statements &#8212; all fair game..."
+    ></textarea>
+
+    <div class="rilie-file">
+      <label class="rilie-label" for="rilie-files">Attach context (not wired yet)</label><br />
+      <input id="rilie-files" type="file" multiple />
+    </div>
+
+    <div class="rilie-btn-wrap">
+      <button class="rilie-button" id="rilie-submit">Learn from Go</button>
+      <span class="rilie-lfg">LFG</span>
+      <button class="rilie-button-sm" id="rilie-self">Who is RILIE?</button>
+      <button class="rilie-button-sm" id="rilie-library">Library</button>
+    </div>
+
+    <div class="rilie-output-label">Answer</div>
+    <div class="rilie-output-tagline">
+      No Spoon Feed, just a Fork.
+    </div>
+    <div id="rilie-output" class="rilie-output"></div>
+
+    <!-- Meta panel — the X-ray, hidden by default -->
+    <div id="rilie-meta" class="rilie-meta">
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">status</span>
+        <span class="rilie-meta-val" id="meta-status">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">quality</span>
+        <span class="rilie-meta-val" id="meta-quality">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">priorities</span>
+        <span class="rilie-meta-val" id="meta-priorities">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">anti-beige</span>
+        <span class="rilie-meta-val" id="meta-beige">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">depth / pass</span>
+        <span class="rilie-meta-val" id="meta-depth">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">tone</span>
+        <span class="rilie-meta-val" id="meta-tone">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">domains</span>
+        <span class="rilie-meta-val" id="meta-domains">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">wit</span>
+        <span class="rilie-meta-val" id="meta-wit">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">language</span>
+        <span class="rilie-meta-val" id="meta-language">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">social</span>
+        <span class="rilie-meta-val" id="meta-social">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">curiosity</span>
+        <span class="rilie-meta-val" id="meta-curiosity">—</span>
+      </div>
+      <div class="rilie-meta-row">
+        <span class="rilie-meta-key">triangle</span>
+        <span class="rilie-meta-val" id="meta-triangle">—</span>
+      </div>
+    </div>
+
+    <div class="rilie-health-bar">
+      <span>conversation health</span>
+      <div class="rilie-health-track">
+        <div class="rilie-health-fill" id="health-fill" style="width: 100%"></div>
+      </div>
+      <span id="health-pct">100</span>
+    </div>
+
+    <div class="rilie-footer">
+      Inspired by those who gave without expecting anything in return (3),
+      we're grateful (6)—and that's enough for us to do good work. (9)<br />
+      Runs on RILIE Sauce · 3.6.NIFE LLC · Ri: Real Intelligence 🔱
+    </div>
+  </div>
+
+  <script>
+    const submitBtn = document.getElementById("rilie-submit");
+    const selfBtn = document.getElementById("rilie-self");
+    const libraryBtn = document.getElementById("rilie-library");
+    const inputEl = document.getElementById("rilie-input");
+    const outputEl = document.getElementById("rilie-output");
+    const metaPanel = document.getElementById("rilie-meta");
+    const healthFill = document.getElementById("health-fill");
+    const healthPct = document.getElementById("health-pct");
+
+    function updateMeta(data) {
+      metaPanel.classList.add("visible");
+
+      const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val || "—";
+      };
+
+      set("meta-status", data.status);
+      set("meta-quality", data.quality_score != null ? data.quality_score.toFixed(2) : "—");
+      set("meta-priorities", data.priorities_met);
+      set("meta-beige", data.anti_beige_score != null ? data.anti_beige_score.toFixed(2) : "—");
+      set("meta-depth", (data.depth || 0) + " / " + (data.pass || 0));
+      set("meta-tone", (data.tone_emoji || "") + " " + (data.tone || ""));
+      set("meta-domains", (data.domains_used || []).join(", "));
+      set("meta-triangle", data.triangle_type || "CLEAN");
+
+      // Wit — show which types fired
+      const wit = data.wit || {};
+      const witActive = Object.entries(wit).filter(([k, v]) => v).map(([k]) => k);
+      set("meta-wit", witActive.length ? witActive.join(", ") : "none");
+
+      // Language mode
+      const lang = data.language_mode || {};
+      const langActive = Object.entries(lang).filter(([k, v]) => v).map(([k]) => k);
+      set("meta-language", langActive.length ? langActive.join(", ") : "literal");
+
+      // Social status
+      const social = data.social || {};
+      set("meta-social", social.user_status != null
+        ? "user=" + social.user_status.toFixed(2) + " self=" + social.self_status.toFixed(2)
+        : "—");
+
+      // Curiosity
+      set("meta-curiosity", data.curiosity_informed ? "own discovery used" : "—");
+
+      // Health bar
+      const health = data.conversation_health || 100;
+      healthFill.style.width = health + "%";
+      healthPct.textContent = Math.round(health);
+      if (health > 70) {
+        healthFill.style.background = "#4a4";
+      } else if (health > 50) {
+        healthFill.style.background = "#aa4";
+      } else if (health > 30) {
+        healthFill.style.background = "#a84";
+      } else {
+        healthFill.style.background = "#a44";
+      }
+    }
+
+    submitBtn.onclick = async () => {
+      const stimulus = inputEl.value.trim();
+      if (!stimulus) {
+        outputEl.textContent = "Drop something in. A question, a thought, a vibe. Then hit Go.";
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Going...";
+      outputEl.textContent = "Running RILIE...";
+
+      try {
+        const res = await fetch("/v1/rilie", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stimulus, max_pass: 3 })
+        });
+
+        if (!res.ok) {
+          outputEl.textContent = "Error from RILIE API: " + res.status;
+          return;
+        }
+
+        const data = await res.json();
+        outputEl.textContent = data.result || "No result returned.";
+        updateMeta(data);
+      } catch (err) {
+        outputEl.textContent = "Request failed: " + err;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Learn from Go";
+      }
+    };
+
+    // Who is RILIE? — asks through normal discourse, not admin endpoint
+    selfBtn.onclick = async () => {
+      inputEl.value = "Who are you?";
+      submitBtn.click();
+    };
+
+    // Library — hits /v1/library
+    libraryBtn.onclick = async () => {
+      outputEl.textContent = "Checking library...";
+      try {
+        const res = await fetch("/v1/library");
+        if (!res.ok) {
+          outputEl.textContent = "Library endpoint not available (" + res.status + ")";
+          return;
+        }
+        const data = await res.json();
+        outputEl.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        outputEl.textContent = "Library check failed: " + err;
+      }
+    };
+
+    // Enter key submits
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        submitBtn.click();
+      }
+    });
+  </script>
+</body>
+</html>
