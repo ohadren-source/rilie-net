@@ -768,6 +768,10 @@
     const selfBtn = document.getElementById("rilie-self");
     const inputEl = document.getElementById("rilie-input");
     const outputEl = document.getElementById("rilie-output");
+    
+    console.log("submitBtn:", submitBtn);
+    console.log("inputEl:", inputEl);
+    console.log("outputEl:", outputEl);
     const metaPanel = document.getElementById("rilie-meta");
     const healthFill = document.getElementById("health-fill");
     const healthPct = document.getElementById("health-pct");
@@ -778,7 +782,6 @@
     const rewriteBtn = document.getElementById("rilie-rewrite");
     const fileInput = document.getElementById("rilie-files");
     const fileNames = document.getElementById("rilie-file-names");
-    const fileClear = document.getElementById("rilie-file-clear");
     let lastStimulus = "";
 
     /* ── File Upload Display ── */
@@ -792,12 +795,6 @@
         fileNames.textContent = "";
         fileClear.classList.remove("visible");
       }
-    });
-
-    fileClear.addEventListener("click", () => {
-      fileInput.value = "";
-      fileNames.textContent = "";
-      fileClear.classList.remove("visible");
     });
 
     function updateMeta(data) {
@@ -877,8 +874,10 @@
     }
 
     /* ── Submit with file upload ── */
-    submitBtn.onclick = async () => {
-      const stimulus = inputEl.value.trim();
+    if (submitBtn) {
+      submitBtn.onclick = async () => {
+        console.log("Button clicked!");
+        const stimulus = inputEl.value.trim();
       if (!stimulus) {
         outputEl.textContent = "Drop something in. A question, a thought, a vibe. Then hit Go.";
         return;
@@ -988,7 +987,10 @@
         submitBtn.disabled = false;
         submitBtn.textContent = "Learn from Go";
       }
-    };
+      };
+    } else {
+      console.error("submitBtn not found!");
+    }
 
     selfBtn.onclick = async () => { inputEl.value = "Who are you?"; submitBtn.click(); };
 
