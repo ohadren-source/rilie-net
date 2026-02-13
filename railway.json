@@ -1,7 +1,12 @@
 {
   "build": {
     "nixpacksPlan": {
-      "providers": ["python"]
+      "providers": ["python"],
+      "phases": {
+        "setup": {
+          "nixPkgs": ["postgresql"]
+        }
+      }
     }
   }
 }
