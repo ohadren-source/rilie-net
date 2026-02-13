@@ -1082,19 +1082,16 @@ class Guvna:
             pass  # Triangle not available — proceed without bouncer
 
         # -----------------------------------------------------------------
-        # 0.75: CONVERSATION MEMORY — primer, callbacks, energy, goodbye
-        # Replaces old _social_primer with full 9-behavior system.
+        # 0.75a: EARLY PRIMER/GOODBYE CHECK (before full processing)
+        # Just check if we should serve a primer or goodbye immediately
         # -----------------------------------------------------------------
-        memory_result = self.memory.process_turn(original_stimulus)
-
-        # If primer is active (asking name, greeting), serve that directly
-        if memory_result.get("is_primer"):
+        primer = self.memory.check_primer(original_stimulus)
+        if primer is not None:
             self.turn_count += 1
-            primer_text = memory_result["primer_text"]
             tone = detect_tone_from_stimulus(original_stimulus)
             return {
                 "stimulus": original_stimulus,
-                "result": primer_text,
+                "result": primer,
                 "quality_score": 0.5,
                 "priorities_met": 0,
                 "anti_beige_score": 0.5,
@@ -1105,14 +1102,13 @@ class Guvna:
                 "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "🔍")),
             }
 
-        # If goodbye detected, serve goodbye with highlights
-        if memory_result.get("is_goodbye"):
+        goodbye = self.memory.check_goodbye(original_stimulus)
+        if goodbye is not None:
             self.turn_count += 1
-            goodbye_text = memory_result["goodbye_text"]
             tone = "compassionate"
             return {
                 "stimulus": original_stimulus,
-                "result": goodbye_text,
+                "result": goodbye,
                 "quality_score": 0.8,
                 "priorities_met": 0,
                 "anti_beige_score": 0.7,
@@ -1125,11 +1121,11 @@ class Guvna:
 
         self.turn_count += 1
 
-        # Extract memory enrichments for the pipeline
-        memory_callback = memory_result.get("callback")
-        memory_energy = memory_result.get("energy_match")
-        memory_thread = memory_result.get("thread_pull")
-        memory_polaroid = memory_result.get("polaroid")
+        # Extract memory enrichments for the pipeline (to be populated after domains/quality/tone)
+        memory_callback = None
+        memory_energy = None
+        memory_thread = None
+        memory_polaroid = None
 
         # -----------------------------------------------------------------
         # 0.8: SOi DOMAIN MAP — find which domains this stimulus touches
@@ -1213,6 +1209,21 @@ class Guvna:
 
         # Update self-state with latest quality
         self.self_state.last_quality_score = quality
+
+        # -----------------------------------------------------------------
+        # 0.75b: NOW PROCESS THE FULL CONVERSATION MEMORY with domains/quality/tone
+        # -----------------------------------------------------------------
+        memory_result = self.memory.process_turn(
+            stimulus=original_stimulus,
+            domains_hit=soi_domain_names,
+            quality=quality,
+            tone=tone,
+            rilie_response=rilie_text,
+        )
+        memory_callback = memory_result.get("callback")
+        memory_energy = memory_result.get("energy_match")
+        memory_thread = memory_result.get("thread_pull")
+        memory_polaroid = memory_result.get("polaroid")
 
         # FIX #2: If Triangle flagged HOSTILE or status is SAFETYREDIRECT,
         # NEVER let the tone be amusing.  Hard override.
