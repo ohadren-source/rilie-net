@@ -97,8 +97,8 @@ CIVICS_STRATEGIC_SIGNALS = ["supreme court", "precedent", "strict scrutiny", "in
 # Reject signals (beige civics)
 CIVICS_REJECT_SIGNALS = ["taxes are theft", "government bad", "freedom", "tyranny"]  # Pure sloganeering
 
-# Integrate into RILIE DOMAINKNOWLEDGE
-DOMAINKNOWLEDGE["civics"] = CIVICS_KNOWLEDGE
+# Integrate into RILIE DOMAINKNOWLEDGE (commented out — DOMAINKNOWLEDGE not available at module load)
+# DOMAINKNOWLEDGE["civics"] = CIVICS_KNOWLEDGE
 
 if __name__ == "__main__":
     print("CIVICS DOMAIN LOADED")
