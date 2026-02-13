@@ -886,9 +886,10 @@ class Guvna:
         # Turn 3: one more soft beat if they're still casual
         if self.turn_count == 2 and is_greeting:
             text = "I'm here. Ready when you are."
+            self.turn_count += 1  # Increment to exit greeting mode
             return self._primer_response(stimulus, text)
 
-        # Turn 4+: full pipeline
+        # Turn 4+: full pipeline — exit greeting mode
         return None
 
     def _primer_response(self, stimulus: str, text: str) -> Dict[str, Any]:
