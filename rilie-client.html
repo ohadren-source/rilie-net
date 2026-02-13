@@ -378,10 +378,28 @@
       font-family: 'Outfit', Consolas, Menlo, monospace;
       font-size: 13px;
       line-height: 1.65;
-      white-space: pre-wrap;
       color: rgba(255,255,255,0.75);
       min-height: 60px;
+      max-height: 500px;
+      overflow-y: auto;
       box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .rilie-output::-webkit-scrollbar {
+      width: 6px;
+    }
+    .rilie-output::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .rilie-output::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+    }
+    .rilie-output::-webkit-scrollbar-thumb:hover {
+      background: rgba(255,255,255,0.2);
     }
 
     /* ── Code block cards inside Answer ── */
@@ -777,10 +795,15 @@
 
       submitBtn.disabled = true;
       submitBtn.textContent = "Going...";
-      outputEl.textContent = "Running RILIE...";
       outputActions.classList.remove("visible");
 
       try {
+        // Append user message to conversation flow
+        const userDiv = document.createElement("div");
+        userDiv.style.marginBottom = "16px";
+        userDiv.innerHTML = "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
+        outputEl.appendChild(userDiv);
+
         const files = fileInput.files;
         let res;
 
@@ -803,21 +826,69 @@
         }
 
         if (!res.ok) {
-          outputEl.textContent = "Error from RILIE API: " + res.status;
+          const errDiv = document.createElement("div");
+          errDiv.style.color = "#a55";
+          errDiv.innerHTML = "<strong>Error:</strong> " + res.status;
+          outputEl.appendChild(errDiv);
           return;
         }
 
         const data = await res.json();
+        const rilieLine = data.result || "No result returned.";
 
-        // Echo the human and then RILIE's answer in the Answer band
-        const userLine = "You: " + stimulus + "\n\n";
-        const rilieLine = "RILIE: " + (data.result || "No result returned.");
-        renderOutputWithCode(userLine + rilieLine);
+        // Create RILIE response container
+        const rilieDiv = document.createElement("div");
+        rilieDiv.style.marginBottom = "16px";
+        
+        // Parse and render with code blocks
+        const parts = rilieLine.split("```");
+        let html = "";
+        for (let i = 0; i < parts.length; i++) {
+          const chunk = parts[i];
+          if (i % 2 === 0) {
+            if (chunk.trim()) {
+              html += "<p><strong>RILIE:</strong> " + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
+            }
+          } else {
+            const lines = chunk.split("\n");
+            let codeLines = lines;
+            if (lines[0].trim().match(/^[a-zA-Z0-9_+-]+$/)) {
+              codeLines = lines.slice(1);
+            }
+            const codeHtml = escapeHtml(codeLines.join("\n"));
+            html += (
+              '<div class="rilie-code-block">' +
+                '<button class="rilie-code-copy">copy</button>' +
+                "<pre><code>" + codeHtml + "</code></pre>" +
+              "</div>"
+            );
+          }
+        }
+        rilieDiv.innerHTML = html;
+        outputEl.appendChild(rilieDiv);
+
+        // Attach copy button handlers
+        rilieDiv.querySelectorAll(".rilie-code-copy").forEach((btn) => {
+          btn.onclick = async () => {
+            const code = btn.parentElement.querySelector("pre").innerText;
+            try {
+              await navigator.clipboard.writeText(code);
+              btn.textContent = "copied";
+              setTimeout(() => { btn.textContent = "copy"; }, 1200);
+            } catch (e) {}
+          };
+        });
+
+        // Scroll to bottom
+        outputEl.scrollTop = outputEl.scrollHeight;
 
         updateMeta(data);
         outputActions.classList.add("visible");
       } catch (err) {
-        outputEl.textContent = "Request failed: " + err;
+        const errDiv = document.createElement("div");
+        errDiv.style.color = "#a55";
+        errDiv.innerHTML = "<strong>Request failed:</strong> " + err;
+        outputEl.appendChild(errDiv);
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = "Learn from Go";
