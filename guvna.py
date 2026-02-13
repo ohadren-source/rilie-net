@@ -1119,6 +1119,7 @@ class Guvna:
                 "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "🔍")),
             }
 
+        # If we get here, increment turn_count for normal processing
         self.turn_count += 1
 
         # Extract memory enrichments for the pipeline (to be populated after domains/quality/tone)
