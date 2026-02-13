@@ -1087,6 +1087,7 @@ class Guvna:
         # -----------------------------------------------------------------
         primer = self.memory.check_primer(original_stimulus)
         if primer is not None:
+            self.memory.turn_count += 1
             self.turn_count += 1
             tone = detect_tone_from_stimulus(original_stimulus)
             return {
@@ -1104,6 +1105,7 @@ class Guvna:
 
         goodbye = self.memory.check_goodbye(original_stimulus)
         if goodbye is not None:
+            self.memory.turn_count += 1
             self.turn_count += 1
             tone = "compassionate"
             return {
@@ -1120,6 +1122,7 @@ class Guvna:
             }
 
         # If we get here, increment turn_count for normal processing
+        self.memory.turn_count += 1
         self.turn_count += 1
 
         # Extract memory enrichments for the pipeline (to be populated after domains/quality/tone)
