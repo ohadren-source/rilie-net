@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <title>RILIE (3,6,9)</title>
-  <link rel="icon" type="image/png" href="/static/3Dent.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="/static/3Dent.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/3Dent.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/3Dent.png" />
+  <link rel="apple-touch-icon" href="/static/3Dent.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -17,9 +21,88 @@
       color: #e8e8e8;
       font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       display: flex;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Sidebar ── */
+    .rilie-sidebar {
+      width: 56px;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #0c0c10 0%, #08080c 100%);
+      border-right: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+      gap: 6px;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      width: 30px;
+      height: 30px;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 1px 6px rgba(255,255,255,0.06));
+    }
+
+    .sidebar-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
       align-items: center;
       justify-content: center;
-      -webkit-font-smoothing: antialiased;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .sidebar-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: rgba(255,255,255,0.3);
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke 0.2s ease;
+    }
+    .sidebar-btn:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    .sidebar-btn:hover svg {
+      stroke: rgba(255,255,255,0.6);
+    }
+    .sidebar-btn.active {
+      background: rgba(255,255,255,0.07);
+    }
+    .sidebar-btn.active svg {
+      stroke: rgba(255,255,255,0.7);
+    }
+
+    .sidebar-label {
+      font-size: 8px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 0.04em;
+      text-align: center;
+      margin-top: -2px;
+      font-weight: 500;
+    }
+
+    .sidebar-spacer { flex: 1; }
+
+    /* ── Main Content ── */
+    .rilie-main {
+      flex: 1;
+      margin-left: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
 
     .rilie-shell {
@@ -88,8 +171,86 @@
     }
     .rilie-textarea::placeholder { color: rgba(255,255,255,0.22); }
 
-    .rilie-file { margin-bottom: 18px; font-size: 12px; }
-    .rilie-file input[type="file"] { margin-top: 4px; font-size: 11px; color: rgba(255,255,255,0.4); }
+    /* ── Custom File Upload ── */
+    .rilie-file { margin-bottom: 18px; }
+    .rilie-file input[type="file"] { display: none; }
+
+    .rilie-file-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .rilie-file-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      color: rgba(255,255,255,0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 7px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.04) 52%, rgba(0,0,0,0.08) 100%),
+        linear-gradient(180deg, #1a1a1e 0%, #111114 100%);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .rilie-file-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+      border-radius: 6px 6px 0 0;
+      pointer-events: none;
+    }
+    .rilie-file-btn:hover {
+      color: rgba(255,255,255,0.8);
+      border-color: rgba(255,255,255,0.14);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 48%, rgba(0,0,0,0.02) 52%, rgba(0,0,0,0.06) 100%),
+        linear-gradient(180deg, #222226 0%, #161618 100%);
+    }
+    .rilie-file-btn svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .rilie-file-names {
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      font-style: italic;
+      max-width: 400px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rilie-file-clear {
+      font-size: 10px;
+      color: rgba(255,255,255,0.25);
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: inherit;
+      transition: color 0.2s ease;
+      display: none;
+    }
+    .rilie-file-clear:hover { color: rgba(255,255,255,0.5); }
+    .rilie-file-clear.visible { display: inline; }
 
     .rilie-btn-wrap {
       display: flex;
@@ -229,6 +390,7 @@
       box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
     }
 
+    /* ── Output Action Bar (share, download, copy, rewrite) ── */
     .rilie-output-actions {
       display: none;
       align-items: center;
@@ -334,90 +496,170 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .rilie-shell { animation: fadeUp 0.6s ease-out; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .rilie-sidebar { width: 0; overflow: hidden; border: none; }
+      .rilie-main { margin-left: 0; }
+      .rilie-shell { padding: 24px 16px; }
+    }
   </style>
 </head>
 <body>
-  <div class="rilie-shell">
-    <img src="/static/3Dent.png" alt="RILIE logo" class="rilie-logo" />
-    <div class="rilie-title">RILIE (3,6,9)</div>
-    <div class="rilie-subtitle">Real Intelligence, RI. Really? Play Around and Find Out :)</div>
 
-    <label class="rilie-label" for="rilie-input">Discourse</label>
-    <textarea id="rilie-input" class="rilie-textarea" placeholder="What's on your mind?"></textarea>
+  <!-- ── Sidebar ── -->
+  <nav class="rilie-sidebar">
+    <img src="/static/3Dent.png" alt="R" class="sidebar-logo" />
 
-    <div class="rilie-file">
-      <label class="rilie-label" for="rilie-files">Attach context (not wired yet)</label><br />
-      <input id="rilie-files" type="file" multiple />
-    </div>
+    <button class="sidebar-btn" id="sidebar-new" title="New Conversation">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <span class="sidebar-label">New</span>
 
-    <div class="rilie-btn-wrap">
-      <button class="rilie-button" id="rilie-submit">Learn from Go</button>
-      <span class="rilie-lfg">LFG</span>
-      <button class="rilie-button-sm" id="rilie-self">Who is RILIE?</button>
-      <button class="rilie-button-sm" id="rilie-library">Library</button>
-    </div>
+    <button class="sidebar-btn" id="sidebar-history" title="History">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </button>
+    <span class="sidebar-label">History</span>
 
-    <div class="rilie-output-label">Answer</div>
-    <div class="rilie-output-tagline">No Spoon Feed, just a Fork.</div>
-    <div class="rilie-output-wrap">
-      <div id="rilie-output" class="rilie-output"></div>
-      <div id="rilie-output-actions" class="rilie-output-actions">
-        <button class="rilie-action-btn" id="rilie-retry" title="Retry">
-          <svg viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-        </button>
-        <button class="rilie-action-btn" id="rilie-edit" title="Edit input">
-          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
-        <button class="rilie-action-btn" id="rilie-copy" title="Copy response">
-          <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        </button>
+    <button class="sidebar-btn active" id="sidebar-discover" title="Discover">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    </button>
+    <span class="sidebar-label">Discover</span>
+
+    <button class="sidebar-btn" id="sidebar-spaces" title="Spaces">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </button>
+    <span class="sidebar-label">Spaces</span>
+
+    <div class="sidebar-spacer"></div>
+
+    <button class="sidebar-btn" id="sidebar-finance" title="Finance">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </button>
+    <span class="sidebar-label">Finance</span>
+  </nav>
+
+  <!-- ── Main ── -->
+  <div class="rilie-main">
+    <div class="rilie-shell">
+      <img src="/static/3Dent.png" alt="RILIE logo" class="rilie-logo" />
+      <div class="rilie-title">RILIE (3,6,9)</div>
+      <div class="rilie-subtitle">Real Intelligence, RI. Really? Play Around and Find Out :)</div>
+
+      <label class="rilie-label" for="rilie-input">Discourse</label>
+      <textarea id="rilie-input" class="rilie-textarea" placeholder="What's on your mind?"></textarea>
+
+      <!-- Custom file upload — no more ugly Choose Files -->
+      <div class="rilie-file">
+        <label class="rilie-label">Attach Context</label>
+        <div class="rilie-file-row">
+          <label for="rilie-files" class="rilie-file-btn">
+            <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            Attach Files
+          </label>
+          <input id="rilie-files" type="file" multiple />
+          <span id="rilie-file-names" class="rilie-file-names"></span>
+          <button id="rilie-file-clear" class="rilie-file-clear">&times; clear</button>
+        </div>
       </div>
-    </div>
 
-    <div id="rilie-meta" class="rilie-meta">
-      <div class="rilie-meta-row"><span class="rilie-meta-key">status</span><span class="rilie-meta-val" id="meta-status">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">quality</span><span class="rilie-meta-val" id="meta-quality">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">priorities</span><span class="rilie-meta-val" id="meta-priorities">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">anti-beige</span><span class="rilie-meta-val" id="meta-beige">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">depth / pass</span><span class="rilie-meta-val" id="meta-depth">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">tone</span><span class="rilie-meta-val" id="meta-tone">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">domains</span><span class="rilie-meta-val" id="meta-domains">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">wit</span><span class="rilie-meta-val" id="meta-wit">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">language</span><span class="rilie-meta-val" id="meta-language">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">social</span><span class="rilie-meta-val" id="meta-social">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">curiosity</span><span class="rilie-meta-val" id="meta-curiosity">—</span></div>
-      <div class="rilie-meta-row"><span class="rilie-meta-key">triangle</span><span class="rilie-meta-val" id="meta-triangle">—</span></div>
-    </div>
-
-    <div class="rilie-health-bar">
-      <span>conversation health</span>
-      <div class="rilie-health-track">
-        <div class="rilie-health-fill" id="health-fill" style="width: 100%"></div>
+      <div class="rilie-btn-wrap">
+        <button class="rilie-button" id="rilie-submit">Learn from Go</button>
+        <span class="rilie-lfg">LFG</span>
+        <button class="rilie-button-sm" id="rilie-self">Who is RILIE?</button>
       </div>
-      <span id="health-pct">100</span>
-    </div>
 
-    <div class="rilie-footer">
-      Inspired by those who gave without expecting anything in return (3),
-      we're grateful (6)—and that's enough for us to do good work. (9)<br />
-      Runs on RILIE Sauce · 3.6.NIFE LLC · Ri: Real Intelligence 📱
+      <div class="rilie-output-label">Answer</div>
+      <div class="rilie-output-tagline">No Spoon Feed, just a Fork.</div>
+      <div class="rilie-output-wrap">
+        <div id="rilie-output" class="rilie-output"></div>
+        <div id="rilie-output-actions" class="rilie-output-actions">
+          <!-- Share -->
+          <button class="rilie-action-btn" id="rilie-share" title="Share">
+            <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
+          <!-- Download -->
+          <button class="rilie-action-btn" id="rilie-download" title="Download">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <!-- Copy -->
+          <button class="rilie-action-btn" id="rilie-copy" title="Copy">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <!-- Rewrite -->
+          <button class="rilie-action-btn" id="rilie-rewrite" title="Rewrite">
+            <svg viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="rilie-meta" class="rilie-meta">
+        <div class="rilie-meta-row"><span class="rilie-meta-key">status</span><span class="rilie-meta-val" id="meta-status">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">quality</span><span class="rilie-meta-val" id="meta-quality">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">priorities</span><span class="rilie-meta-val" id="meta-priorities">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">anti-beige</span><span class="rilie-meta-val" id="meta-beige">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">depth / pass</span><span class="rilie-meta-val" id="meta-depth">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">tone</span><span class="rilie-meta-val" id="meta-tone">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">domains</span><span class="rilie-meta-val" id="meta-domains">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">wit</span><span class="rilie-meta-val" id="meta-wit">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">language</span><span class="rilie-meta-val" id="meta-language">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">social</span><span class="rilie-meta-val" id="meta-social">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">curiosity</span><span class="rilie-meta-val" id="meta-curiosity">—</span></div>
+        <div class="rilie-meta-row"><span class="rilie-meta-key">triangle</span><span class="rilie-meta-val" id="meta-triangle">—</span></div>
+      </div>
+
+      <div class="rilie-health-bar">
+        <span>conversation health</span>
+        <div class="rilie-health-track">
+          <div class="rilie-health-fill" id="health-fill" style="width: 100%"></div>
+        </div>
+        <span id="health-pct">100</span>
+      </div>
+
+      <div class="rilie-footer">
+        Inspired by those who gave without expecting anything in return (3),
+        we're grateful (6)—and that's enough for us to do good work. (9)<br />
+        Runs on RILIE Sauce · 3.6.NIFE LLC · Ri: Real Intelligence 📱
+      </div>
     </div>
   </div>
 
   <script>
     const submitBtn = document.getElementById("rilie-submit");
     const selfBtn = document.getElementById("rilie-self");
-    const libraryBtn = document.getElementById("rilie-library");
     const inputEl = document.getElementById("rilie-input");
     const outputEl = document.getElementById("rilie-output");
     const metaPanel = document.getElementById("rilie-meta");
     const healthFill = document.getElementById("health-fill");
     const healthPct = document.getElementById("health-pct");
     const outputActions = document.getElementById("rilie-output-actions");
-    const retryBtn = document.getElementById("rilie-retry");
-    const editBtn = document.getElementById("rilie-edit");
+    const shareBtn = document.getElementById("rilie-share");
+    const downloadBtn = document.getElementById("rilie-download");
     const copyBtn = document.getElementById("rilie-copy");
+    const rewriteBtn = document.getElementById("rilie-rewrite");
+    const fileInput = document.getElementById("rilie-files");
+    const fileNames = document.getElementById("rilie-file-names");
+    const fileClear = document.getElementById("rilie-file-clear");
     let lastStimulus = "";
+
+    /* ── File Upload Display ── */
+    fileInput.addEventListener("change", () => {
+      const files = fileInput.files;
+      if (files.length > 0) {
+        const names = Array.from(files).map(f => f.name).join(", ");
+        fileNames.textContent = files.length === 1 ? names : files.length + " files: " + names;
+        fileClear.classList.add("visible");
+      } else {
+        fileNames.textContent = "";
+        fileClear.classList.remove("visible");
+      }
+    });
+
+    fileClear.addEventListener("click", () => {
+      fileInput.value = "";
+      fileNames.textContent = "";
+      fileClear.classList.remove("visible");
+    });
 
     function updateMeta(data) {
       metaPanel.classList.add("visible");
@@ -448,6 +690,7 @@
       else healthFill.style.background = "linear-gradient(90deg, #a55, #b66)";
     }
 
+    /* ── Submit with file upload ── */
     submitBtn.onclick = async () => {
       const stimulus = inputEl.value.trim();
       if (!stimulus) { outputEl.textContent = "Drop something in. A question, a thought, a vibe. Then hit Go."; return; }
@@ -456,8 +699,29 @@
       outputEl.textContent = "Running RILIE...";
       outputActions.classList.remove("visible");
       lastStimulus = stimulus;
+
       try {
-        const res = await fetch("/v1/rilie", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stimulus, max_pass: 3 }) });
+        const files = fileInput.files;
+        let res;
+
+        if (files && files.length > 0) {
+          // Send as FormData with files
+          const formData = new FormData();
+          formData.append("stimulus", stimulus);
+          formData.append("max_pass", "3");
+          for (let i = 0; i < files.length; i++) {
+            formData.append("files", files[i]);
+          }
+          res = await fetch("/v1/rilie", { method: "POST", body: formData });
+        } else {
+          // Send as JSON (no files)
+          res = await fetch("/v1/rilie", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stimulus, max_pass: 3 })
+          });
+        }
+
         if (!res.ok) { outputEl.textContent = "Error from RILIE API: " + res.status; return; }
         const data = await res.json();
         outputEl.textContent = data.result || "No result returned.";
@@ -468,21 +732,95 @@
     };
 
     selfBtn.onclick = async () => { inputEl.value = "Who are you?"; submitBtn.click(); };
-    libraryBtn.onclick = async () => {
-      outputEl.textContent = "Checking library...";
-      try { const res = await fetch("/v1/library"); if (!res.ok) { outputEl.textContent = "Library endpoint not available (" + res.status + ")"; return; } const data = await res.json(); outputEl.textContent = JSON.stringify(data, null, 2); }
-      catch (err) { outputEl.textContent = "Library check failed: " + err; }
+
+    /* ── Output Actions ── */
+    // Share — copy URL + response snippet
+    shareBtn.onclick = async () => {
+      const text = outputEl.textContent;
+      const shareData = { title: "RILIE (3,6,9)", text: text.substring(0, 200) + (text.length > 200 ? "..." : ""), url: window.location.href };
+      if (navigator.share) {
+        try { await navigator.share(shareData); } catch (e) { /* user cancelled */ }
+      } else {
+        try { await navigator.clipboard.writeText(window.location.href + "\n\n" + text); shareBtn.classList.add("copied"); setTimeout(() => shareBtn.classList.remove("copied"), 1500); }
+        catch (e) {}
+      }
     };
-    retryBtn.onclick = () => { if (lastStimulus) { inputEl.value = lastStimulus; submitBtn.click(); } };
-    editBtn.onclick = () => { if (lastStimulus) inputEl.value = lastStimulus; inputEl.focus(); inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); };
+
+    // Download — save response as .txt
+    downloadBtn.onclick = () => {
+      const text = outputEl.textContent;
+      if (!text) return;
+      const blob = new Blob([text], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "rilie-response.txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    // Copy
     copyBtn.onclick = async () => {
       const text = outputEl.textContent;
       if (text) {
-        try { await navigator.clipboard.writeText(text); copyBtn.classList.add("copied"); const o = copyBtn.innerHTML; copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'; setTimeout(() => { copyBtn.classList.remove("copied"); copyBtn.innerHTML = o; }, 1500); }
-        catch (err) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); }
+        try {
+          await navigator.clipboard.writeText(text);
+          copyBtn.classList.add("copied");
+          const o = copyBtn.innerHTML;
+          copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+          setTimeout(() => { copyBtn.classList.remove("copied"); copyBtn.innerHTML = o; }, 1500);
+        } catch (err) {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        }
       }
     };
+
+    // Rewrite — re-submit last stimulus
+    rewriteBtn.onclick = () => { if (lastStimulus) { inputEl.value = lastStimulus; submitBtn.click(); } };
+
+    // Enter to submit
     inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitBtn.click(); } });
+
+    /* ── Sidebar Actions ── */
+    document.getElementById("sidebar-new").onclick = () => {
+      inputEl.value = "";
+      outputEl.textContent = "";
+      metaPanel.classList.remove("visible");
+      outputActions.classList.remove("visible");
+      healthFill.style.width = "100%";
+      healthPct.textContent = "100";
+      fileInput.value = "";
+      fileNames.textContent = "";
+      fileClear.classList.remove("visible");
+      lastStimulus = "";
+      inputEl.focus();
+    };
+
+    document.getElementById("sidebar-history").onclick = () => {
+      outputEl.textContent = "History — coming soon. Every conversation remembered.";
+      outputActions.classList.remove("visible");
+    };
+
+    document.getElementById("sidebar-discover").onclick = () => {
+      inputEl.focus();
+    };
+
+    document.getElementById("sidebar-spaces").onclick = () => {
+      outputEl.textContent = "Spaces — coming soon. Collaborative rooms with shared context.";
+      outputActions.classList.remove("visible");
+    };
+
+    document.getElementById("sidebar-finance").onclick = () => {
+      outputEl.textContent = "Finance — coming soon. Real intelligence meets real numbers.";
+      outputActions.classList.remove("visible");
+    };
   </script>
 </body>
 </html>
