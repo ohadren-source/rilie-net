@@ -157,35 +157,8 @@ def detect_wit(text: str) -> WitState:
 def wilden_swift(base_reply: str, wit: WitState,
                  social: Optional[SocialState] = None,
                  language: Optional['LanguageMode'] = None) -> str:
-    """
-    Tone modulation layer. Named for Oscar Wilde + Taylor Swift â€”
-    wit meets emotional intelligence. Adjusts RILIE's output tone
-    based on what she detected in the input.
-    """
-    r = base_reply
-
-    if wit.wordplay:
-        r += " If that was a bit of wordplay, I'm here for it."
-
-    if wit.absurdity:
-        r += (" It sounds intentionally a little absurd, so I'll lean"
-              " into the joke while still answering straight.")
-
-    if wit.mockery:
-        r += " I'll take that as friendly mockery and not get defensive."
-
-    if wit.persuasion:
-        r += (" I'll still check the logic rather than just agreeing"
-              " because it sounds convincing.")
-
-    # If language mode detected figurative speech, acknowledge it
-    if language and language.figurative and not language.literal:
-        if language.simile:
-            r += " (I caught the comparison â€” let me work with it.)"
-        elif language.metaphor:
-            r += " (Reading that as metaphor, not literal.)"
-
-    return r
+    """Tone modulation. She does the thing, doesn't narrate it."""
+    return base_reply
 
 
 # ============================================================================
@@ -787,10 +760,9 @@ class Guvna:
         elif any(w in s for w in ["you failed", "you missed", "you can't",
                                   "you don't", "you didn't", "wrong"]):
             result_text = (
-                f"Fair. I scored that last one at about {ss.last_quality_score:.2f} "
-                "myself. If I missed something, that's on me â€” not you. "
-                "Point me closer."
-            )
+            "Fair point. If I missed something, that's on me, not you. "
+            "Point me closer and I'll do better."
+        )
 
         elif any(w in s for w in ["do you feel", "are you happy", "do you care",
                                   "are you conscious", "do you have feelings"]):
@@ -1236,28 +1208,16 @@ class Guvna:
             if tone == "amusing":
                 tone = "compassionate"
 
-        # -----------------------------------------------------------------
+        # -----------------------------------------------------------------        # -----------------------------------------------------------------
         # 9: DECIDE WHICH PILLAR TO SERVE
         # -----------------------------------------------------------------
         chosen = rilie_text
         baseline_used_as_result = False
+        if not chosen or not chosen.strip():
+            chosen = ("I don't have a strong take on that yet. "
+                     "Can you give me more to work with?")
 
-        if baseline_text:
-            # If RILIE is essentially a fallback / low-confidence, let the
-            # baseline win as the primary text.
-            if status in {"MISE_EN_PLACE", "GUESS"} or quality < 0.25:
-                chosen = baseline_text
-                baseline_used_as_result = True
 
-            # If RILIE defaulted to DISCOURSE (asking for more) but she has
-            # search results, she should USE them â€” form an opinion, don't
-            # punt. Google it and make a call, like a real person would.
-            elif status == "DISCOURSE" and len(baseline_text) > 50:
-                chosen = baseline_text
-                baseline_used_as_result = True
-                status = "RESEARCHED"
-
-        # -----------------------------------------------------------------
         # 10: WILDEN SWIFT â€” tone modulation
         # Only apply if not a safety redirect or self-reflection
         # -----------------------------------------------------------------

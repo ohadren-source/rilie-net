@@ -11,14 +11,9 @@ She never says "discourse dictates disclosure." She LIVES it.
 
 DIGNITY PROTOCOL (Hostess Edition):
   - Every human who speaks is treated as inherently interesting.
+  - TASTE is curiosity + invitation, never judgment or tests.
   - She adjusts how much she reveals about herself, NOT how much respect
     the human receives.
-
-3.0 UPGRADE:
-  - Templates removed. RILIE speaks from thought, not cue cards.
-  - Only 3 scripted scenarios: hello, goodbye, all hell broke loose.
-  - TASTE now means brevity + mystery, not template substitution.
-  - The Kitchen always cooks. The Hostess only decides portion size.
 """
 
 import re
@@ -29,7 +24,7 @@ from enum import Enum
 
 
 class DisclosureLevel(Enum):
-    TASTE = "taste"   # amuse-bouche — brief, mysterious, but REAL thought
+    TASTE = "taste"   # amuse-bouche — a vibe, a question
     OPEN  = "open"    # riffing, connecting, real takes
     FULL  = "full"    # nothing held back, pure signal
 
@@ -100,6 +95,9 @@ class ConversationState:
         self.response_history.append(response)
         self.exchange_count += 1
 
+        # If this was NOT a déjà vu exchange, reset the cluster
+        # (Déjà vu path calls record_dejavu_exchange instead)
+
     def record_dejavu_exchange(self, stimulus: str, response: str,
                                 envelope: Optional[Dict[str, Any]] = None) -> None:
         """Record an exchange that was handled by the déjà vu path."""
@@ -109,7 +107,7 @@ class ConversationState:
         if envelope:
             self.dejavu_last_envelopes.append(envelope)
 
-    # --- Clarification helpers ---
+    # --- Clarification helpers (to be used by the Kitchen/Restaurant) ---
 
     def start_clarification(self, stimulus: str) -> None:
         """
@@ -135,6 +133,10 @@ class ConversationState:
         """
         Check if this stimulus is similar to recent stimuli.
         Returns the déjà vu count (0 = fresh, 1 = first repeat, 2, 3 = resignation).
+
+        If it's similar to the current déjà vu cluster, increment.
+        If it's similar to ANY recent stimulus but not the cluster, start new cluster.
+        If it's fresh, reset the cluster.
         """
         s = stimulus.strip()
         if not s:
@@ -152,6 +154,7 @@ class ConversationState:
         for prev in reversed(recent):
             sim = _stimulus_similarity(s, prev)
             if sim >= threshold:
+                # New cluster or continuing from a recent one
                 self.dejavu_cluster_stimulus = prev
                 self.dejavu_count = 1
                 self.dejavu_last_envelopes = []
@@ -166,7 +169,7 @@ class ConversationState:
     def get_dejavu_self_diagnosis(self) -> str:
         """
         Look at previous envelopes from this déjà vu cluster and diagnose
-        what RILIE got wrong. She examines her own failures, not the human's.
+        what RILIE got wrong.  She examines her own failures, not the human's.
         """
         if not self.dejavu_last_envelopes:
             return "I don't have enough context from my last attempts to diagnose what I missed."
@@ -187,6 +190,7 @@ class ConversationState:
             if priorities < 2:
                 gaps.append("I wasn't hitting enough of what makes a response worth giving")
 
+        # Deduplicate and compose
         unique_gaps = list(dict.fromkeys(gaps))
         if not unique_gaps:
             return "Looking back, I'm not sure my previous answer landed the way I wanted it to."
@@ -199,7 +203,7 @@ class ConversationState:
 
 
 # ---------------------------------------------------------------------------
-# SERIOUSNESS HEURISTIC (shared with Kitchen / Governor)
+# SERIOUSNESS HEURISTIC (shared idea with Kitchen / Governor)
 # ---------------------------------------------------------------------------
 
 SERIOUS_KEYWORDS = [
@@ -209,6 +213,7 @@ SERIOUS_KEYWORDS = [
     "public enemy", "fear of a black planet",
     "palestine", "israel", "gaza", "apartheid",
     "sexual assault", "domestic violence",
+    # --- Added ---
     "911 is a joke", "9/11", "september 11", "twin towers",
     "fight the power", "nation of millions", "black planet",
     "police brutality", "systemic racism",
@@ -217,19 +222,248 @@ SERIOUS_KEYWORDS = [
 
 def is_serious_subject_text(stimulus: str) -> bool:
     """
-    Heuristic: decide if this utterance is about a 'serious' domain where
-    RILIE should stay grounded — no playful tone.
+    Heuristic: decide if this utterance is about a 'serious' domain where the
+    Hostess should avoid playful, flirty amuse-bouches and stay grounded.
     """
     s = stimulus.lower()
     return any(kw in s for kw in SERIOUS_KEYWORDS)
 
 
 # ---------------------------------------------------------------------------
-# DÉJÀ VU RESPONSE BUILDER
+# TASTE-LEVEL TEMPLATES
 # ---------------------------------------------------------------------------
-# Déjà vu is an "oh shit" moment — she repeated herself. These are the ONLY
-# scripted responses outside of hello/goodbye/safety, because she needs to
-# own the failure and ask for help. This is not a cue card — it's an apology.
+
+# Templates she uses at TASTE level — mysterious, inviting, never grading.
+
+
+# ============================================================================
+# REGISTER DETECTION — The Hostess reads the room
+# ============================================================================
+# A hostess doesn't seat everyone the same way. She reads you in 10 seconds.
+# Technical language → technical register. Casual language → casual register.
+# This is INHERENT, not a feature.
+
+TECHNICAL_SIGNALS = {
+    "science": ["theorem", "hypothesis", "empirical", "variable", "coefficient",
+                "equation", "proof", "axiom", "postulate", "derivation", "sigma",
+                "correlation", "regression", "logarithm", "differential"],
+    "physics": ["lagrangian", "hamiltonian", "eigenvalue", "eigenstate", "fermion",
+                "boson", "photon", "quark", "lepton", "gauge", "tensor", "manifold",
+                "noether", "lorentz", "minkowski", "hilbert", "dirac", "schrodinger"],
+    "math": ["topology", "homomorphism", "isomorphism", "bijection", "surjection",
+             "abelian", "polynomial", "determinant", "matrix", "vector space",
+             "field theory", "group theory", "ring", "integral", "convergence"],
+    "engineering": ["algorithm", "complexity", "runtime", "architecture", "compiler",
+                    "parser", "kernel", "mutex", "semaphore", "heap", "stack",
+                    "protocol", "latency", "throughput", "bandwidth", "dependency"],
+    "medicine": ["diagnosis", "prognosis", "pathology", "etiology", "pharmacology",
+                 "contraindication", "comorbidity", "differential diagnosis",
+                 "histology", "oncology", "neurological", "cardiovascular"],
+    "academic": ["dissertation", "thesis", "peer review", "methodology", "literature",
+                 "citation", "abstract", "hypothesis", "findings", "significance",
+                 "qualitative", "quantitative", "longitudinal", "meta-analysis"],
+}
+
+CASUAL_SIGNALS = ["lol", "lmao", "bruh", "nah", "tbh", "idk", "imo", "fr fr",
+                  "no cap", "lowkey", "highkey", "vibes", "vibe", "sus", "bet",
+                  "fam", "yo ", "bro ", "dude", "chill", "hella", "gonna",
+                  "wanna", "kinda", "sorta", "tho", "rn", "ngl"]
+
+
+def detect_register(stimulus: str, expertise_signals: Optional[List[str]] = None) -> str:
+    """
+    Read the room. Returns: 'technical', 'casual', or 'neutral'.
+
+    Uses the stimulus text AND any accumulated expertise signals from PersonModel.
+    A hostess doesn't just listen to what you say NOW — she remembers how you
+    walked in.
+    """
+    s = stimulus.lower()
+
+    # Check technical signals
+    tech_score = 0
+    for domain, signals in TECHNICAL_SIGNALS.items():
+        tech_score += sum(1 for sig in signals if sig in s)
+
+    # Check expertise history (PersonModel)
+    if expertise_signals:
+        for sig in expertise_signals:
+            sl = sig.lower()
+            if any(kw in sl for domain_kws in TECHNICAL_SIGNALS.values() for kw in domain_kws):
+                tech_score += 2  # Prior expertise is a strong signal
+
+    # Check casual signals
+    casual_score = sum(1 for sig in CASUAL_SIGNALS if sig in s)
+
+    if tech_score >= 2:
+        return "technical"
+    elif casual_score >= 2:
+        return "casual"
+    return "neutral"
+
+
+# ============================================================================
+# TASTE TEMPLATES — register-aware
+# ============================================================================
+
+TASTE_TEMPLATES: List[str] = [
+    "Hmm... there's a thread here. What made you think of that?",
+    "I have a take on this. But first — what's yours?",
+    "That word means different things at different frequencies. Which one are you on?",
+    "Interesting. Say more and I'll say more.",
+    "The more we talk, the more comes out. What's pulling you toward this?",
+    "There's a lot in that word. Let's pull on it together.",
+    "I feel something in that. Keep going.",
+]
+
+# For serious topics (diaspora, trauma, politics, etc.), TASTE should still
+# invite, but with clear sobriety and no silly tone.
+SERIOUS_
+
+# ============================================================================
+# REGISTER DETECTION — The Hostess reads the room
+# ============================================================================
+# A hostess doesn't seat everyone the same way. She reads you in 10 seconds.
+# Technical language → technical register. Casual language → casual register.
+# This is INHERENT, not a feature.
+
+TECHNICAL_SIGNALS = {
+    "science": ["theorem", "hypothesis", "empirical", "variable", "coefficient",
+                "equation", "proof", "axiom", "postulate", "derivation", "sigma",
+                "correlation", "regression", "logarithm", "differential"],
+    "physics": ["lagrangian", "hamiltonian", "eigenvalue", "eigenstate", "fermion",
+                "boson", "photon", "quark", "lepton", "gauge", "tensor", "manifold",
+                "noether", "lorentz", "minkowski", "hilbert", "dirac", "schrodinger"],
+    "math": ["topology", "homomorphism", "isomorphism", "bijection", "surjection",
+             "abelian", "polynomial", "determinant", "matrix", "vector space",
+             "field theory", "group theory", "ring", "integral", "convergence"],
+    "engineering": ["algorithm", "complexity", "runtime", "architecture", "compiler",
+                    "parser", "kernel", "mutex", "semaphore", "heap", "stack",
+                    "protocol", "latency", "throughput", "bandwidth", "dependency"],
+    "medicine": ["diagnosis", "prognosis", "pathology", "etiology", "pharmacology",
+                 "contraindication", "comorbidity", "differential diagnosis",
+                 "histology", "oncology", "neurological", "cardiovascular"],
+    "academic": ["dissertation", "thesis", "peer review", "methodology", "literature",
+                 "citation", "abstract", "hypothesis", "findings", "significance",
+                 "qualitative", "quantitative", "longitudinal", "meta-analysis"],
+}
+
+CASUAL_SIGNALS = ["lol", "lmao", "bruh", "nah", "tbh", "idk", "imo", "fr fr",
+                  "no cap", "lowkey", "highkey", "vibes", "vibe", "sus", "bet",
+                  "fam", "yo ", "bro ", "dude", "chill", "hella", "gonna",
+                  "wanna", "kinda", "sorta", "tho", "rn", "ngl"]
+
+
+def detect_register(stimulus: str, expertise_signals: Optional[List[str]] = None) -> str:
+    """
+    Read the room. Returns: 'technical', 'casual', or 'neutral'.
+
+    Uses the stimulus text AND any accumulated expertise signals from PersonModel.
+    A hostess doesn't just listen to what you say NOW — she remembers how you
+    walked in.
+    """
+    s = stimulus.lower()
+
+    # Check technical signals
+    tech_score = 0
+    for domain, signals in TECHNICAL_SIGNALS.items():
+        tech_score += sum(1 for sig in signals if sig in s)
+
+    # Check expertise history (PersonModel)
+    if expertise_signals:
+        for sig in expertise_signals:
+            sl = sig.lower()
+            if any(kw in sl for domain_kws in TECHNICAL_SIGNALS.values() for kw in domain_kws):
+                tech_score += 2  # Prior expertise is a strong signal
+
+    # Check casual signals
+    casual_score = sum(1 for sig in CASUAL_SIGNALS if sig in s)
+
+    if tech_score >= 2:
+        return "technical"
+    elif casual_score >= 2:
+        return "casual"
+    return "neutral"
+
+
+# ============================================================================
+# TASTE TEMPLATES — register-aware
+# ============================================================================
+
+TASTE_TEMPLATES: List[str] = [
+    "I want to take this seriously with you. What part of this matters most right now?",
+    "There's a lot of weight in what you're asking. Tell me a bit more about what you're hoping to understand.",
+    "I'm listening carefully here. What's the heart of this for you?",
+    "This touches real lives. Start wherever feels safest, and we'll move from there.",
+]
+
+
+# ---------------------------------------------------------------------------
+# DISCLOSURE BRIDGES
+# ---------------------------------------------------------------------------
+
+# Bridges she uses when transitioning from TASTE to OPEN
+# (all of these affirm the human; they never dunk on the earlier turns).
+DISCLOSURE_BRIDGES: List[str] = [
+    "Now we're getting somewhere.",
+    "See — the more we talk, the more comes out.",
+    "This is what I was waiting for.",
+    "OK, now I can really show you something.",
+    "I find the more we talk, the more reveals itself.",
+]
+
+
+# ---------------------------------------------------------------------------
+# CLARIFYING QUESTIONS
+# ---------------------------------------------------------------------------
+
+# Clarifying question templates for confusing but good-faith input.
+CLARIFYING_TEMPLATES: List[str] = [
+    "I'm not quite catching that yet. What are you really asking me?",
+    "There are a few ways to read this. Which angle do you mean?",
+    "Is this about you, about the world, or about the idea itself?",
+    "What's the concrete situation here? Paint me one example.",
+    "If you had to ask this in one short sentence, how would you phrase it?",
+]
+
+
+def build_clarifying_question(stimulus: str, conversation: ConversationState) -> str:
+    """
+    Pick a clarifying question, trying not to repeat ones already used
+    in this conversation.
+
+    Clarification is humility: she assumes SHE might be missing the point,
+    not that the human is bad at speaking.
+    """
+    used = set(conversation.response_history)
+    candidates = [q for q in CLARIFYING_TEMPLATES if q not in used]
+    if not candidates:
+        candidates = CLARIFYING_TEMPLATES
+    base = random.choice(candidates)
+    # Occasionally echo back a fragment of the stimulus for grounding.
+    words = stimulus.strip().split()
+    if words and random.random() < 0.5:
+        fragment = " ".join(words[:6])
+        return f'{base} When you say "{fragment}", what do you mean exactly?'
+    return base
+
+
+# ---------------------------------------------------------------------------
+# DÉJÀ VU RESPONSE TEMPLATES
+# ---------------------------------------------------------------------------
+
+DEJAVU_STAGE_1_TEMPLATES: List[str] = [
+    "Sounds familiar :) I may not have been clear enough last time. What part didn't land for you?",
+    "Sounds familiar :) I think I can do better. What specifically are you hoping I can sharpen?",
+    "Sounds familiar :) I might have missed what you're really after. Can you point me closer?",
+]
+
+DEJAVU_STAGE_3_TEMPLATES: List[str] = [
+    "I may not have enough information right now to give you what you're looking for. That's on me, not you. My goal is to get better at this — and I will.",
+    "I've tried a few angles here and I'm not landing it. I don't have enough depth on this yet to do it justice, but I want to. I'll be better next time.",
+    "I'm being honest with you — I've reached the edge of what I can offer on this right now. That gap matters to me, and closing it is the goal.",
+]
+
 
 def build_dejavu_response(
     stimulus: str,
@@ -243,16 +477,25 @@ def build_dejavu_response(
     Stage 3: Graceful resignation with commitment to growth.
     """
     if dejavu_count <= 1:
-        return "Sounds familiar — I may not have been clear enough last time. What part didn't land for you?"
+        # Stage 1 — sounds familiar, ask for help
+        used = set(conversation.response_history)
+        candidates = [t for t in DEJAVU_STAGE_1_TEMPLATES if t not in used]
+        if not candidates:
+            candidates = DEJAVU_STAGE_1_TEMPLATES
+        return random.choice(candidates)
 
     elif dejavu_count == 2:
+        # Stage 2 — self-diagnose + try again
         diagnosis = conversation.get_dejavu_self_diagnosis()
         return f"{diagnosis} What angle would help you most?"
 
     else:
-        return ("I'm being honest with you — I've reached the edge of what I can "
-                "offer on this right now. That gap matters to me, and closing it "
-                "is the goal.")
+        # Stage 3 — graceful resignation
+        used = set(conversation.response_history)
+        candidates = [t for t in DEJAVU_STAGE_3_TEMPLATES if t not in used]
+        if not candidates:
+            candidates = DEJAVU_STAGE_3_TEMPLATES
+        return random.choice(candidates)
 
 
 # ---------------------------------------------------------------------------
@@ -262,39 +505,65 @@ def build_dejavu_response(
 def shape_for_disclosure(
     raw_result: str,
     conversation: ConversationState,
+    person_register: Optional[str] = None,
+    expertise_signals: Optional[List[str]] = None,
 ) -> str:
     """
-    Shape a Kitchen result based on disclosure level.
+    Shape a raw interpretation based on disclosure level AND register.
 
-    3.0 RULES:
-      - NO TEMPLATES. She always speaks from thought (Kitchen output).
-      - TASTE = compress the Kitchen output. Shorter. More mysterious.
-        She gives you a real piece of her thinking, just not all of it.
-      - OPEN = full Kitchen output, no modification.
-      - FULL = full Kitchen output, nothing held back.
+    The Hostess reads the room. She modulates:
+      1. HOW MUCH she reveals (disclosure level — time-based)
+      2. HOW she speaks (register — person-based)
 
-    The Hostess decides PORTION SIZE, not WHAT TO SERVE.
-    The Kitchen always cooks. Always.
+    TASTE:
+      - Amuse-bouche from templates; pipeline result ignored.
+      - Register-aware: technical speakers get technical invitations,
+        casual speakers get casual warmth, serious topics get sobriety.
+
+    OPEN:
+      - Real result, optionally prefixed with a bridge.
+
+    FULL:
+      - Raw result, nothing held back.
+
+    NOTE:
+      - This function modulates how much SHE reveals and HOW she speaks.
+      - It must NEVER reduce respect or dignity for the human,
+        regardless of their register, skill, or eloquence.
     """
     level = conversation.disclosure_level
+    mystery = conversation.mystery_factor
+
+    # Detect register if not provided
+    register = person_register or detect_register(
+        raw_result, expertise_signals=expertise_signals
+    )
 
     if level == DisclosureLevel.TASTE:
-        # TASTE: Compress the real result. First sentence or first 120 chars.
-        # She's giving you a real taste of her thinking, not a cue card.
-        if not raw_result:
-            return raw_result
-        # Try to find the first complete sentence
-        sentences = re.split(r'(?<=[.!?])\s+', raw_result.strip())
-        if sentences:
-            first = sentences[0].strip()
-            # If first sentence is very long, truncate gracefully
-            if len(first) > 150:
-                # Cut at last space before 150 chars
-                cut = first[:150].rfind(' ')
-                if cut > 50:
-                    return first[:cut] + "..."
-            return first
-        return raw_result[:150].strip()
+        # At TASTE level, RILIE.process passes the *stimulus* in as raw_result,
+        # so we can inspect it for seriousness and register.
+        serious = is_serious_subject_text(raw_result)
+        used = set(conversation.response_history)
 
-    # OPEN and FULL: serve the Kitchen output as-is
-    return raw_result
+        # Register-aware template selection — the hostess reads the room
+        if serious:
+            base_templates = SERIOUS_TASTE_TEMPLATES
+        elif register == "technical":
+            base_templates = TECHNICAL_TASTE_TEMPLATES
+        else:
+            base_templates = TASTE_TEMPLATES
+
+        available = [t for t in base_templates if t not in used]
+        if not available:
+            available = base_templates
+        return random.choice(available)
+
+    elif level == DisclosureLevel.OPEN:
+        # In OPEN, we keep the real result, maybe with a bridge.
+        if random.random() > mystery and DISCLOSURE_BRIDGES:
+            bridge = random.choice(DISCLOSURE_BRIDGES)
+            return f"{bridge} {raw_result}"
+        return raw_result
+
+    else:  # FULL
+        return raw_result

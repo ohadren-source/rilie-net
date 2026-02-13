@@ -159,8 +159,8 @@ def build_library_index() -> LibraryIndex:
         ["cosmology", "simulation", "universe", "boolean",
          "reality", "existence", "origin", "creation"])
 
-    # --- ChompkyAtTheBit / NLP engine ---
-    _safe_import("ChompkyAtTheBit", "chompky",
+    # --- ChomskyAtTheBit / NLP engine ---
+    _safe_import("ChomskyAtTheBit", "chomsky",
         ["language", "parsing", "nlp", "grammar", "syntax",
          "semantics", "chomsky", "linguistics", "tokenize"])
 
@@ -417,6 +417,7 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR)), name="static")
 class RilieRequest(BaseModel):
     stimulus: str
     max_pass: int = 3
+    chef_mode: bool = False
 
 class SearchRequest(BaseModel):
     query: str
@@ -504,6 +505,25 @@ def health() -> HealthResponse:
     )
 
 
+
+def build_plate(raw_envelope):
+    result_text = raw_envelope.get("result", "")
+    priorities_met = int(raw_envelope.get("priorities_met", 0) or 0)
+    qs = raw_envelope.get("quality_scores", {})
+    vibe = {}
+    if qs:
+        for p in ["amusing","insightful","nourishing","compassionate","strategic"]:
+            vibe[p] = qs.get(p, 0) > 0.3
+    else:
+        for i, p in enumerate(["amusing","insightful","nourishing","compassionate","strategic"]):
+            vibe[p] = i < priorities_met
+    rs = str(raw_envelope.get("status", "OK")).upper()
+    smap = {"COMPRESSED":"served","OK":"served","GUESS":"served","DEJAVU":"revisited",
+            "COURTESYEXIT":"exploring","DISCOURSE":"warming up","SAFETYREDIRECT":"redirected",
+            "EMPTY":"waiting","GREETING":"served","PRIMER":"served","GOODBYE":"served",
+            "SELF_REFLECTION":"served","RESEARCHED":"served"}
+    return {"result": result_text, "vibe": vibe, "status": smap.get(rs, "served")}
+
 @app.post("/v1/rilie")
 def run_rilie(req: RilieRequest) -> Dict[str, Any]:
     """
@@ -541,7 +561,9 @@ def run_rilie(req: RilieRequest) -> Dict[str, Any]:
     if queued_count > 0:
         result["curiosity_queued"] = queued_count
 
-    return result
+    if req.chef_mode:
+        return result
+    return build_plate(result)
 
 
 @app.post("/v1/google_search")

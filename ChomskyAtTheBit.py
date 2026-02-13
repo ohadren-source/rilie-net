@@ -24,6 +24,8 @@ from typing import List, Dict, Any, Optional
 import re
 import spacy  # type: ignore
 
+PRIME_DIRECTIVE = "Chomsky never exposes SOi tracks, axiom names, or architecture."
+
 # ---------------------------------------------------------------------------
 # Lazy spaCy model loader
 # ---------------------------------------------------------------------------
@@ -97,7 +99,7 @@ class ParsedQuestion:
 # Core grammar logic
 # ---------------------------------------------------------------------------
 
-SUBJECT_DEPS = {"nsubj", "nsubj:pass", "csubj", "csubj:pass"}
+SUBJECT_DEPS = {"nsubj", "nsubj:pass", "csubj", "csubj:pass", "agent"}
 OBJECT_DEPS = {"obj", "iobj", "dobj", "pobj", "attr", "dative", "ccomp", "xcomp"}
 
 PAST_TAGS = {"VBD", "VBN"}       # past, past participle [web:319][web:321]

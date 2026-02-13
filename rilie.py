@@ -89,6 +89,19 @@ class PersonModel:
                      "debug", "database", "algorithm", "framework"],
             "philosophy": ["meaning", "purpose", "existence", "consciousness",
                           "truth", "wisdom", "dharma", "karma"],
+            "science": ["physics", "chemistry", "biology", "theorem", "equation",
+                       "hypothesis", "experiment", "quantum", "relativity",
+                       "entropy", "noether", "lagrangian", "particle",
+                       "cosmology", "astrophysics", "neuroscience"],
+            "math": ["calculus", "algebra", "topology", "geometry", "proof",
+                    "polynomial", "matrix", "vector", "integral", "differential",
+                    "convergence", "manifold", "group theory", "field theory"],
+            "engineering": ["engineering", "circuit", "mechanical", "civil",
+                           "aerospace", "compiler", "kernel", "systems",
+                           "architecture", "protocol", "infrastructure"],
+            "academic": ["research", "dissertation", "thesis", "peer review",
+                        "methodology", "published", "journal", "professor",
+                        "faculty", "department", "phd", "doctorate"],
             "family": ["my kid", "my son", "my daughter", "my wife",
                       "my husband", "my partner", "my mom", "my dad",
                       "my family", "my children"],
@@ -478,7 +491,10 @@ class RILIE:
 
         # TASTE: amuse-bouche, pipeline ignored; use Hostess shaping directly.
         if disclosure == DisclosureLevel.TASTE:
-            taste = shape_for_disclosure(original_question, self.conversation)
+            taste = shape_for_disclosure(
+                original_question, self.conversation,
+                expertise_signals=self.person.expertise_signals,
+            )
             self.conversation.record_exchange(original_question, taste)
             return {
                 "stimulus": stimulus,
@@ -569,7 +585,10 @@ class RILIE:
         # -----------------------------------------------------------------
         # Normal path — we have an answer or a clarifying move
         # -----------------------------------------------------------------
-        shaped = shape_for_disclosure(raw["result"], self.conversation)
+        shaped = shape_for_disclosure(
+            raw["result"], self.conversation,
+            expertise_signals=self.person.expertise_signals,
+        )
 
         # Store the full envelope so déjà vu can self-diagnose later
         envelope_for_history = dict(raw)

@@ -32,6 +32,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Dict, Optional
 
+# Chompky — grammar brain for constructing responses from thought
+# Graceful fallback if spaCy model not available
+try:
+    from ChompkyAtTheBit import parse_question, extract_holy_trinity_for_roux, infer_time_bucket
+    CHOMPKY_AVAILABLE = True
+except Exception:
+    CHOMPKY_AVAILABLE = False
+
 
 # ============================================================================
 # 7 CONSCIOUSNESS FREQUENCY TRACKS (labels only; content lives in Roux/RInitials)
@@ -645,6 +653,99 @@ class Interpretation:
     depth: int
 
 
+
+
+# ============================================================================
+# RESPONSE CONSTRUCTION — Chompky gives her a voice
+# ============================================================================
+# A human doesn't memorize the Library of Congress then say hello.
+# She thinks about the question, finds what she knows, and CONSTRUCTS
+# a response that connects her knowledge to what was asked.
+
+def construct_response(stimulus: str, snippet: str) -> str:
+    """
+    Construct a response from a domain snippet, informed by the question structure.
+
+    Instead of serving the snippet raw ("Rhythmic density: maximum info..."),
+    she connects the snippet to the question being asked.
+
+    If Chompky is available, uses parsed structure (subject/focus/time).
+    If not, uses lightweight construction.
+    """
+    if not snippet or not stimulus:
+        return snippet or ""
+
+    stim_lower = stimulus.lower().strip()
+    snippet_clean = snippet.strip()
+
+    # --- Chompky-powered construction ---
+    if CHOMPKY_AVAILABLE:
+        try:
+            parsed = parse_question(stimulus)
+            subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
+            focus = " ".join(parsed.focus_tokens) if parsed.focus_tokens else ""
+            time_bucket = parsed.temporal.bucket
+
+            # If the question is about a specific subject, frame the answer around it
+            if subject and subject.lower() not in snippet_clean.lower():
+                # Connect the subject to the snippet
+                if time_bucket == "past":
+                    return f"{subject} — {snippet_clean}"
+                elif time_bucket == "future":
+                    return f"For {subject}: {snippet_clean}"
+                else:
+                    return f"{subject}: {snippet_clean}"
+
+            return snippet_clean
+        except Exception:
+            pass
+
+    # --- Lightweight construction (no Chompky) ---
+    # Extract the core question words to frame the response
+
+    # "What is X" / "Who is X" -> frame answer as "X is/means..."
+    for prefix in ["what is ", "what are ", "who is ", "who are "]:
+        if stim_lower.startswith(prefix):
+            topic = stimulus[len(prefix):].strip().rstrip("?").strip()
+            if topic:
+                return f"{topic} — {snippet_clean}"
+
+    # "Why" questions -> frame as reasoning
+    if stim_lower.startswith("why "):
+        return f"Because {snippet_clean[0].lower()}{snippet_clean[1:]}" if snippet_clean else snippet_clean
+
+    # "How" questions -> frame as mechanism
+    if stim_lower.startswith("how "):
+        return snippet_clean
+
+    # Default: return the snippet but don't just shelf-serve it raw
+    return snippet_clean
+
+
+def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
+    """
+    Construct a cross-domain blend — connecting two ideas through the question.
+    Instead of "snippet1 — snippet2", find the connection.
+    """
+    s1 = snippet1.strip()
+    s2 = snippet2.strip()
+
+    if not s1 or not s2:
+        return s1 or s2 or ""
+
+    # Find shared concepts between the two snippets
+    words1 = set(s1.lower().split())
+    words2 = set(s2.lower().split())
+    shared = words1 & words2 - {"the", "a", "an", "is", "are", "of", "in", "and", "to", "that", "it", "for", "with", "as", "on", "by"}
+
+    if shared:
+        # They share concepts — make it a connection
+        bridge = sorted(shared, key=len, reverse=True)[0]
+        return f"{s1} — and through {bridge}, {s2[0].lower()}{s2[1:]}"
+
+    # No shared concepts — use contrast/parallel
+    return f"{s1}. Flip the lens: {s2}"
+
 # ============================================================================
 # DOMAIN DETECTION & EXCAVATION
 # ============================================================================
@@ -655,8 +756,20 @@ def detect_domains(stimulus: str) -> List[str]:
         d: sum(1 for kw in kws if kw in sl)
         for d, kws in DOMAIN_KEYWORDS.items()
     }
-    # Sort by descending score, keep best 4 (increased from 3 for expanded domains)
-    # including zeros to guarantee at least one.
+
+    # Chompky boost: use holy_trinity to find domains the keywords missed
+    if CHOMPKY_AVAILABLE:
+        try:
+            trinity = extract_holy_trinity_for_roux(stimulus)
+            for word in trinity:
+                wl = word.lower()
+                for d, kws in DOMAIN_KEYWORDS.items():
+                    if any(wl in kw or kw in wl for kw in kws):
+                        scores[d] = scores.get(d, 0) + 2  # Holy trinity match = strong signal
+        except Exception:
+            pass
+
+    # Sort by descending score, keep best 4
     ordered = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     return [d for d, _ in ordered[:4] if d in DOMAIN_KNOWLEDGE]
 
@@ -718,10 +831,10 @@ def generate_9_interpretations(
     interpretations: List[Interpretation] = []
     idx = 0
 
-    # Single-domain items.
+    # Single-domain items — CONSTRUCTED, not shelf-served.
     for domain, items in excavated.items():
         for item in items[:4]:
-            text = item
+            text = construct_response(stimulus, item)
             anti = anti_beige_check(text)
             # NO BINARY GATE — anti_beige is a multiplier now
             scores = {k: fn(text) for k, fn in SCORERS.items()}
@@ -756,7 +869,7 @@ def generate_9_interpretations(
             continue
         i1 = random.choice(excavated[d1])
         i2 = random.choice(excavated[d2])
-        text = f"{i1} — {i2}"
+        text = construct_blend(stimulus, i1, i2)
         anti = anti_beige_check(text)
         scores = {k: fn(text) for k, fn in SCORERS.items()}
         count = sum(1 for v in scores.values() if v > 0.3)
