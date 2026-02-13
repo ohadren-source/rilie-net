@@ -1,7 +1,7 @@
 """
 Catch-44 Network Theory Module
 ------------------------------
-Models karma as consequence propagation through networks.
+Models karma/dharma as consequence propagation through networks.
 
 Key truths:
 - Effects propagate via topology, not intention
