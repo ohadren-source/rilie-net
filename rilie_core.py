@@ -102,21 +102,6 @@ PRIORITY_HIERARCHY: Dict[str, Dict[str, float]] = {
 # ============================================================================
 
 DOMAIN_KNOWLEDGE: Dict[str, Dict[str, List[str]]] = {
-    "neuroscience": {
-        "compression": [
-            "Signal compression via synaptic pruning — unused connections eliminated",
-            "Memory consolidation as dimensional reduction in neural manifolds",
-            "Information theory: reduce redundancy while preserving signal integrity",
-        ],
-        "love": [
-            "Bonding circuits show how WE > I through care over time",
-            "Secure attachment patterns form the base layer of healthy relating",
-        ],
-        "fear": [
-            "Threat detection: rapid discrimination of danger vs safety",
-            "Extinction learning: fear decreases when prediction error is safe",
-        ],
-    },
     "music": {
         "compression": [
             "Rhythmic density: maximum information in minimal bar count",
@@ -139,20 +124,6 @@ DOMAIN_KNOWLEDGE: Dict[str, Dict[str, List[str]]] = {
             "Bomb Squad production built dense, noisy collages — media overload as art form",
             "Sample layering as cultural archaeology — every chop carries the weight of its source",
             "The wall of noise wasn't chaos, it was architecture — every siren and scream placed with intent",
-        ],
-    },
-    "psychology": {
-        "compression": [
-            "Cognitive load: working-memory limits on simultaneous thoughts",
-            "Defense mechanisms as affect compression under stress",
-        ],
-        "love": [
-            "Attachment styles: secure, anxious, avoidant, disorganized",
-            "Vulnerability as prerequisite for intimacy and self-expansion",
-        ],
-        "fear": [
-            "Catastrophizing: over-weighting worst-case possibilities",
-            "Social anxiety: fear of judgment from the imagined crowd",
         ],
     },
     "culture": {
@@ -292,14 +263,12 @@ DOMAIN_KNOWLEDGE: Dict[str, Dict[str, List[str]]] = {
 
 # Quick keyword hooks to detect which domains to lean on.
 DOMAIN_KEYWORDS: Dict[str, List[str]] = {
-    "neuroscience": ["brain", "neural", "synapse", "signal", "memory", "conscious"],
     "music": [
         "rhythm", "harmony", "tempo", "tone", "beat", "song", "rap", "hip-hop",
         "hip hop", "album", "music", "flav", "flavor", "chuck", "bomb squad",
         "production", "satire", "lyric", "lyrics", "verse", "hook", "sample",
         "biting", "joke", "911",
     ],
-    "psychology": ["emotion", "fear", "love", "anxiety", "attachment", "therapy"],
     "culture": [
         "culture", "politics", "race", "media", "society", "public enemy",
         "black planet", "911 is a joke", "fight the power", "nation",
