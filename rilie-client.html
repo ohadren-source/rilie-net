@@ -4,209 +4,346 @@
   <meta charset="UTF-8" />
   <title>RILIE (3,6,9)</title>
   <link rel="icon" type="image/png" href="/static/3Dent.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      margin: 0;
       min-height: 100vh;
-      background: #000;
-      color: #fff;
-      font-family: Calibri, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0a0a0a;
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(30,30,40,0.6) 0%, transparent 70%),
+        radial-gradient(ellipse at 80% 50%, rgba(20,20,30,0.4) 0%, transparent 70%);
+      color: #e8e8e8;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
+      -webkit-font-smoothing: antialiased;
     }
+
     .rilie-shell {
       width: 100%;
-      max-width: 720px;
-      padding: 24px;
-      box-sizing: border-box;
+      max-width: 740px;
+      padding: 32px 28px;
     }
+
     .rilie-logo {
       display: block;
       height: 72px;
-      margin: 0 auto 16px auto;
+      margin: 0 auto 18px auto;
+      filter: drop-shadow(0 2px 12px rgba(255,255,255,0.08));
     }
+
     .rilie-title {
       text-align: center;
-      font-size: 24px;
-      margin-bottom: 4px;
+      font-size: 26px;
       font-weight: 700;
+      letter-spacing: 0.02em;
+      background: linear-gradient(180deg, #fff 0%, #aab 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
+
     .rilie-subtitle {
       text-align: center;
       font-size: 13px;
-      opacity: 0.75;
-      margin-bottom: 24px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.45);
+      margin-top: 4px;
+      margin-bottom: 28px;
+      letter-spacing: 0.03em;
     }
+
     .rilie-label {
-      font-size: 12px;
+      font-size: 11px;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      opacity: 0.8;
+      letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.5);
     }
+
     .rilie-textarea {
       width: 100%;
       margin-top: 8px;
-      margin-bottom: 16px;
-      padding: 12px;
-      box-sizing: border-box;
-      background: #111;
-      color: #fff;
-      border: 1px solid #444;
-      border-radius: 4px;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      background: linear-gradient(180deg, #0e0e10 0%, #141418 100%);
+      color: #ddd;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
       resize: vertical;
       min-height: 120px;
       font-family: inherit;
       font-size: 14px;
+      line-height: 1.6;
+      outline: none;
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
     }
-    .rilie-file {
-      margin-bottom: 16px;
-      font-size: 12px;
+    .rilie-textarea:focus {
+      border-color: rgba(255,255,255,0.18);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 0 0 3px rgba(255,255,255,0.04);
     }
+    .rilie-textarea::placeholder { color: rgba(255,255,255,0.22); }
+
+    .rilie-file { margin-bottom: 18px; font-size: 12px; }
+    .rilie-file input[type="file"] { margin-top: 4px; font-size: 11px; color: rgba(255,255,255,0.4); }
+
     .rilie-btn-wrap {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      flex-wrap: wrap;
     }
+
+    /* ── Primary — Aero Glass ── */
     .rilie-button {
-      display: inline-block;
-      padding: 10px 18px;
-      background: #fff;
-      color: #000;
-      border: none;
-      border-radius: 999px;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 28px;
       font-family: inherit;
       font-size: 14px;
-      font-weight: 700;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
-      transition: background 0.15s ease;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 45%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.15) 100%),
+        linear-gradient(180deg, #3a3a44 0%, #222228 100%);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.12) inset,
+        0 -1px 0 rgba(0,0,0,0.3) inset,
+        0 2px 8px rgba(0,0,0,0.5),
+        0 1px 2px rgba(0,0,0,0.3);
+      text-shadow: 0 -1px 1px rgba(0,0,0,0.4);
+    }
+    .rilie-button::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.02) 100%);
+      border-radius: 8px 8px 0 0;
+      pointer-events: none;
     }
     .rilie-button:hover {
-      background: #ddd;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.12) 45%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.1) 100%),
+        linear-gradient(180deg, #444450 0%, #2a2a30 100%);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.15) inset,
+        0 -1px 0 rgba(0,0,0,0.3) inset,
+        0 3px 12px rgba(0,0,0,0.6),
+        0 1px 3px rgba(0,0,0,0.4);
     }
-    .rilie-button:disabled {
-      opacity: 0.4;
-      cursor: default;
+    .rilie-button:active {
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.05) 45%, rgba(255,255,255,0.02) 50%, rgba(255,255,255,0.05) 100%),
+        linear-gradient(180deg, #1a1a20 0%, #2a2a30 100%);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.2) inset, 0 2px 4px rgba(0,0,0,0.3) inset, 0 1px 2px rgba(0,0,0,0.2);
     }
+    .rilie-button:disabled { opacity: 0.35; cursor: default; }
+
+    /* ── Secondary — subtle glass ── */
     .rilie-button-sm {
-      display: inline-block;
-      padding: 6px 12px;
-      background: #222;
-      color: #888;
-      border: 1px solid #333;
-      border-radius: 999px;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 16px;
       font-family: inherit;
       font-size: 11px;
       font-weight: 600;
+      letter-spacing: 0.03em;
+      color: rgba(255,255,255,0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 7px;
       cursor: pointer;
-      transition: all 0.15s ease;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.04) 52%, rgba(0,0,0,0.08) 100%),
+        linear-gradient(180deg, #1a1a1e 0%, #111114 100%);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .rilie-button-sm::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+      border-radius: 6px 6px 0 0;
+      pointer-events: none;
     }
     .rilie-button-sm:hover {
-      background: #333;
-      color: #fff;
+      color: rgba(255,255,255,0.8);
+      border-color: rgba(255,255,255,0.14);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 48%, rgba(0,0,0,0.02) 52%, rgba(0,0,0,0.06) 100%),
+        linear-gradient(180deg, #222226 0%, #161618 100%);
     }
+
     .rilie-lfg {
-      font-size: 10px;
-      letter-spacing: 0.15em;
+      font-size: 9px;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
-      opacity: 0.4;
+      color: rgba(255,255,255,0.2);
+      font-weight: 500;
     }
+
     .rilie-output-label {
-      margin-top: 24px;
+      margin-top: 28px;
       margin-bottom: 4px;
-      font-size: 12px;
+      font-size: 11px;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      opacity: 0.8;
+      letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.5);
     }
     .rilie-output-tagline {
       font-size: 11px;
-      opacity: 0.7;
-      margin-bottom: 8px;
+      color: rgba(255,255,255,0.28);
+      margin-bottom: 10px;
+      font-style: italic;
     }
+    .rilie-output-wrap { position: relative; }
     .rilie-output {
-      margin-top: 0;
-      padding: 12px;
-      background: #070707;
-      border-radius: 4px;
-      font-family: Consolas, Menlo, Monaco, monospace;
+      padding: 16px 18px;
+      background: linear-gradient(180deg, #08080a 0%, #0c0c10 100%);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 10px;
+      font-family: 'Outfit', Consolas, Menlo, monospace;
       font-size: 13px;
+      line-height: 1.65;
       white-space: pre-wrap;
-      line-height: 1.5;
+      color: rgba(255,255,255,0.75);
+      min-height: 60px;
+      box-shadow: inset 0 1px 4px rgba(0,0,0,0.5);
     }
-    .rilie-meta {
-      margin-top: 16px;
-      padding: 10px;
-      background: #0a0a0a;
-      border: 1px solid #1a1a1a;
-      border-radius: 4px;
-      font-size: 11px;
-      font-family: Consolas, Menlo, Monaco, monospace;
-      color: #666;
+
+    .rilie-output-actions {
       display: none;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      justify-content: flex-end;
     }
-    .rilie-meta.visible {
-      display: block;
+    .rilie-output-actions.visible { display: flex; }
+    .rilie-action-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.35);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0.04) 100%), #0e0e12;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
-    .rilie-meta-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 2px 0;
+    .rilie-action-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 100%);
+      pointer-events: none;
     }
-    .rilie-meta-key {
+    .rilie-action-btn:hover {
+      color: rgba(255,255,255,0.6);
+      border-color: rgba(255,255,255,0.1);
+      background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(0,0,0,0.02) 100%), #141418;
+    }
+    .rilie-action-btn svg {
+      width: 12px; height: 12px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .rilie-action-btn.copied { color: #5a8; border-color: rgba(85,170,136,0.3); }
+
+    .rilie-meta {
+      margin-top: 18px;
+      padding: 12px 14px;
+      background: linear-gradient(180deg, #0a0a0e 0%, #08080c 100%);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 8px;
+      font-size: 11px;
+      font-family: 'Outfit', Consolas, Menlo, monospace;
       color: #555;
+      display: none;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
     }
-    .rilie-meta-val {
-      color: #888;
-    }
-    .rilie-meta-val.green { color: #4a4; }
-    .rilie-meta-val.yellow { color: #aa4; }
-    .rilie-meta-val.orange { color: #a84; }
-    .rilie-meta-val.red { color: #a44; }
+    .rilie-meta.visible { display: block; }
+    .rilie-meta-row { display: flex; justify-content: space-between; padding: 2px 0; }
+    .rilie-meta-key { color: rgba(255,255,255,0.25); }
+    .rilie-meta-val { color: rgba(255,255,255,0.45); }
+    .rilie-meta-val.green { color: #5a8; }
+    .rilie-meta-val.yellow { color: #aa8; }
+    .rilie-meta-val.orange { color: #a85; }
+    .rilie-meta-val.red { color: #a55; }
+
     .rilie-health-bar {
-      margin-top: 12px;
+      margin-top: 14px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       font-size: 10px;
-      opacity: 0.5;
+      color: rgba(255,255,255,0.2);
+      font-weight: 500;
+      letter-spacing: 0.05em;
     }
     .rilie-health-track {
-      flex: 1;
-      height: 3px;
-      background: #222;
+      flex: 1; height: 3px;
+      background: rgba(255,255,255,0.04);
       border-radius: 2px;
       overflow: hidden;
     }
     .rilie-health-fill {
       height: 100%;
-      background: #4a4;
+      background: linear-gradient(90deg, #4a7 0%, #5a8 100%);
+      border-radius: 2px;
       transition: width 0.4s ease, background 0.4s ease;
+      box-shadow: 0 0 6px rgba(85,170,136,0.3);
     }
+
     .rilie-footer {
-      margin-top: 32px;
+      margin-top: 36px;
       text-align: center;
       font-size: 10px;
-      opacity: 0.3;
-      line-height: 1.6;
+      color: rgba(255,255,255,0.15);
+      line-height: 1.7;
+      letter-spacing: 0.02em;
     }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .rilie-shell { animation: fadeUp 0.6s ease-out; }
   </style>
 </head>
 <body>
   <div class="rilie-shell">
     <img src="/static/3Dent.png" alt="RILIE logo" class="rilie-logo" />
-
     <div class="rilie-title">RILIE (3,6,9)</div>
-    <div class="rilie-subtitle">
-      Real Intelligence, RI. Really? Play Around and Find Out :)
-    </div>
+    <div class="rilie-subtitle">Real Intelligence, RI. Really? Play Around and Find Out :)</div>
 
     <label class="rilie-label" for="rilie-input">Discourse</label>
-    <textarea
-      id="rilie-input"
-      class="rilie-textarea"
-      placeholder="What are you thinking about? Questions, ideas, statements &#8212; all fair game..."
-    ></textarea>
+    <textarea id="rilie-input" class="rilie-textarea" placeholder="What are you thinking about? Questions, ideas, statements &#8212; all fair game..."></textarea>
 
     <div class="rilie-file">
       <label class="rilie-label" for="rilie-files">Attach context (not wired yet)</label><br />
@@ -221,61 +358,35 @@
     </div>
 
     <div class="rilie-output-label">Answer</div>
-    <div class="rilie-output-tagline">
-      No Spoon Feed, just a Fork.
+    <div class="rilie-output-tagline">No Spoon Feed, just a Fork.</div>
+    <div class="rilie-output-wrap">
+      <div id="rilie-output" class="rilie-output"></div>
+      <div id="rilie-output-actions" class="rilie-output-actions">
+        <button class="rilie-action-btn" id="rilie-retry" title="Retry">
+          <svg viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        </button>
+        <button class="rilie-action-btn" id="rilie-edit" title="Edit input">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="rilie-action-btn" id="rilie-copy" title="Copy response">
+          <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
     </div>
-    <div id="rilie-output" class="rilie-output"></div>
 
-    <!-- Meta panel — the X-ray, hidden by default -->
     <div id="rilie-meta" class="rilie-meta">
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">status</span>
-        <span class="rilie-meta-val" id="meta-status">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">quality</span>
-        <span class="rilie-meta-val" id="meta-quality">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">priorities</span>
-        <span class="rilie-meta-val" id="meta-priorities">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">anti-beige</span>
-        <span class="rilie-meta-val" id="meta-beige">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">depth / pass</span>
-        <span class="rilie-meta-val" id="meta-depth">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">tone</span>
-        <span class="rilie-meta-val" id="meta-tone">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">domains</span>
-        <span class="rilie-meta-val" id="meta-domains">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">wit</span>
-        <span class="rilie-meta-val" id="meta-wit">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">language</span>
-        <span class="rilie-meta-val" id="meta-language">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">social</span>
-        <span class="rilie-meta-val" id="meta-social">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">curiosity</span>
-        <span class="rilie-meta-val" id="meta-curiosity">—</span>
-      </div>
-      <div class="rilie-meta-row">
-        <span class="rilie-meta-key">triangle</span>
-        <span class="rilie-meta-val" id="meta-triangle">—</span>
-      </div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">status</span><span class="rilie-meta-val" id="meta-status">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">quality</span><span class="rilie-meta-val" id="meta-quality">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">priorities</span><span class="rilie-meta-val" id="meta-priorities">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">anti-beige</span><span class="rilie-meta-val" id="meta-beige">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">depth / pass</span><span class="rilie-meta-val" id="meta-depth">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">tone</span><span class="rilie-meta-val" id="meta-tone">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">domains</span><span class="rilie-meta-val" id="meta-domains">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">wit</span><span class="rilie-meta-val" id="meta-wit">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">language</span><span class="rilie-meta-val" id="meta-language">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">social</span><span class="rilie-meta-val" id="meta-social">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">curiosity</span><span class="rilie-meta-val" id="meta-curiosity">—</span></div>
+      <div class="rilie-meta-row"><span class="rilie-meta-key">triangle</span><span class="rilie-meta-val" id="meta-triangle">—</span></div>
     </div>
 
     <div class="rilie-health-bar">
@@ -289,7 +400,7 @@
     <div class="rilie-footer">
       Inspired by those who gave without expecting anything in return (3),
       we're grateful (6)—and that's enough for us to do good work. (9)<br />
-      Runs on RILIE Sauce · 3.6.NIFE LLC · Ri: Real Intelligence 🔱
+      Runs on RILIE Sauce · 3.6.NIFE LLC · Ri: Real Intelligence 📱
     </div>
   </div>
 
@@ -302,15 +413,15 @@
     const metaPanel = document.getElementById("rilie-meta");
     const healthFill = document.getElementById("health-fill");
     const healthPct = document.getElementById("health-pct");
+    const outputActions = document.getElementById("rilie-output-actions");
+    const retryBtn = document.getElementById("rilie-retry");
+    const editBtn = document.getElementById("rilie-edit");
+    const copyBtn = document.getElementById("rilie-copy");
+    let lastStimulus = "";
 
     function updateMeta(data) {
       metaPanel.classList.add("visible");
-
-      const set = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val || "—";
-      };
-
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "—"; };
       set("meta-status", data.status);
       set("meta-quality", data.quality_score != null ? data.quality_score.toFixed(2) : "—");
       set("meta-priorities", data.priorities_met);
@@ -319,104 +430,59 @@
       set("meta-tone", (data.tone_emoji || "") + " " + (data.tone || ""));
       set("meta-domains", (data.domains_used || []).join(", "));
       set("meta-triangle", data.triangle_type || "CLEAN");
-
-      // Wit — show which types fired
       const wit = data.wit || {};
       const witActive = Object.entries(wit).filter(([k, v]) => v).map(([k]) => k);
       set("meta-wit", witActive.length ? witActive.join(", ") : "none");
-
-      // Language mode
       const lang = data.language_mode || {};
       const langActive = Object.entries(lang).filter(([k, v]) => v).map(([k]) => k);
       set("meta-language", langActive.length ? langActive.join(", ") : "literal");
-
-      // Social status
       const social = data.social || {};
-      set("meta-social", social.user_status != null
-        ? "user=" + social.user_status.toFixed(2) + " self=" + social.self_status.toFixed(2)
-        : "—");
-
-      // Curiosity
+      set("meta-social", social.user_status != null ? "user=" + social.user_status.toFixed(2) + " self=" + social.self_status.toFixed(2) : "—");
       set("meta-curiosity", data.curiosity_informed ? "own discovery used" : "—");
-
-      // Health bar
       const health = data.conversation_health || 100;
       healthFill.style.width = health + "%";
       healthPct.textContent = Math.round(health);
-      if (health > 70) {
-        healthFill.style.background = "#4a4";
-      } else if (health > 50) {
-        healthFill.style.background = "#aa4";
-      } else if (health > 30) {
-        healthFill.style.background = "#a84";
-      } else {
-        healthFill.style.background = "#a44";
-      }
+      if (health > 70) healthFill.style.background = "linear-gradient(90deg, #4a7, #5a8)";
+      else if (health > 50) healthFill.style.background = "linear-gradient(90deg, #aa8, #bb9)";
+      else if (health > 30) healthFill.style.background = "linear-gradient(90deg, #a85, #b96)";
+      else healthFill.style.background = "linear-gradient(90deg, #a55, #b66)";
     }
 
     submitBtn.onclick = async () => {
       const stimulus = inputEl.value.trim();
-      if (!stimulus) {
-        outputEl.textContent = "Drop something in. A question, a thought, a vibe. Then hit Go.";
-        return;
-      }
-
+      if (!stimulus) { outputEl.textContent = "Drop something in. A question, a thought, a vibe. Then hit Go."; return; }
       submitBtn.disabled = true;
       submitBtn.textContent = "Going...";
       outputEl.textContent = "Running RILIE...";
-
+      outputActions.classList.remove("visible");
+      lastStimulus = stimulus;
       try {
-        const res = await fetch("/v1/rilie", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stimulus, max_pass: 3 })
-        });
-
-        if (!res.ok) {
-          outputEl.textContent = "Error from RILIE API: " + res.status;
-          return;
-        }
-
+        const res = await fetch("/v1/rilie", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stimulus, max_pass: 3 }) });
+        if (!res.ok) { outputEl.textContent = "Error from RILIE API: " + res.status; return; }
         const data = await res.json();
         outputEl.textContent = data.result || "No result returned.";
         updateMeta(data);
-      } catch (err) {
-        outputEl.textContent = "Request failed: " + err;
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Learn from Go";
-      }
+        outputActions.classList.add("visible");
+      } catch (err) { outputEl.textContent = "Request failed: " + err; }
+      finally { submitBtn.disabled = false; submitBtn.textContent = "Learn from Go"; }
     };
 
-    // Who is RILIE? — asks through normal discourse, not admin endpoint
-    selfBtn.onclick = async () => {
-      inputEl.value = "Who are you?";
-      submitBtn.click();
-    };
-
-    // Library — hits /v1/library
+    selfBtn.onclick = async () => { inputEl.value = "Who are you?"; submitBtn.click(); };
     libraryBtn.onclick = async () => {
       outputEl.textContent = "Checking library...";
-      try {
-        const res = await fetch("/v1/library");
-        if (!res.ok) {
-          outputEl.textContent = "Library endpoint not available (" + res.status + ")";
-          return;
-        }
-        const data = await res.json();
-        outputEl.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        outputEl.textContent = "Library check failed: " + err;
+      try { const res = await fetch("/v1/library"); if (!res.ok) { outputEl.textContent = "Library endpoint not available (" + res.status + ")"; return; } const data = await res.json(); outputEl.textContent = JSON.stringify(data, null, 2); }
+      catch (err) { outputEl.textContent = "Library check failed: " + err; }
+    };
+    retryBtn.onclick = () => { if (lastStimulus) { inputEl.value = lastStimulus; submitBtn.click(); } };
+    editBtn.onclick = () => { if (lastStimulus) inputEl.value = lastStimulus; inputEl.focus(); inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length); };
+    copyBtn.onclick = async () => {
+      const text = outputEl.textContent;
+      if (text) {
+        try { await navigator.clipboard.writeText(text); copyBtn.classList.add("copied"); const o = copyBtn.innerHTML; copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'; setTimeout(() => { copyBtn.classList.remove("copied"); copyBtn.innerHTML = o; }, 1500); }
+        catch (err) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); }
       }
     };
-
-    // Enter key submits
-    inputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        submitBtn.click();
-      }
-    });
+    inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitBtn.click(); } });
   </script>
 </body>
 </html>

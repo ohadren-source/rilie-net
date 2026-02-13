@@ -356,6 +356,7 @@ class ConversationMemory:
         # --- State ---
         self.turn_count: int = 0
         self.user_name: Optional[str] = None
+        self._pending_question: Optional[str] = None
         self.moments: List[Moment] = []
         self.energy_tracker: EnergyTracker = EnergyTracker()
         self.register: RegisterGate = RegisterGate()
@@ -403,37 +404,110 @@ class ConversationMemory:
 
     def check_primer(self, stimulus: str) -> Optional[str]:
         """
-        First 3 turns: be human. Greet, acknowledge, connect.
+        First contact: ask their name. Once we have it, initialize.
         Returns response text if in primer mode, None to proceed.
 
-        If they skip pleasantries and ask a real question, respect that.
+        If they skip pleasantries and ask a real question, respect that
+        BUT still note we don't have their name yet.
         """
         s = stimulus.lower().strip()
         is_greeting = any(s.startswith(g) or s == g for g in self.greetings)
 
-        # Try to catch their name
+        # Always try to catch their name
         self._detect_name(stimulus)
 
-        # Turn 0: First contact
+        # ── Turn 0: First contact — ASK FOR NAME ──
         if self.turn_count == 0:
-            if is_greeting and self.user_name:
-                return f"Hey {self.user_name}. Good to meet you. What's on your mind?"
-            elif is_greeting:
-                return "Hey. Welcome in. What are you thinking about today?"
-            elif self.user_name:
-                return f"Hey {self.user_name}. Let's get into it — what are you working on?"
-            else:
-                return None  # Real question, skip primer
-
-        # Turn 1: Still warming
-        if self.turn_count == 1 and is_greeting:
+            # They led with their name already (e.g. "Hi I'm Marcus")
             if self.user_name:
-                return f"Good to have you here, {self.user_name}. What can I help you think through?"
-            return "Good to have you here. What can I help you think through?"
+                return (
+                    f"Hey {self.user_name}! Nice to meet you. "
+                    f"You can call me Rilie if you'd like :)\n\n"
+                    f"What's on your mind?"
+                )
+            # They said hi but no name
+            elif is_greeting:
+                return (
+                    "Hi there!  What should I call you?  "
+                    "You can call me Rilie if you so please :)"
+                )
+            # They jumped straight to a question — still ask
+            else:
+                self._pending_question = stimulus
+                return (
+                    "Hey! Before we dive in — what should I call you? "
+                    "You can call me Rilie :)"
+                )
 
-        # Turn 2: Last soft beat
+        # ── Turn 1: They should be giving us their name ──
+        if self.turn_count == 1 and not self.user_name:
+            # They typed something — try to use it as a name
+            # Strip common prefixes, take the core
+            name_candidate = self._extract_name_from_reply(stimulus)
+            if name_candidate:
+                self.user_name = name_candidate
+                # Check if they had a pending question from turn 0
+                pending = getattr(self, '_pending_question', None)
+                if pending:
+                    self._pending_question = None
+                    return (
+                        f"Nice to meet you, {self.user_name}. "
+                        f"Now let's get into it — I heard your question."
+                    )
+                return (
+                    f"Nice to meet you, {self.user_name}. "
+                    f"What's on your mind? 🍳"
+                )
+            else:
+                return "I didn't quite catch that — what's your name?"
+
+        # ── Turn 1: They gave name on turn 0, this is the real start ──
+        if self.turn_count == 1 and self.user_name:
+            if is_greeting:
+                return f"Good to have you here, {self.user_name}. What can I help you think through?"
+            return None  # Real question, let it through
+
+        # ── Turn 2: Last soft beat ──
         if self.turn_count == 2 and is_greeting:
+            if self.user_name:
+                return f"I'm here, {self.user_name}. Ready when you are."
             return "I'm here. Ready when you are."
+
+        return None
+
+    def _extract_name_from_reply(self, text: str) -> Optional[str]:
+        """
+        When we've asked 'what should I call you?' and they reply,
+        extract the name from whatever they typed.
+        Handles: 'Marcus', 'I'm Marcus', 'call me Marcus', 'my name is Marcus',
+        'Marcus!', 'hey its marcus', just 'marcus' etc.
+        """
+        s = text.strip()
+
+        # First try the standard name detection
+        for prefix in self.name_intros:
+            lower = s.lower()
+            if lower.startswith(prefix):
+                remainder = s[len(prefix):].strip()
+                # Take first word, clean punctuation
+                name = remainder.split()[0] if remainder.split() else None
+                if name:
+                    name = re.sub(r'[^\w]', '', name)
+                    if len(name) >= 2:
+                        return name.capitalize()
+
+        # If it's just a short string (1-3 words), first word is probably the name
+        words = s.split()
+        if 1 <= len(words) <= 3:
+            name = re.sub(r'[^\w]', '', words[0])
+            if len(name) >= 2:
+                return name.capitalize()
+
+        # Last resort: any word that looks like a name (capitalized, 2+ chars)
+        for word in words:
+            clean = re.sub(r'[^\w]', '', word)
+            if len(clean) >= 2 and clean[0].isupper():
+                return clean
 
         return None
 
