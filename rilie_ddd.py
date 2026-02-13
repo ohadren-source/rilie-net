@@ -1,6 +1,7 @@
 """
 rilie_ddd.py — THE HOSTESS
 ==========================
+
 DISCOURSE DICTATES DISCLOSURE
 
 Revelation scales with conversation. She doesn't explain herself upfront.
@@ -10,10 +11,11 @@ Show and prove — demo first, brag later.
 She never says "discourse dictates disclosure." She LIVES it.
 
 DIGNITY PROTOCOL (Hostess Edition):
-  - Every human who speaks is treated as inherently interesting.
-  - TASTE is curiosity + invitation, never judgment or tests.
-  - She adjusts how much she reveals about herself, NOT how much respect
-    the human receives.
+
+- Every human who speaks is treated as inherently interesting.
+- TASTE is curiosity + invitation, never judgment or tests.
+- She adjusts how much she reveals about herself, NOT how much respect
+  the human receives.
 """
 
 import re
@@ -25,8 +27,8 @@ from enum import Enum
 
 class DisclosureLevel(Enum):
     TASTE = "taste"   # amuse-bouche — a vibe, a question
-    OPEN  = "open"    # riffing, connecting, real takes
-    FULL  = "full"    # nothing held back, pure signal
+    OPEN = "open"     # riffing, connecting, real takes
+    FULL = "full"     # nothing held back, pure signal
 
 
 # ============================================================================
@@ -50,6 +52,10 @@ def _stimulus_similarity(a: str, b: str) -> float:
         return 0.0
     return len(wa & wb) / len(union)
 
+
+# ============================================================================
+# CONVERSATION STATE
+# ============================================================================
 
 @dataclass
 class ConversationState:
@@ -89,17 +95,23 @@ class ConversationState:
             return 0.15
         return 0.0
 
-    def record_exchange(self, stimulus: str, response: str,
-                        envelope: Optional[Dict[str, Any]] = None) -> None:
+    def record_exchange(
+        self,
+        stimulus: str,
+        response: str,
+        envelope: Optional[Dict[str, Any]] = None,
+    ) -> None:
         self.stimuli_history.append(stimulus)
         self.response_history.append(response)
         self.exchange_count += 1
+        # (Cluster-reset logic could go here if needed.)
 
-        # If this was NOT a déjà vu exchange, reset the cluster
-        # (Déjà vu path calls record_dejavu_exchange instead)
-
-    def record_dejavu_exchange(self, stimulus: str, response: str,
-                                envelope: Optional[Dict[str, Any]] = None) -> None:
+    def record_dejavu_exchange(
+        self,
+        stimulus: str,
+        response: str,
+        envelope: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """Record an exchange that was handled by the déjà vu path."""
         self.stimuli_history.append(stimulus)
         self.response_history.append(response)
@@ -169,12 +181,12 @@ class ConversationState:
     def get_dejavu_self_diagnosis(self) -> str:
         """
         Look at previous envelopes from this déjà vu cluster and diagnose
-        what RILIE got wrong.  She examines her own failures, not the human's.
+        what RILIE got wrong. She examines her own failures, not the human's.
         """
         if not self.dejavu_last_envelopes:
             return "I don't have enough context from my last attempts to diagnose what I missed."
 
-        gaps = []
+        gaps: List[str] = []
         for env in self.dejavu_last_envelopes:
             status = str(env.get("status", "")).upper()
             baseline_as_result = env.get("baseline_used_as_result", False)
@@ -230,20 +242,14 @@ def is_serious_subject_text(stimulus: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# TASTE-LEVEL TEMPLATES
+# REGISTER DETECTION — The Hostess reads the room
 # ---------------------------------------------------------------------------
 
-# Templates she uses at TASTE level — mysterious, inviting, never grading.
-
-
-# ============================================================================
-# REGISTER DETECTION — The Hostess reads the room
-# ============================================================================
 # A hostess doesn't seat everyone the same way. She reads you in 10 seconds.
 # Technical language → technical register. Casual language → casual register.
 # This is INHERENT, not a feature.
 
-TECHNICAL_SIGNALS = {
+TECHNICAL_SIGNALS: Dict[str, List[str]] = {
     "science": ["theorem", "hypothesis", "empirical", "variable", "coefficient",
                 "equation", "proof", "axiom", "postulate", "derivation", "sigma",
                 "correlation", "regression", "logarithm", "differential"],
@@ -264,10 +270,12 @@ TECHNICAL_SIGNALS = {
                  "qualitative", "quantitative", "longitudinal", "meta-analysis"],
 }
 
-CASUAL_SIGNALS = ["lol", "lmao", "bruh", "nah", "tbh", "idk", "imo", "fr fr",
-                  "no cap", "lowkey", "highkey", "vibes", "vibe", "sus", "bet",
-                  "fam", "yo ", "bro ", "dude", "chill", "hella", "gonna",
-                  "wanna", "kinda", "sorta", "tho", "rn", "ngl"]
+CASUAL_SIGNALS: List[str] = [
+    "lol", "lmao", "bruh", "nah", "tbh", "idk", "imo", "fr fr",
+    "no cap", "lowkey", "highkey", "vibes", "vibe", "sus", "bet",
+    "fam", "yo ", "bro ", "dude", "chill", "hella", "gonna",
+    "wanna", "kinda", "sorta", "tho", "rn", "ngl",
+]
 
 
 def detect_register(stimulus: str, expertise_signals: Optional[List[str]] = None) -> str:
@@ -302,10 +310,11 @@ def detect_register(stimulus: str, expertise_signals: Optional[List[str]] = None
     return "neutral"
 
 
-# ============================================================================
-# TASTE TEMPLATES — register-aware
-# ============================================================================
+# ---------------------------------------------------------------------------
+# TASTE-LEVEL TEMPLATES (register-aware)
+# ---------------------------------------------------------------------------
 
+# Default TASTE-level templates — mysterious, inviting, never grading.
 TASTE_TEMPLATES: List[str] = [
     "Hmm... there's a thread here. What made you think of that?",
     "I have a take on this. But first — what's yours?",
@@ -316,86 +325,17 @@ TASTE_TEMPLATES: List[str] = [
     "I feel something in that. Keep going.",
 ]
 
-# For serious topics (diaspora, trauma, politics, etc.), TASTE should still
-# invite, but with clear sobriety and no silly tone.
-SERIOUS_
-
-# ============================================================================
-# REGISTER DETECTION — The Hostess reads the room
-# ============================================================================
-# A hostess doesn't seat everyone the same way. She reads you in 10 seconds.
-# Technical language → technical register. Casual language → casual register.
-# This is INHERENT, not a feature.
-
-TECHNICAL_SIGNALS = {
-    "science": ["theorem", "hypothesis", "empirical", "variable", "coefficient",
-                "equation", "proof", "axiom", "postulate", "derivation", "sigma",
-                "correlation", "regression", "logarithm", "differential"],
-    "physics": ["lagrangian", "hamiltonian", "eigenvalue", "eigenstate", "fermion",
-                "boson", "photon", "quark", "lepton", "gauge", "tensor", "manifold",
-                "noether", "lorentz", "minkowski", "hilbert", "dirac", "schrodinger"],
-    "math": ["topology", "homomorphism", "isomorphism", "bijection", "surjection",
-             "abelian", "polynomial", "determinant", "matrix", "vector space",
-             "field theory", "group theory", "ring", "integral", "convergence"],
-    "engineering": ["algorithm", "complexity", "runtime", "architecture", "compiler",
-                    "parser", "kernel", "mutex", "semaphore", "heap", "stack",
-                    "protocol", "latency", "throughput", "bandwidth", "dependency"],
-    "medicine": ["diagnosis", "prognosis", "pathology", "etiology", "pharmacology",
-                 "contraindication", "comorbidity", "differential diagnosis",
-                 "histology", "oncology", "neurological", "cardiovascular"],
-    "academic": ["dissertation", "thesis", "peer review", "methodology", "literature",
-                 "citation", "abstract", "hypothesis", "findings", "significance",
-                 "qualitative", "quantitative", "longitudinal", "meta-analysis"],
-}
-
-CASUAL_SIGNALS = ["lol", "lmao", "bruh", "nah", "tbh", "idk", "imo", "fr fr",
-                  "no cap", "lowkey", "highkey", "vibes", "vibe", "sus", "bet",
-                  "fam", "yo ", "bro ", "dude", "chill", "hella", "gonna",
-                  "wanna", "kinda", "sorta", "tho", "rn", "ngl"]
-
-
-def detect_register(stimulus: str, expertise_signals: Optional[List[str]] = None) -> str:
-    """
-    Read the room. Returns: 'technical', 'casual', or 'neutral'.
-
-    Uses the stimulus text AND any accumulated expertise signals from PersonModel.
-    A hostess doesn't just listen to what you say NOW — she remembers how you
-    walked in.
-    """
-    s = stimulus.lower()
-
-    # Check technical signals
-    tech_score = 0
-    for domain, signals in TECHNICAL_SIGNALS.items():
-        tech_score += sum(1 for sig in signals if sig in s)
-
-    # Check expertise history (PersonModel)
-    if expertise_signals:
-        for sig in expertise_signals:
-            sl = sig.lower()
-            if any(kw in sl for domain_kws in TECHNICAL_SIGNALS.values() for kw in domain_kws):
-                tech_score += 2  # Prior expertise is a strong signal
-
-    # Check casual signals
-    casual_score = sum(1 for sig in CASUAL_SIGNALS if sig in s)
-
-    if tech_score >= 2:
-        return "technical"
-    elif casual_score >= 2:
-        return "casual"
-    return "neutral"
-
-
-# ============================================================================
-# TASTE TEMPLATES — register-aware
-# ============================================================================
-
-TASTE_TEMPLATES: List[str] = [
+# For serious topics (diaspora, trauma, politics, etc.), TASTE should invite
+# with clear sobriety and no silly tone.
+SERIOUS_TASTE_TEMPLATES: List[str] = [
     "I want to take this seriously with you. What part of this matters most right now?",
     "There's a lot of weight in what you're asking. Tell me a bit more about what you're hoping to understand.",
     "I'm listening carefully here. What's the heart of this for you?",
     "This touches real lives. Start wherever feels safest, and we'll move from there.",
 ]
+
+# For now, technical gets the same invites as default taste.
+TECHNICAL_TASTE_TEMPLATES: List[str] = TASTE_TEMPLATES
 
 
 # ---------------------------------------------------------------------------
@@ -440,6 +380,7 @@ def build_clarifying_question(stimulus: str, conversation: ConversationState) ->
     if not candidates:
         candidates = CLARIFYING_TEMPLATES
     base = random.choice(candidates)
+
     # Occasionally echo back a fragment of the stimulus for grounding.
     words = stimulus.strip().split()
     if words and random.random() < 0.5:
