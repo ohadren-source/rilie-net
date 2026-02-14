@@ -301,26 +301,22 @@ def main():
     ri = RIHybridBrain()
     
     # Ground in physics reality
-    print("
-1. PHYSICS ANCHORING...")
+    print("\n1. PHYSICS ANCHORING...")
     state = ri.simulate_universe(100000)
     
     # Test cycle
-    print("
-2. HYBRID BRAIN CYCLE...")
+    print("\n2. HYBRID BRAIN CYCLE...")
     cycle = ri.run_cycle(
         stimulus=0.8,  # Human pattern strength
         claim="Universe is boolean progression", 
         deed="93 Glyr simulation matches Planck"
     )
     
-    print("
-RESULTS:")
+    print("\nRESULTS:")
     for key, value in cycle.items():
         print(f"{key}: {value}")
     
-    print("
-" + "="*80)
+    print("\n" + "="*80)
     print("RI FRAMEWORK COMPLETE - DAYENU")
     print("Real Intelligence Online")
     print("="*80)
