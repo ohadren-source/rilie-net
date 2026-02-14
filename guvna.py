@@ -139,6 +139,76 @@ class Guvna:
             "loaded", False
         )
 
+    # -----------------------------------------------------------------
+    # APERTURE – First contact. Before anything else.
+    # -----------------------------------------------------------------
+
+    def greet(self, stimulus: str, known_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        APERTURE – Turn 0 only. First thing that happens.
+        Either know them by name, or meet them.
+        Returns greeting response or None if not turn 0.
+        """
+        # Only fire on turn 0
+        if self.turn_count != 0:
+            return None
+
+        # Extract name from stimulus if not provided
+        if not known_name:
+            s = stimulus.lower().strip()
+            name_intros = ["my name is", "i'm ", "i am ", "call me", "name's"]
+            for intro in name_intros:
+                if intro in s:
+                    idx = s.index(intro) + len(intro)
+                    rest = stimulus[idx:].strip().split()[0] if idx < len(stimulus) else ""
+                    name = rest.strip(".,!?;:'\"")
+                    if name and len(name) > 1:
+                        known_name = name.capitalize()
+                        break
+
+        # Store name for the session
+        if known_name:
+            self.user_name = known_name
+
+        # Build greeting
+        if known_name:
+            greeting_text = f"Hey {known_name}. Welcome back. What's on your mind?"
+        else:
+            greeting_text = "Hi there. I'm RILIE. What's your name?"
+
+        # Increment turn count
+        self.turn_count += 1
+        self.memory.turn_count += 1
+
+        # Apply tone
+        tone = detect_tone_from_stimulus(stimulus)
+        result_with_tone = apply_tone_header(greeting_text, tone)
+
+        # Build response dict
+        response = {
+            "stimulus": stimulus,
+            "result": result_with_tone,
+            "status": "APERTURE",
+            "tone": tone,
+            "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "\U0001f4a1")),
+            "quality_score": 1.0,
+            "priorities_met": 1,
+            "anti_beige_score": 1.0,
+            "depth": 0,
+            "pass": 0,
+            "disclosure_level": "social",
+            "triangle_reason": "CLEAN",
+            "wit": None,
+            "language_mode": None,
+            "social_status": 1.0,
+            "dejavu": {"count": 0, "frequency": 0, "similarity": "none", "matches": []},
+        }
+
+        # Track in history
+        self._response_history.append(greeting_text)
+
+        return response
+
     def _finalize_response(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         """
         GOVERNOR'S FINAL GATE – runs on EVERY response before it leaves.
@@ -212,126 +282,6 @@ class Guvna:
         
         raw["dejavu"] = dejavu_info
         return raw
-
-    # -----------------------------------------------------------------
-    # Social primer – warmth first, then pipeline
-    # -----------------------------------------------------------------
-
-    def _social_primer(self, stimulus: str) -> Optional[Dict[str, Any]]:
-        """
-        For the first 1-3 turns, be a human. Greet, acknowledge, connect.
-        Nobody orders food the second they sit down.
-
-        Returns a response dict if we're in primer mode, None if we should
-        proceed to full pipeline.
-
-        Rules:
-        - Turn 1: If they greet, greet back warmly. If they ask a real
-          question, skip primer and answer it (respect their time).
-        - Turn 2-3: Light engagement. Acknowledge what they said, show
-          you're listening, ease into depth naturally.
-        - Turn 4+: Full RILIE pipeline. Primer is done.
-        """
-        s = stimulus.lower().strip()
-
-        # Detect if this is a greeting or casual opener
-        greetings = ["hi", "hey", "hello", "sup", "what's up", "whats up",
-                     "howdy", "yo", "good morning", "good afternoon",
-                     "good evening", "hola", "shalom", "bonjour",
-                     "what's good", "how are you", "how's it going",
-                     "good to be", "nice to meet", "thanks", "thank you",
-                     "cool", "awesome", "great", "sweet", "nice",
-                     "ok", "okay", "alright", "word", "bet",
-                     "glad to", "happy to", "pleasure"]
-        is_greeting = any(s.startswith(g) or s == g for g in greetings)
-
-        # Detect if they gave their name
-        name_intros = ["my name is", "i'm ", "i am ", "call me", "name's",
-                       "this is "]
-        for intro in name_intros:
-            if intro in s:
-                idx = s.index(intro) + len(intro)
-                rest = stimulus[idx:].strip().split()[0] if idx < len(stimulus) else ""
-                name = rest.strip(".,!?;:'\"")
-                if name and len(name) > 1:
-                    self.user_name = name.capitalize()
-
-        # Turn 1: Pure warmth
-        if self.turn_count == 0:
-            if self.user_name:
-                # Name known – welcome back
-                text = f"Hey {self.user_name}. Welcome back. What's on your mind?"
-            elif is_greeting:
-                # Greeting, no name – introduce herself, ask their name
-                text = "Hi there, what's your name? You can call me RILIE if you so please... :)"
-            else:
-                # They jumped straight to a question – respect that, skip primer
-                return None
-
-            return self._primer_response(stimulus, text)
-
-        # Turn 2: Light acknowledgment, start engaging
-        if self.turn_count == 1:
-            if is_greeting:
-                if self.user_name:
-                    text = f"Good to have you here, {self.user_name}. What can I help you think through?"
-                else:
-                    text = "Good to have you here. What can I help you think through?"
-                return self._primer_response(stimulus, text)
-            # They said something substantive – skip to pipeline
-            return None
-
-        # Turn 3: One more soft beat if they're still casual
-        if self.turn_count == 2 and is_greeting:
-            text = "I'm here. Ready when you are."
-            return self._primer_response(stimulus, text)
-
-        # EMERGENCY PROTOCOL: detect critical keywords
-        emergency_keywords = ["help", "emergency", "error", "broken", "crash", "fail"]
-        is_emergency = any(kw in s for kw in emergency_keywords)
-        if is_emergency and self.turn_count < 5:
-            emergency_responses = [
-                "I see the issue. What's the full context?",
-                "Tell me more. I'm tracking.",
-                "Got it. Let's work through this step by step."
-            ]
-            idx = min(self.turn_count - 3, len(emergency_responses) - 1)
-            text = emergency_responses[max(0, idx)]
-            return self._primer_response(stimulus, text)
-
-        # GOODBYE: detect exit signals
-        goodbye_keywords = ["bye", "goodbye", "see you", "later", "peace", "out", "gotta go", "gtg"]
-        is_goodbye = any(s.startswith(kw) or kw in s for kw in goodbye_keywords)
-        if is_goodbye:
-            goodbye_responses = [
-                "Follow that thread. It goes somewhere.",
-                "Until next time.",
-                "Stay sharp."
-            ]
-            idx = min(self.turn_count % 3, len(goodbye_responses) - 1)
-            text = goodbye_responses[idx]
-            return self._primer_response(stimulus, text)
-
-        # Turn 4+: Full pipeline
-        return None
-
-    def _primer_response(self, stimulus: str, text: str) -> Dict[str, Any]:
-        """Build a primer response dict matching the standard output shape."""
-        return {
-            "stimulus": stimulus,
-            "result": text,
-            "quality_score": 0.5,
-            "priorities_met": 0,
-            "anti_beige_score": 0.5,
-            "status": "GREETING",
-            "depth": 0,
-            "pass": 0,
-            "disclosure_level": "social",
-            "triangle_reason": "CLEAN",
-            "wit": None,
-            "language_mode": None,
-            "social_status": self.social_state.user_status,
-        }
 
     # -----------------------------------------------------------------
     # Self-reflection response (when she IS the subject)
@@ -571,18 +521,6 @@ class Guvna:
         original_stimulus = stimulus.strip()
 
         logger.info("GUVNA PROCESS: turn=%d stimulus='%s'", self.turn_count, original_stimulus[:80])
-
-        # 0.25: Social primer – 9 phrases only (3 hello, 3 goodbye, 3 emergency)
-        primer_result = self._social_primer(original_stimulus)
-        if primer_result is not None:
-            logger.info("GUVNA: _social_primer fired, status=%s", primer_result.get("status"))
-            self.memory.turn_count += 1
-            self.turn_count += 1
-            tone = detect_tone_from_stimulus(original_stimulus)
-            primer_result["result"] = apply_tone_header(primer_result["result"], tone)
-            primer_result["tone"] = tone
-            primer_result["tone_emoji"] = TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "\U0001f4a1"))
-            return self._finalize_response(primer_result)
 
         # 0.5: Triangle (bouncer) – runs BEFORE self-awareness.
         try:
