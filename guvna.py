@@ -142,27 +142,75 @@ class Guvna:
     def _finalize_response(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         """
         GOVERNOR'S FINAL GATE – runs on EVERY response before it leaves.
-        She is forbidden to produce déjà vu in others.
+        Déjà-vu is tracked as SIGNAL, not blocked.
+        Exposes: word overlap, frequency, similarity (variation vs literal).
+        What to do with it is up to caller.
         """
         import re as _re
+        
         final_text = raw.get("result", "")
+        dejavu_info = {
+            "count": 0,
+            "frequency": 0,
+            "similarity": "none",
+            "matches": []
+        }
+        
         if final_text and len(self._response_history) > 0:
             cand_words = set(_re.sub(r"[^a-zA-Z0-9\s]", "", final_text.lower()).split())
+            
             if len(cand_words) > 3:
-                for prior in self._response_history[-5:]:
+                overlap_matches = []
+                
+                for i, prior in enumerate(self._response_history[-5:]):
                     prior_words = set(_re.sub(r"[^a-zA-Z0-9\s]", "", prior.lower()).split())
                     if not prior_words:
                         continue
-                    smaller = min(len(cand_words), len(prior_words))
-                    if smaller > 0 and len(cand_words & prior_words) / smaller > 0.6:
-                        logger.warning("GOVERNOR ANTI-DEJAVU: blocked repeat")
-                        raw["result"] = ""
-                        raw["status"] = "DEJAVU_BLOCKED"
-                        break
+                    
+                    overlap = len(cand_words & prior_words)
+                    
+                    if overlap >= 3:  # Aminimum: 3+ word overlap = signal
+                        overlap_matches.append({
+                            "response": prior[:60] + ("..." if len(prior) > 60 else ""),
+                            "overlap": overlap,
+                            "turn": len(self._response_history) - 5 + i,
+                            "total_words_prior": len(prior_words),
+                            "total_words_candidate": len(cand_words),
+                        })
+                
+                if overlap_matches:
+                    # Calculate similarity: overlap / min(prior, candidate) = how much of shorter text is repeated
+                    best_match = max(overlap_matches, key=lambda x: x["overlap"])
+                    similarity_pct = (best_match["overlap"] / min(best_match["total_words_prior"], best_match["total_words_candidate"])) * 100
+                    
+                    dejavu_info["count"] = best_match["overlap"]
+                    dejavu_info["matches"] = overlap_matches
+                    
+                    # Classify: variation (low overlap%) vs literal (high overlap%)
+                    if similarity_pct >= 70:
+                        dejavu_info["similarity"] = "literal"  # >70% same words = near-verbatim
+                    elif similarity_pct >= 40:
+                        dejavu_info["similarity"] = "thematic"  # 40-70% = similar idea, different words (jazz variation)
+                    else:
+                        dejavu_info["similarity"] = "resonance"  # <40% = just echoing some themes
+                    
+                    # Count frequency: how many times has this pattern appeared?
+                    frequency = len(overlap_matches)
+                    dejavu_info["frequency"] = frequency
+                    
+                    logger.info(
+                        "GOVERNOR DEJAVU SIGNAL: count=%d freq=%d similarity=%s",
+                        dejavu_info["count"],
+                        dejavu_info["frequency"],
+                        dejavu_info["similarity"]
+                    )
 
+        # Append to history (never block, always track)
         out_text = raw.get("result", "")
         if out_text and out_text.strip():
             self._response_history.append(out_text)
+        
+        raw["dejavu"] = dejavu_info
         return raw
 
     # -----------------------------------------------------------------
