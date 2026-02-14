@@ -1296,7 +1296,7 @@ class Guvna:
     # MAIN PROCESS — the full 5-act pipeline with new layers
     # -----------------------------------------------------------------
 
-    def process(self, stimulus: str, maxpass: int = 3) -> Dict[str, Any]:
+    def process(self, stimulus: str, max_pass: int = 3) -> Dict[str, Any]:
         """
         Route stimulus through the full 5-act pipeline.
         """
@@ -1488,7 +1488,7 @@ class Guvna:
         # 8: augment + send to RILIE
         augmented = self._augment_with_baseline(original_stimulus, baseline_text)
         logger.info("GUVNA: sending to RILIE, augmented='%s'", augmented[:100])
-        raw = self.rilie.process(augmented, maxpass=maxpass)
+        raw = self.rilie.process(augmented, maxpass=max_pass)
         rilie_text = str(raw.get("result", "") or "").strip()
         status = str(raw.get("status", "") or "").upper()
         logger.info("GUVNA: RILIE returned status=%s result='%s'", status, rilie_text[:120])
