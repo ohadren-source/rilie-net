@@ -453,6 +453,7 @@ class RILIE:
         dejavu_count = self.conversation.check_dejavu(original_question)
 
         if dejavu_count >= 1:
+            response = build_dejavu_response(
                 original_question, self.conversation, dejavu_count
             )
 
