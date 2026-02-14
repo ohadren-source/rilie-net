@@ -59,10 +59,13 @@ def _words(text: str) -> set:
 
 
 def gate_empty(plate: Dict[str, Any]) -> tuple:
-    """Gate 1: Is there food on the plate?"""
+    """Gate 1: Is there food on the plate? Minimum 9 words to serve."""
     text = plate.get("result", "").strip()
     if not text:
         return False, "EMPTY_PLATE"
+    word_count = len(text.split())
+    if word_count < 9:
+        return False, f"UNDERWEIGHT_{word_count}"
     return True, "OK"
 
 
@@ -177,6 +180,7 @@ def talk(
     memory: TalkMemory,
     max_retries: int = 2,
     retry_fn=None,
+    search_fn=None,
 ) -> Dict[str, Any]:
     """
     THE WAITRESS.
@@ -194,6 +198,7 @@ def talk(
         memory:      TalkMemory — what we've served before
         max_retries: How many times to send it back before giving up
         retry_fn:    Optional callable(stimulus) -> plate for retrying
+        search_fn:   Optional callable(query) -> str for self-search verification
     """
 
     attempts = 0
@@ -216,8 +221,24 @@ def talk(
                 break
 
         if failed is None:
-            # All gates passed. Serve it.
+            # All gates passed.
             result_text = current_plate.get("result", "")
+
+            # SELF-SEARCH: Before serving, google her own sentence
+            # to verify/enrich. Skip for primers (greetings etc).
+            status = str(current_plate.get("status", "")).upper()
+            is_primer = status in ("GREETING", "PRIMER", "GOODBYE")
+
+            if search_fn and result_text and not is_primer:
+                try:
+                    enrichment = search_fn(result_text)
+                    if enrichment and len(enrichment.strip()) > 20:
+                        # She found something — blend it in
+                        current_plate["self_search"] = enrichment.strip()
+                        logger.info("TALK: Self-search enriched response")
+                except Exception as e:
+                    logger.debug("TALK: Self-search failed (non-fatal): %s", e)
+
             memory.record(result_text)
 
             # Attach the receipt

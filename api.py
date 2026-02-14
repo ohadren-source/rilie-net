@@ -674,12 +674,23 @@ def run_rilie(req: RilieRequest) -> Dict[str, Any]:
     def _retry(stim):
         return guvna.process(stim, maxpass=req.max_pass)
 
+    def _self_search(sentence):
+        """She googles her own sentence before speaking it."""
+        try:
+            results = brave_search_sync(sentence, num_results=1)
+            if results:
+                return results[0].get("snippet", "")
+        except Exception:
+            pass
+        return ""
+
     served = talk(
         plate=result,
         stimulus=stimulus,
         memory=talk_memory,
         max_retries=2,
         retry_fn=_retry,
+        search_fn=_self_search,
     )
 
     if req.chef_mode:
