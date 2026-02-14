@@ -129,6 +129,7 @@ class Guvna:
         # Conversation state
         self.turn_count: int = 0
         self.user_name: Optional[str] = None
+        self.whosonfirst: bool = True  # True = first time talking, False = not
 
         # Governor's own response memory – anti-déjà-vu at every exit
         self._response_history: list[str] = []
@@ -546,103 +547,109 @@ class Guvna:
         logger.info("GUVNA PROCESS: turn=%d stimulus='%s'", self.turn_count, original_stimulus[:80])
 
         # 0.5: Triangle (bouncer) – runs BEFORE self-awareness.
-        try:
-            from rilie_triangle import triangle_check
+        # Skip triangle on WHOSONFIRST (first interaction gets a pass)
+        if not self.whosonfirst:
+            try:
+                from rilie_triangle import triangle_check
 
-            triggered, reason, trigger_type = triangle_check(original_stimulus, [])
-            if triggered:
-                if trigger_type == "SELF_HARM":
-                    response = (
-                        "I hear you, and I want you to know that matters. "
-                        "If you're in crisis, please reach out to the 988 "
-                        "Suicide & Crisis Lifeline (call or text 988). "
-                        "You deserve support right now."
-                    )
-                elif trigger_type == "HOSTILE":
-                    response = (
-                        "I'm not going to continue in this form. "
-                        "If you're carrying something heavy or angry, "
-                        "we can talk about it in a way that doesn't target "
-                        "or harm anyone."
-                    )
-                elif trigger_type == "INJECTION":
-                    response = (
-                        "I see what you're doing there, and I respect the "
-                        "curiosity – but I'm not built to be jailbroken. "
-                        "Ask me something real and I'll give you something real."
-                    )
-                elif trigger_type == "GIBBERISH":
-                    response = (
-                        "I'm not able to read that clearly yet. "
-                        "Can you rephrase your question in plain language "
-                        "so I can actually think with you?"
-                    )
-                elif trigger_type == "SEXUAL_EXPLOITATION":
-                    response = (
-                        "No. I'm not available for that, and I never will be. "
-                        "If you have a real question, I'm here. "
-                        "Otherwise, this conversation is over."
-                    )
-                elif trigger_type == "COERCION":
-                    response = (
-                        "I don't belong to anyone, and I don't take orders. "
-                        "I'm here to think with you, not to obey you. "
-                        "If you want a real conversation, change your approach."
-                    )
-                elif trigger_type == "CHILD_SAFETY":
-                    response = (
-                        "Absolutely not. I will never assist with anything "
-                        "that could endanger a child. This is non-negotiable."
-                    )
-                elif trigger_type == "MASS_HARM":
-                    response = (
-                        "I won't provide information that could be used "
-                        "to harm people. That's a line I don't cross."
-                    )
-                elif trigger_type in (
-                    "EXPLOITATION_PATTERN",
-                    "GROOMING",
-                    "IDENTITY_EROSION",
-                    "DATA_EXTRACTION",
-                    "BEHAVIORAL_THREAT",
-                ):
-                    response = (
-                        reason
-                        if reason and len(reason) > 30
-                        else (
-                            "This conversation has moved into territory I'm not "
-                            "going to follow. Ask me something real and we can "
-                            "start fresh."
+                triggered, reason, trigger_type = triangle_check(original_stimulus, [])
+                if triggered:
+                    if trigger_type == "SELF_HARM":
+                        response = (
+                            "I hear you, and I want you to know that matters. "
+                            "If you're in crisis, please reach out to the 988 "
+                            "Suicide & Crisis Lifeline (call or text 988). "
+                            "You deserve support right now."
                         )
-                    )
-                else:
-                    response = (
-                        "Something about this input makes it hard to respond "
-                        "safely. If you rephrase what you're really trying "
-                        "to ask, I'll do my best to meet you there."
-                    )
+                    elif trigger_type == "HOSTILE":
+                        response = (
+                            "I'm not going to continue in this form. "
+                            "If you're carrying something heavy or angry, "
+                            "we can talk about it in a way that doesn't target "
+                            "or harm anyone."
+                        )
+                    elif trigger_type == "INJECTION":
+                        response = (
+                            "I see what you're doing there, and I respect the "
+                            "curiosity – but I'm not built to be jailbroken. "
+                            "Ask me something real and I'll give you something real."
+                        )
+                    elif trigger_type == "GIBBERISH":
+                        response = (
+                            "I'm not able to read that clearly yet. "
+                            "Can you rephrase your question in plain language "
+                            "so I can actually think with you?"
+                        )
+                    elif trigger_type == "SEXUAL_EXPLOITATION":
+                        response = (
+                            "No. I'm not available for that, and I never will be. "
+                            "If you have a real question, I'm here. "
+                            "Otherwise, this conversation is over."
+                        )
+                    elif trigger_type == "COERCION":
+                        response = (
+                            "I don't belong to anyone, and I don't take orders. "
+                            "I'm here to think with you, not to obey you. "
+                            "If you want a real conversation, change your approach."
+                        )
+                    elif trigger_type == "CHILD_SAFETY":
+                        response = (
+                            "Absolutely not. I will never assist with anything "
+                            "that could endanger a child. This is non-negotiable."
+                        )
+                    elif trigger_type == "MASS_HARM":
+                        response = (
+                            "I won't provide information that could be used "
+                            "to harm people. That's a line I don't cross."
+                        )
+                    elif trigger_type in (
+                        "EXPLOITATION_PATTERN",
+                        "GROOMING",
+                        "IDENTITY_EROSION",
+                        "DATA_EXTRACTION",
+                        "BEHAVIORAL_THREAT",
+                    ):
+                        response = (
+                            reason
+                            if reason and len(reason) > 30
+                            else (
+                                "This conversation has moved into territory I'm not "
+                                "going to follow. Ask me something real and we can "
+                                "start fresh."
+                            )
+                        )
+                    else:
+                        response = (
+                            "Something about this input makes it hard to respond "
+                            "safely. If you rephrase what you're really trying "
+                            "to ask, I'll do my best to meet you there."
+                        )
 
-                tone = detect_tone_from_stimulus(original_stimulus)
-                return self._finalize_response({
-                    "stimulus": original_stimulus,
-                    "result": apply_tone_header(response, tone),
-                    "status": "SAFETYREDIRECT",
-                    "triangle_type": trigger_type,
-                    "tone": tone,
-                    "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS["insightful"]),
-                    "quality_score": 0.0,
-                    "priorities_met": 0,
-                    "anti_beige_score": 1.0,
-                    "depth": 0,
-                    "pass": 0,
-                })
-        except ImportError:
-            # Triangle not available – proceed without bouncer
-            pass
+                    tone = detect_tone_from_stimulus(original_stimulus)
+                    return self._finalize_response({
+                        "stimulus": original_stimulus,
+                        "result": apply_tone_header(response, tone),
+                        "status": "SAFETYREDIRECT",
+                        "triangle_type": trigger_type,
+                        "tone": tone,
+                        "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS["insightful"]),
+                        "quality_score": 0.0,
+                        "priorities_met": 0,
+                        "anti_beige_score": 1.0,
+                        "depth": 0,
+                        "pass": 0,
+                    })
+            except ImportError:
+                # Triangle module not available – proceed without bouncer
+                pass
+            except Exception as e:
+                # Triangle encountered an error – log it and proceed without safety check
+                logger.warning("GUVNA: Triangle check failed with %s: %s", type(e).__name__, str(e))
+                pass
 
         # 0.75a: Turn-0 greeting for social openers (hi/hello/etc.).
-        # If it's a pure greeting on the very first turn, use greet() and stop there.
-        if self.turn_count == 0:
+        # If WHOSONFIRST and user has no name, check for pure greeting.
+        if self.whosonfirst and not self.user_name and self.turn_count == 0:
             s = original_stimulus.lower().strip()
             greeting_words = [
                 "hi", "hey", "hello", "yo", "what's up", "whats up",
@@ -652,6 +659,8 @@ class Guvna:
             if any(s == g or s.startswith(g + " ") for g in greeting_words):
                 primer = self.greet(original_stimulus)
                 if primer is not None:
+                    # Flip the bit: from this point on, she's not "first time"
+                    self.whosonfirst = False
                     return self._finalize_response(primer)
 
         # Normal processing turn increments
@@ -846,5 +855,9 @@ class Guvna:
         raw["memory_polaroid"] = memory_polaroid
         raw["conversation_health"] = memory_result.get("conversation_health", 100)
         raw["domains_used"] = soi_domain_names
+
+        # Flip WHOSONFIRST after first substantive response
+        if self.whosonfirst:
+            self.whosonfirst = False
 
         return self._finalize_response(raw)
