@@ -59,12 +59,12 @@ def _words(text: str) -> set:
 
 
 def gate_empty(plate: Dict[str, Any]) -> tuple:
-    """Gate 1: Is there food on the plate? Minimum 99 words to serve."""
+    """Gate 1: Is there food on the plate? Minimum 18 words to serve."""
     text = plate.get("result", "").strip()
     if not text:
         return False, "EMPTY_PLATE"
     word_count = len(text.split())
-    if word_count < 99:
+    if word_count < 18:
         return False, f"UNDERWEIGHT_{word_count}"
     return True, "OK"
 

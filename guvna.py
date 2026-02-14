@@ -993,11 +993,14 @@ class Guvna:
         # Turn 1: Pure warmth
         if self.turn_count == 0:
             if self.user_name:
-                # She knows them — welcome back
+                # Name known — welcome back
                 text = f"Hey {self.user_name}. Welcome back. What's on your mind?"
-            else:
-                # She doesn't know them — introduce herself, ask their name
+            elif is_greeting:
+                # Greeting, no name — introduce herself, ask their name
                 text = "Hi there, what's your name? You can call me RILIE if you so please... :)"
+            else:
+                # They jumped straight to a question — respect that, skip primer
+                return None
 
             return self._primer_response(stimulus, text)
 
