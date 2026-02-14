@@ -91,9 +91,27 @@ def gate_relevance(plate: Dict[str, Any], stimulus: str) -> tuple:
     """
     Gate 3: Did she answer what was asked?
     Checks if the response has any connection to the stimulus.
+
+    EXCEPTION: Greetings, goodbyes, and short social exchanges
+    don't need topic relevance. They're social, not topical.
     """
     text = plate.get("result", "").strip()
     if not text:
+        return True, "OK"
+
+    # Social exchanges skip relevance — they're not about a topic
+    s = stimulus.lower().strip()
+    social_signals = [
+        "hi", "hey", "hello", "sup", "what's up", "whats up", "howdy", "yo",
+        "good morning", "good afternoon", "good evening", "hola", "shalom",
+        "bonjour", "bye", "goodbye", "see you", "later", "peace", "thanks",
+        "thank you", "ok", "okay", "cool", "nice", "wow", "haha", "lol",
+        "my name is", "i'm ", "call me",
+    ]
+    if any(s.startswith(g) or s == g for g in social_signals):
+        return True, "OK"
+    # Very short stimulus (< 4 words) — social by nature
+    if len(s.split()) < 4:
         return True, "OK"
 
     stim_words = _words(stimulus)
