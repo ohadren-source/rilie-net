@@ -28,6 +28,7 @@ UPGRADES (from savage_salvage):
 """
 
 import random
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Dict, Optional
@@ -810,6 +811,7 @@ def run_pass_pipeline(
     disclosure_level: str,
     max_pass: int = 3,
     baseline_results: Optional[List[Dict[str, str]]] = None,
+    prior_responses: Optional[List[str]] = None,
 ) -> Dict:
     """
     Run interpretation passes.  Called only at OPEN or FULL disclosure.
@@ -817,20 +819,11 @@ def run_pass_pipeline(
     Now accepts baseline_results so it can compute the external trite meter.
     Also detects and applies curiosity context if present in the stimulus.
 
-    Behavior:
-    - Extracts curiosity context if injected by rilie.py.
-    - Sets external trite score before generating interpretations.
-    - Sets curiosity bonus if her own discoveries are relevant.
-    - Always tries up to max_pass depths (capped at 9).
-    - Anti-beige is a CURVE: penalizes but does not kill candidates.
-    - If any candidates survive, ALWAYS returns the best one:
-      * "COMPRESSED" for early/shallow question types.
-      * "GUESS" when thresholds aren't hit but something exists.
-    - Only if NO interpretations survive at all does it return
-      the global "MISE_EN_PLACE" fallback.
-
-    There is NO normal COURTESY_EXIT here; courtesy exits live in rilie.py
-    as OHAD-style last resorts after this pipeline runs.
+    ANTI-DÉJÀ-VU GATE:
+    She is forbidden to produce déjà vu in others.
+    Any candidate too similar to her own recent responses is rejected.
+    She can *notice* the user repeating — that's internal context.
+    But she never repeats herself. Rather silence than repetition.
     """
     # Check for curiosity context and extract it
     curiosity_ctx = extract_curiosity_context(stimulus)
@@ -848,6 +841,29 @@ def run_pass_pipeline(
 
     question_type = detect_question_type(clean_stimulus)
     domains = detect_domains(clean_stimulus)
+
+    # --- Anti-déjà-vu: build word sets from her recent responses ---
+    _prior_word_sets: List[set] = []
+    if prior_responses:
+        for pr in prior_responses[-5:]:  # Last 5 responses
+            words = set(re.sub(r"[^a-zA-Z0-9\s]", "", pr.lower()).split())
+            _prior_word_sets.append(words)
+
+    def _is_dejavu(candidate_text: str) -> bool:
+        """Return True if candidate is too similar to any recent response."""
+        if not _prior_word_sets or not candidate_text:
+            return False
+        cand_words = set(re.sub(r"[^a-zA-Z0-9\s]", "", candidate_text.lower()).split())
+        if len(cand_words) < 3:
+            return False
+        for prior_words in _prior_word_sets:
+            if not prior_words:
+                continue
+            overlap = cand_words & prior_words
+            smaller = min(len(cand_words), len(prior_words))
+            if smaller > 0 and len(overlap) / smaller > 0.6:
+                return True
+        return False
     excavated = excavate_domains(clean_stimulus, domains)
 
     # --- SOi DOMAIN MAP: Pull wisdom from the 93 tracks ---
@@ -889,13 +905,38 @@ def run_pass_pipeline(
         if not nine:
             continue
 
-        # Thresholds — lowered slightly since beige curve means more candidates survive
+        # Thresholds — she doesn't need to be Oscar Wilde. Just not trite.
         filtered = [
             i
             for i in nine
-            if i.overall_score > (0.15 if current_pass == 1 else 0.25)
-            or i.count_met >= (1 if current_pass == 1 else 2)
+            if (i.overall_score > (0.06 if current_pass == 1 else 0.09)
+                or i.count_met >= 1)
+            and not _is_dejavu(i.text)  # ANTI-DÉJÀ-VU GATE
         ]
+
+        # If anti-déjà-vu rejected everything, take the LEAST similar one.
+        # She must respond. Silence is a moment, not a destination.
+        if not filtered and nine:
+            def _dejavu_score(text: str) -> float:
+                """Lower = less similar to prior responses = better."""
+                if not _prior_word_sets or not text:
+                    return 0.0
+                cand_words = set(re.sub(r"[^a-zA-Z0-9\s]", "", text.lower()).split())
+                if len(cand_words) < 3:
+                    return 0.0
+                best_overlap = 0.0
+                for pw in _prior_word_sets:
+                    if not pw:
+                        continue
+                    overlap = cand_words & pw
+                    smaller = min(len(cand_words), len(pw))
+                    if smaller > 0:
+                        best_overlap = max(best_overlap, len(overlap) / smaller)
+                return best_overlap
+
+            # Sort by least déjà vu, pick the freshest
+            ranked = sorted(nine, key=lambda x: _dejavu_score(x.text))
+            filtered = [ranked[0]]
 
         if filtered:
             best = max(filtered, key=lambda x: (x.count_met, x.overall_score))

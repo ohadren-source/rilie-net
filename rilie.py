@@ -635,6 +635,7 @@ class RILIE:
             kitchen_input,
             disclosure_level=disclosure.value,
             max_pass=maxpass_int,
+            prior_responses=self.conversation.response_history,
         )
 
         status = str(raw.get("status", "OK") or "OK").upper()
