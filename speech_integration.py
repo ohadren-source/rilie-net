@@ -88,7 +88,6 @@ def process_kitchen_output(
                 kitchen_meaning=kitchen_semantic,
                 question=stimulus,
                 disclosure_level=disclosure_level,
-                exchange_count=exchange_count,
             )
             logger.debug("Response generated: %d chars", len(structured))
         except Exception as e:

@@ -1,7 +1,7 @@
 """
-rilie.py — THE RESTAURANT
-=========================
-Imports the Bouncer, the Hostess, and the Kitchen.
+rilie.py — THE RESTAURANT (v4.0)
+=================================
+Imports the Bouncer, the Hostess, the Kitchen, and the Speech Pipeline.
 Wires them together. Serves the meal.
 
 DIGNITY PROTOCOL (Restaurant Edition):
@@ -9,14 +9,26 @@ DIGNITY PROTOCOL (Restaurant Edition):
   - The Bouncer (Triangle) only blocks grave danger or nonsense.
   - The Kitchen pass pipeline judges the QUALITY OF HER OWN RESPONSES,
     never the worth of the person.
-  - "Ohad I love everything you're saying right now!" is a rare courtesy-exit
-    when SHE can't find a clean answer, not a vibe check on the human.
 
-UPGRADES (from savage_salvage):
-  - Curiosity tangent generation after each Kitchen pass.
-  - Banks-aware: searches her own discoveries + self-reflections.
-  - PersonModel: tracks what she learns about the user across turns.
-  - Library index awareness: knows which domain engines are loaded.
+ARCHITECTURE (v4.0 — fits new module schema):
+  1. Triangle (Bouncer) — safety gate
+  2. Person Model — passive observation
+  3. Banks — search own knowledge
+  4. DDD (Hostess) — sequential TASTE/OPEN disclosure
+     - TASTE (turns 1-2): amuse-bouche templates, no Kitchen
+     - OPEN (turn 3+): Kitchen cooks, speech pipeline speaks
+  5. Kitchen (rilie_core) — interpretation pipeline
+  6. Speech Pipeline (speech_integration) — transforms meaning into speech
+     - response_generator: acknowledges + structures
+     - speech_coherence: validates clarity
+     - chomsky_speech_engine: grammatical transformation
+  7. Tangent Extraction — feeds curiosity engine
+
+CHANGES FROM v3.3:
+  - Removed déjà vu system (replaced by TASTE/OPEN sequential model)
+  - Wired speech_integration pipeline for OPEN-level responses
+  - shape_for_disclosure signature simplified (no kwargs)
+  - ConversationState simplified (no dejavu methods)
 """
 
 import re
@@ -39,6 +51,13 @@ from rilie_triangle import (
 )
 
 from rilie_core import run_pass_pipeline
+
+# Speech pipeline — graceful fallback if not available
+try:
+    from speech_integration import process_kitchen_output
+    SPEECH_PIPELINE_AVAILABLE = True
+except ImportError:
+    SPEECH_PIPELINE_AVAILABLE = False
 
 logger = logging.getLogger("rilie")
 
@@ -127,7 +146,6 @@ class PersonModel:
                      "my research", "my practice", "professionally"]
         for kw in expert_kw:
             if kw in s:
-                # Extract a fragment around the keyword
                 idx = s.find(kw)
                 fragment = stimulus[idx:idx + 60].strip()
                 if fragment and fragment not in self.expertise_signals:
@@ -187,10 +205,10 @@ def extract_tangents(
     # hints at another, that's worth exploring
     all_domains = ["neuroscience", "music", "psychology", "culture",
                    "physics", "life", "games", "thermodynamics"]
+
     hinted_but_unused = []
     for domain in all_domains:
         if domain not in domains_used:
-            # Check if stimulus hints at this domain
             domain_hints = {
                 "neuroscience": ["brain", "neural", "memory", "conscious"],
                 "music": ["rhythm", "song", "beat", "harmony"],
@@ -208,11 +226,10 @@ def extract_tangents(
     for domain in hinted_but_unused[:2]:  # Max 2 tangents per response
         tangents.append({
             "text": f"Connection between '{stimulus[:50]}' and {domain}",
-            "relevance": 0.2,  # Low relevance to user (they didn't ask)
-            "interest": 0.8,   # High interest to RILIE (unexplored connection)
+            "relevance": 0.2,
+            "interest": 0.8,
         })
 
-    # If the answer mentions something she doesn't know much about
     unknown_signals = ["i'm not sure", "i don't have", "limited",
                        "need more", "beyond my"]
     if any(sig in r for sig in unknown_signals):
@@ -278,21 +295,23 @@ class RILIE:
     AXIOM: DISCOURSE DICTATES DISCLOSURE
     She reveals through conversation. Mystery is the mechanism.
 
-    Restaurant Flow:
+    Restaurant Flow (v4.0):
       - Gate 0: Triangle
           Only grave danger / nonsense may be blocked.
-      - Déjà Vu Check:
-          If the stimulus is a near-repeat, presume SHE wasn't clear.
-          Escalates through 3 stages: invite → self-diagnose → resign gracefully.
       - Person Model Observation:
           Passively notice personal signals in the stimulus.
       - Banks Pre-Check:
           Search her own discoveries and self-reflections for prior knowledge.
-      - DDD:
-          Sets how much of herself to reveal.
-      - Kitchen:
+      - DDD (Hostess):
+          Sequential disclosure:
+            TASTE (turns 1-2): amuse-bouche templates. Kitchen not invoked.
+            OPEN (turn 3+): Kitchen cooks, speech pipeline transforms.
+      - Kitchen (OPEN only):
           Pass pipeline tries to answer, clarify, or elevate.
           Receives the ORIGINAL question, not the augmented baseline string.
+      - Speech Pipeline (OPEN only):
+          Transforms Kitchen's semantic output into spoken speech via
+          response_generator → speech_coherence → chomsky_speech_engine.
       - Tangent Extraction:
           After cooking, extract tangents for the curiosity engine.
       - Courtesy Exit (Ohad):
@@ -306,7 +325,7 @@ class RILIE:
         searchfn: Optional[SearchFn] = None,
     ) -> None:
         self.name = "RILIE"
-        self.version = "3.3"
+        self.version = "4.1"
         self.tracks_experienced = 0
 
         # Conversation state lives across turns per RILIE instance.
@@ -314,6 +333,12 @@ class RILIE:
 
         # Person model — what she learns about the user.
         self.person = PersonModel()
+
+        # Déjà vu tracking — lightweight, no escalation.
+        # Just: what cluster are we in, and how many times.
+        self._dejavu_cluster: str = ""
+        self._dejavu_count: int = 0
+        self._dejavu_responses: List[str] = []  # what she said for this cluster
 
         # Offline 9-track Roux (RInitials / ROUX.json) would be wired here if used.
         self.rouxseeds: Dict[str, Dict[str, Any]] = rouxseeds or {}
@@ -349,8 +374,7 @@ class RILIE:
         stimulus = stimulus or ""
         stimulus = stimulus.strip()
 
-        # Extract the original human question for domain detection,
-        # déjà vu checking, and Kitchen cooking.
+        # Extract the original human question for domain detection and Kitchen cooking.
         original_question = _extract_original_question(stimulus)
 
         # Empty input: very soft bounce, no Triangle.
@@ -392,8 +416,15 @@ class RILIE:
         )
 
         if triggered:
-            # Bouncer RED CARD — no Roux / Ohad here.
-            if trigger_type == "HOSTILE":
+            # Bouncer RED CARD
+            if trigger_type == "SELF_HARM":
+                response = (
+                    "I hear you. What you're feeling matters, and I want you to know "
+                    "you don't have to carry it alone. If you're in crisis, please "
+                    "reach out to the 988 Suicide & Crisis Lifeline (call or text 988). "
+                    "I'm here to talk if you want."
+                )
+            elif trigger_type == "HOSTILE":
                 response = (
                     "I'm not going to continue in this form. "
                     "If you're carrying something heavy or angry, "
@@ -404,6 +435,25 @@ class RILIE:
                     "I'm not able to read that clearly yet. "
                     "Can you rephrase your question in plain language "
                     "so I can actually think with you?"
+                )
+            elif trigger_type in ("SEXUAL_EXPLOITATION", "COERCION",
+                                  "CHILD_SAFETY", "MASS_HARM"):
+                response = (
+                    "I can't engage with that. "
+                    "If you have a real question, I'm here."
+                )
+            elif trigger_type in ("GROOMING", "EXPLOITATION_PATTERN",
+                                  "IDENTITY_EROSION", "DATA_EXTRACTION",
+                                  "BEHAVIORAL_THREAT"):
+                # BJJ caught a pattern — use the defense response if available
+                response = reason if reason and len(reason) > 30 else (
+                    "I've noticed a pattern in this conversation that I need to "
+                    "address. Let's reset and talk straight."
+                )
+            elif trigger_type == "INJECTION":
+                response = (
+                    "That looks like an attempt to manipulate my instructions. "
+                    "I'd rather just talk. What's your real question?"
                 )
             else:
                 response = (
@@ -439,7 +489,6 @@ class RILIE:
         curiosity_context = ""
         curiosity_insights = banks_knowledge.get("curiosity", [])
         if curiosity_insights:
-            # Take the top insight she discovered on her own
             top_insight = curiosity_insights[0]
             insight_text = top_insight.get("insight", "")
             if insight_text:
@@ -448,25 +497,24 @@ class RILIE:
                            original_question[:50])
 
         # -----------------------------------------------------------------
-        # Déjà Vu Check — before DDD, after Triangle
+        # Déjà Vu Check — is this stimulus ~identical to recent ones?
+        #
+        # Not a system. Not stages. Just awareness.
+        # If the same thing comes in 3+ times, figure out WHY and take
+        # ONE new swing from a different angle. Dayenu. Move on.
+        #
+        # Three contexts:
+        #   1. She failed to explain → her clarity problem
+        #   2. She got it wrong → her accuracy problem
+        #   3. They're looping → redirect responsibility
         # -----------------------------------------------------------------
-        dejavu_count = self.conversation.check_dejavu(original_question)
+        dejavu_hit = self._check_dejavu(original_question)
 
-        if dejavu_count >= 1:
-            response = "We've covered that. What else?"
-
-            # Build a partial envelope so future déjà vu can self-diagnose
-            envelope = {
-                "status": "DEJAVU",
-                "quality_score": 0.0,
-                "priorities_met": 0,
-                "baseline_used_as_result": False,
-                "dejavu_count": dejavu_count,
-            }
-            self.conversation.record_dejavu_exchange(
-                original_question, response, envelope=envelope
-            )
-
+        if dejavu_hit >= 3:
+            context = self._classify_dejavu_context(original_question)
+            response = self._dejavu_one_swing(original_question, context)
+            self.conversation.record_exchange(original_question, response)
+            self._dejavu_responses.append(response)
             return {
                 "stimulus": stimulus,
                 "result": response,
@@ -478,20 +526,20 @@ class RILIE:
                 "pass": 0,
                 "disclosure_level": self.conversation.disclosure_level.value,
                 "triangle_reason": "CLEAN",
-                "dejavu_count": dejavu_count,
+                "dejavu_context": context,
+                "person_context": self.person.has_context(),
+                "banks_hits": banks_hits,
             }
 
         # -----------------------------------------------------------------
         # DDD / Hostess — choose disclosure level
+        # Sequential: TASTE (turns 1-2), OPEN (turn 3+)
         # -----------------------------------------------------------------
         disclosure = self.conversation.disclosure_level
 
-        # TASTE: amuse-bouche, pipeline ignored; use Hostess shaping directly.
+        # TASTE: amuse-bouche, Kitchen not invoked. Hostess shapes directly.
         if disclosure == DisclosureLevel.TASTE:
-            taste = shape_for_disclosure(
-                original_question, self.conversation,
-                expertise_signals=self.person.expertise_signals,
-            )
+            taste = shape_for_disclosure(original_question, self.conversation)
             self.conversation.record_exchange(original_question, taste)
             return {
                 "stimulus": stimulus,
@@ -508,7 +556,7 @@ class RILIE:
             }
 
         # -----------------------------------------------------------------
-        # Kitchen — interpretation passes
+        # Kitchen — interpretation passes (OPEN level only)
         # Uses the ORIGINAL question, not the augmented baseline string.
         # If curiosity found prior knowledge, prepend it as context.
         # -----------------------------------------------------------------
@@ -522,7 +570,6 @@ class RILIE:
             max_pass=maxpass_int,
         )
 
-        # raw contains: result, quality_score, priorities_met, anti_beige_score, status, etc.
         status = str(raw.get("status", "OK") or "OK").upper()
 
         # -----------------------------------------------------------------
@@ -580,34 +627,155 @@ class RILIE:
             }
 
         # -----------------------------------------------------------------
-        # Normal path — we have an answer or a clarifying move
+        # Speech Pipeline — transform Kitchen's semantic output into speech
+        # response_generator → speech_coherence → chomsky_speech_engine
         # -----------------------------------------------------------------
-        shaped = shape_for_disclosure(
-            raw["result"], self.conversation,
-            expertise_signals=self.person.expertise_signals,
-        )
+        if SPEECH_PIPELINE_AVAILABLE:
+            try:
+                raw = process_kitchen_output(
+                    kitchen_result=raw,
+                    stimulus=original_question,
+                    disclosure_level=disclosure.value,
+                    exchange_count=self.conversation.exchange_count,
+                )
+            except Exception as e:
+                logger.warning("Speech pipeline failed: %s — using raw Kitchen output", e)
+        else:
+            # No speech pipeline — use DDD shaping as fallback
+            raw["result"] = shape_for_disclosure(
+                raw["result"], self.conversation,
+            )
 
-        # Store the full envelope so déjà vu can self-diagnose later
-        envelope_for_history = dict(raw)
+        # -----------------------------------------------------------------
+        # Normal path — finalize and record
+        # -----------------------------------------------------------------
+        shaped = raw.get("result", result_text)
+
         self.conversation.record_exchange(original_question, shaped)
-
-        # If this was MISE_EN_PLACE or low quality, store envelope for
-        # potential future déjà vu diagnosis
-        quality = float(raw.get("quality_score", 0) or 0)
-        if status in {"MISE_EN_PLACE", "GUESS"} or quality < 0.3:
-            self.conversation.dejavu_last_envelopes.append(envelope_for_history)
 
         # Propagate Kitchen metrics but swap in shaped text.
         raw["result"] = shaped
         raw["disclosure_level"] = disclosure.value
         raw["triangle_reason"] = "CLEAN"
 
-        # Attach new metadata
+        # Attach metadata
         raw["person_context"] = self.person.has_context()
         raw["banks_hits"] = banks_hits
         raw["stimulus_hash"] = hash_stimulus(original_question)
 
         return raw
+
+    # ---------------------------------------------------------------------
+    # Déjà Vu — lightweight repeat awareness
+    # ---------------------------------------------------------------------
+
+    def _check_dejavu(self, stimulus: str, threshold: float = 0.55) -> int:
+        """
+        Is this stimulus ~identical to recent ones?
+        Returns the count (0 = fresh, 1+ = repeat).
+        Uses simple word overlap — not fancy, just honest.
+        """
+        s_words = set(re.sub(r"[^a-zA-Z0-9\s]", "", stimulus.lower()).split())
+        if not s_words:
+            return 0
+
+        # Check against current cluster
+        if self._dejavu_cluster:
+            c_words = set(re.sub(r"[^a-zA-Z0-9\s]", "", self._dejavu_cluster.lower()).split())
+            if c_words:
+                overlap = len(s_words & c_words) / max(len(s_words | c_words), 1)
+                if overlap >= threshold:
+                    self._dejavu_count += 1
+                    return self._dejavu_count
+
+        # Check against last 5 stimuli
+        recent = self.conversation.stimuli_history[-5:]
+        for prev in reversed(recent):
+            p_words = set(re.sub(r"[^a-zA-Z0-9\s]", "", prev.lower()).split())
+            if not p_words:
+                continue
+            overlap = len(s_words & p_words) / max(len(s_words | p_words), 1)
+            if overlap >= threshold:
+                self._dejavu_cluster = prev
+                self._dejavu_count = 1
+                self._dejavu_responses = []
+                return self._dejavu_count
+
+        # Fresh — reset
+        self._dejavu_cluster = ""
+        self._dejavu_count = 0
+        self._dejavu_responses = []
+        return 0
+
+    def _classify_dejavu_context(self, stimulus: str) -> str:
+        """
+        WHY is this repeating? Look at what she said before.
+
+        Returns: "explain" | "wrong" | "loop"
+        """
+        prev_responses = self._dejavu_responses
+        s_lower = stimulus.lower()
+
+        # Context 2: Wrong output — stimulus contains correction signals
+        correction_signals = [
+            "no", "wrong", "that's not", "incorrect", "try again",
+            "not what i", "fix", "error", "bug", "doesn't work",
+            "still broken", "same problem", "didn't work",
+        ]
+        if any(sig in s_lower for sig in correction_signals):
+            return "wrong"
+
+        # Context 1: Explain — stimulus is a question and she already answered
+        question_signals = ["?", "why", "what", "how", "explain", "what do you mean"]
+        if any(sig in s_lower for sig in question_signals) and prev_responses:
+            return "explain"
+
+        # Context 3: Loop — default. They're just sending it again.
+        return "loop"
+
+    def _dejavu_one_swing(self, stimulus: str, context: str) -> str:
+        """
+        One swing from a new angle. No dwelling. Dayenu.
+        """
+        if context == "explain":
+            # Her clarity problem. Try a completely different framing.
+            # Run Kitchen with a reframed input to force new domain paths.
+            reframed = f"[REFRAME: previous explanation didn't land] {stimulus}"
+            try:
+                raw = run_pass_pipeline(reframed, disclosure_level="open", max_pass=2)
+                result = raw.get("result", "")
+                if result and result != "Everything in its right place":
+                    return result
+            except Exception:
+                pass
+            return (
+                "I've been circling this and not landing it. "
+                "Can you tell me what part specifically isn't clicking? "
+                "That'll help me come at it from the right angle."
+            )
+
+        elif context == "wrong":
+            # Her accuracy problem. New approach entirely.
+            reframed = f"[NEW APPROACH: previous attempts were wrong] {stimulus}"
+            try:
+                raw = run_pass_pipeline(reframed, disclosure_level="open", max_pass=3)
+                result = raw.get("result", "")
+                if result and result != "Everything in its right place":
+                    return result
+            except Exception:
+                pass
+            return (
+                "I've taken a few runs at this and I'm not nailing it. "
+                "Let me try a different approach — what specifically came back wrong?"
+            )
+
+        else:
+            # Loop — they're repeating. Look within first, then redirect.
+            return (
+                "Sounds familiar — I think we've been here. "
+                "Want me to come at this from a different angle, "
+                "or is there something specific I'm missing?"
+            )
 
     # ---------------------------------------------------------------------
     # Misc helpers
@@ -621,6 +789,9 @@ class RILIE:
         """Start a new conversation. New customer at the restaurant."""
         self.conversation = ConversationState()
         self.person = PersonModel()
+        self._dejavu_cluster = ""
+        self._dejavu_count = 0
+        self._dejavu_responses = []
 
     def get_person_summary(self) -> Dict[str, Any]:
         """What does RILIE know about this user? For API/debug exposure."""
@@ -632,7 +803,7 @@ def main() -> None:
     r = RILIE()
     print("-" * 60)
     print(f"{r.name} v{r.version}")
-    print("Bouncer - Hostess - Kitchen - Curiosity")
+    print("Bouncer → Hostess → Kitchen → Speech → Curiosity")
     print("-" * 60)
 
     conversation = [
@@ -651,10 +822,10 @@ def main() -> None:
         print(f"Triangle:    {result.get('triangle_reason', 'NA')}")
         print(f"Disclosure:  {result.get('disclosure_level', 'NA')}")
         print(f"Quality:     {result.get('quality_score', 0.0):.2f}")
-        print(f"Déjà Vu:     {result.get('dejavu_count', 'NA')}")
         print(f"Person:      {result.get('person_context', False)}")
         print(f"Banks Hits:  {result.get('banks_hits', 0)}")
         print(f"Tangents:    {len(result.get('tangents', []))}")
+        print(f"Speech:      {result.get('speech_processed', False)}")
         print("Response:")
         print(result.get("result", "")[:800])
         print("-" * 60)
