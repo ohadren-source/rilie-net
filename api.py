@@ -110,6 +110,12 @@ def build_library_index() -> LibraryIndex:
     """
     import importlib
     import importlib.util
+    import sys
+
+    # Ensure library subfolder is on the path
+    library_dir = str(BASE_DIR / "library")
+    if library_dir not in sys.path:
+        sys.path.insert(0, library_dir)
 
     index: LibraryIndex = {}
 
@@ -198,6 +204,97 @@ def build_library_index() -> LibraryIndex:
     _safe_import("network_theory", "network_theory",
         ["karma", "network", "topology", "propagation",
          "cascade", "grace", "hub", "node", "dharma"])
+
+    # ===================================================================
+    # EXPANDED CURRICULUM — 12 additional domain engines
+    # ===================================================================
+
+    # --- Big Bang / Boolean Universe ---
+    _safe_import("bigbang", "bigbang",
+        ["universe", "boolean", "bang", "inflation", "radiation",
+         "matter", "dark energy", "horizon", "stars", "quack"])
+
+    # --- Biochem Universe / Full Cognition OS ---
+    _safe_import("biochem_universe", "biochem_universe",
+        ["biochem", "atp", "enzyme", "genotype", "cognition",
+         "emergence", "soulpower", "flow", "gates", "dimensions"])
+
+    # --- Chemistry / Molecular OS ---
+    _safe_import("chemistry", "chemistry",
+        ["molecule", "bond", "reaction", "catalyst", "ph",
+         "stoichiometry", "gibbs", "resonance", "electronegativity",
+         "concentration", "acid", "base", "element", "compound"])
+
+    # --- Civics / Government & Rights ---
+    _safe_import("civics", "civics",
+        ["government", "rights", "voting", "amendment", "constitution",
+         "federalism", "due process", "equal protection", "jury",
+         "impeach", "democracy", "civic", "law", "justice"])
+
+    # --- Climate / Catch 44 Climate Model ---
+    _safe_import("climate_catch44_model", "climate",
+        ["climate", "warming", "carbon", "emission", "temperature",
+         "feedback", "tipping point", "atmosphere", "ocean", "weather"])
+
+    # --- Computer Science / Computational OS ---
+    _safe_import("computerscience", "computerscience",
+        ["algorithm", "complexity", "throughput", "big o", "hash",
+         "tree", "consensus", "load", "compute", "data structure",
+         "code", "software", "programming", "binary"])
+
+    # --- Deep Time / Geology ---
+    _safe_import("deep_time_geo", "geology",
+        ["geology", "erosion", "tectonic", "sediment", "fossil",
+         "deep time", "threshold", "collapse", "irreversible",
+         "earth", "mineral", "rock", "volcano", "earthquake"])
+
+    # --- Developmental Biology ---
+    _safe_import("developmental_bio", "developmental_bio",
+        ["development", "embryo", "critical period", "growth",
+         "nurture", "child", "potential", "maturation", "stem cell",
+         "differentiation", "aging", "birth", "pregnancy"])
+
+    # --- Ecology / Ecosystems ---
+    _safe_import("ecology", "ecology",
+        ["ecosystem", "species", "population", "carrying capacity",
+         "keystone", "predator", "prey", "biodiversity", "habitat",
+         "extinction", "food chain", "conservation", "nature"])
+
+    # --- Evolutionary Biology ---
+    _safe_import("evolve", "evolution",
+        ["evolution", "natural selection", "mutation", "adaptation",
+         "cooperation", "exploit", "fitness", "survival", "darwin",
+         "reproduction", "gene", "trait", "species"])
+
+    # --- Genomics ---
+    _safe_import("genomics", "genomics",
+        ["genome", "dna", "rna", "gene", "crispr", "sequencing",
+         "protein", "expression", "heredity", "chromosome",
+         "genetic", "mutation", "epigenetic"])
+
+    # --- Linguistics & Cognitive Science ---
+    _safe_import("linguistics_cognition", "linguistics",
+        ["language", "semantics", "syntax", "pragmatics", "cognition",
+         "bilingual", "translation", "metaphor", "code switch",
+         "broca", "wernicke", "meaning", "speech", "communication"])
+
+    # --- Nanotechnology ---
+    _safe_import("nanotechnology", "nanotechnology",
+        ["nano", "nanoscale", "self assembly", "swarm", "delivery",
+         "coating", "surface", "molecular", "fabrication",
+         "nanoparticle", "quantum dot", "microscale"])
+
+    # --- Night Trader / Quantum Trading (CONFIDENTIAL — internal only) ---
+    _safe_import("QuantumTrading", "nighttrader",
+        ["trading", "density", "signal", "market", "regime",
+         "position", "risk", "portfolio", "stock", "finance",
+         "investment", "capital", "hedge"])
+
+    # --- Urban Design / Saucelito Civic ---
+    _safe_import("urban_design", "urban_design",
+        ["urban", "city", "district", "architecture", "housing",
+         "affordable", "gentrification", "infrastructure", "civic",
+         "zoning", "density", "community", "planning"])
 
     logger.info("Library index complete: %d domain engines loaded", len(index))
     return index

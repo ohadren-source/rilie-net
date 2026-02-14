@@ -57,7 +57,13 @@ class SafetyState:
 
 # Original 3x3
 ROUX_CITIES_CORE = ["Brooklyn", "New Orleans", "Nice France"]
-ROUX_CHANNELS = ["mind", "body", "soul"]
+ROUX_CHANNELS = ["mind", "body", "soul", "food", "music", "funny", "film"]
+
+# Music genre queries — appended after city×channel grid
+ROUX_MUSIC_GENRES = [
+    "hip-hop hip hop", "hardcore hard core", "brutal",
+    "board", "skate", "surf", "funk", "rock", "break",
+]
 
 # Expanded cities matching banks.py DEFAULT_CITIES for full Roux coverage
 ROUX_CITIES_EXPANDED = [
@@ -465,54 +471,101 @@ def gibberish_check(stimulus: str) -> bool:
 def build_roux_queries(
     stimulus: str,
     expanded: bool = False,
+    holy_trinity: Optional[List[str]] = None,
 ) -> List[str]:
     """
-    Take the stimulus X, build Roux queries:
-    Default (9): X + core_city + channel (3×3)
-    Expanded (45): X + expanded_city + channel (15×3)
+    Build Roux search queries from stimulus.
 
-    Returns search queries ready for Brave/Google.
+    Pipeline:
+      1. If holy_trinity provided (from Chomsky), use it as search core.
+         Otherwise fall back to first 8 words of stimulus.
+      2. Core × cities × 7 channels (mind/body/soul/food/music/funny/film)
+      3. Append music genre queries.
+
+    Default (core 3 cities × 7 channels + 9 genres = 30 queries)
+    Expanded (15 cities × 7 channels + 9 genres = 114 queries)
     """
-    # Clean the stimulus for search — keep it short
-    words = stimulus.split()[:8]  # max 8 words
-    core = " ".join(words) if words else "question"
+    # Step 1: Build search core from holy trinity or raw words
+    if holy_trinity and len(holy_trinity) > 0:
+        core = " ".join(holy_trinity[:3])
+    else:
+        words = stimulus.split()[:8]
+        core = " ".join(words) if words else "question"
+
     cities = ROUX_CITIES_EXPANDED if expanded else ROUX_CITIES
     queries: List[str] = []
+
+    # Step 2: Core × cities × channels
     for city in cities:
         for channel in ROUX_CHANNELS:
             queries.append(f"{core} {city} {channel}")
+
+    # Step 3: Music genre queries
+    for genre in ROUX_MUSIC_GENRES:
+        queries.append(f"{core} {genre}")
+
     return queries
 
 
 def pick_best_roux_result(
     search_results: List[Dict],
     domain_keywords: Optional[List[str]] = None,
+    tone: Optional[str] = None,
 ) -> str:
     """
-    From aggregated search results across Roux queries, pick the most relevant.
-    - If domain_keywords provided, score by keyword overlap.
-    - Otherwise, fall back to first non-empty title/snippet.
+    From aggregated Roux search results, pick the best match.
+
+    Scoring:
+      1. Keyword overlap with holy trinity / domain keywords
+      2. Tone affinity — boost results matching stimulus energy
+      3. Length preference — favor substantive snippets over stubs
+
+    Returns the single best snippet.
     """
     if not search_results:
         return ""
 
-    # No domain context — just pick the first result with a title/snippet
-    if not domain_keywords:
-        for r in search_results:
-            if r.get("title") or r.get("snippet"):
-                return r.get("snippet", r.get("title", ""))
-        return ""
+    # Tone signal words for boosting
+    TONE_SIGNALS = {
+        "amusing": ["funny", "humor", "laugh", "comedy", "joke", "absurd", "ironic", "wit"],
+        "insightful": ["because", "reason", "explains", "meaning", "reveals", "shows", "demonstrates"],
+        "nourishing": ["grow", "learn", "build", "create", "nurture", "develop", "teach"],
+        "compassionate": ["feel", "hurt", "care", "support", "understand", "empathy", "heal"],
+        "strategic": ["plan", "move", "leverage", "position", "advantage", "optimize", "execute"],
+    }
 
-    # Score each result by keyword overlap
-    best_score = -1
+    dk_set = set(w.lower() for w in (domain_keywords or []))
+
+    best_score = -1.0
     best_snippet = ""
-    dk_set = set(w.lower() for w in domain_keywords)
+
     for r in search_results:
-        text = f"{r.get('title', '')} {r.get('snippet', '')}".lower()
-        score = sum(1 for kw in dk_set if kw in text)
+        snippet = r.get("snippet", "") or ""
+        title = r.get("title", "") or ""
+        text = f"{title} {snippet}".lower()
+
+        if not text.strip():
+            continue
+
+        score = 0.0
+
+        # Keyword overlap
+        if dk_set:
+            score += sum(2.0 for kw in dk_set if kw in text)
+
+        # Tone affinity
+        if tone and tone in TONE_SIGNALS:
+            score += sum(0.5 for tw in TONE_SIGNALS[tone] if tw in text)
+
+        # Length preference — substantive over stubs (min 30 chars)
+        if len(snippet) > 30:
+            score += 1.0
+        if len(snippet) > 80:
+            score += 0.5
+
         if score > best_score:
             best_score = score
-            best_snippet = r.get("snippet", r.get("title", ""))
+            best_snippet = snippet or title
 
     return best_snippet if best_snippet else ""
 

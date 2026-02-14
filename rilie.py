@@ -537,13 +537,99 @@ class RILIE:
         disclosure = self.conversation.disclosure_level
 
         # -----------------------------------------------------------------
+        # SAUCIER — Roux Search (EVERY TURN)
+        # 1. Chomsky parses stimulus → holy trinity
+        # 2. Holy trinity × cities × channels → Brave
+        # 3. Score results against tone/context
+        # 4. Pick 1 — the best match
+        # This is her food. Without it she's thinking on empty stomach.
+        # -----------------------------------------------------------------
+        roux_material = ""
+        holy_trinity = []
+
+        # Step 1: Chomsky parse for holy trinity
+        try:
+            from ChomskyAtTheBit import extract_holy_trinity_for_roux, infer_time_bucket
+            holy_trinity = extract_holy_trinity_for_roux(original_question)
+            time_bucket = infer_time_bucket(original_question)
+            logger.info("ROUX: holy_trinity=%s time=%s", holy_trinity, time_bucket)
+        except ImportError:
+            # Chomsky not available — fall back to raw words
+            words = [w for w in original_question.split() if len(w) > 2][:3]
+            holy_trinity = words if words else ["question"]
+            time_bucket = "unknown"
+            logger.info("ROUX: no Chomsky, raw words=%s", holy_trinity)
+
+        # Step 2: Build Roux queries from holy trinity and fire Brave
+        if active_search:
+            try:
+                queries = build_roux_queries(
+                    original_question,
+                    holy_trinity=holy_trinity,
+                )
+                all_roux_results: List[Dict[str, str]] = []
+                for q in queries:
+                    try:
+                        try:
+                            results = active_search(q)
+                        except TypeError:
+                            results = active_search(q, 5)
+                    except Exception:
+                        continue
+                    if results:
+                        all_roux_results.extend(results)
+
+                # Step 3: Pick best result weighted by holy trinity + tone
+                if all_roux_results:
+                    # Detect tone from stimulus for scoring
+                    try:
+                        from guvna import detect_tone_from_stimulus
+                        stimulus_tone = detect_tone_from_stimulus(original_question)
+                    except ImportError:
+                        stimulus_tone = None
+
+                    roux_material = pick_best_roux_result(
+                        all_roux_results, holy_trinity, tone=stimulus_tone
+                    )
+                    logger.info("ROUX: %d results, picked='%s'",
+                                len(all_roux_results), roux_material[:80])
+            except Exception as e:
+                logger.warning("ROUX search failed: %s", e)
+                roux_material = ""
+
+        # -----------------------------------------------------------------
+        # SOiOS CYCLE — perceive → decide → think → emerge
+        # Runs on Roux material. Is this worth saying?
+        # -----------------------------------------------------------------
+        soios_emergence = 0.0
+        try:
+            from SOiOS import RIHybridBrain
+            soios = RIHybridBrain()
+            # Stimulus strength from roux_material presence
+            stimulus_strength = 0.8 if roux_material else 0.3
+            cycle = soios.run_cycle(
+                stimulus=stimulus_strength,
+                claim=original_question,
+                deed=roux_material or original_question,
+            )
+            soios_emergence = cycle.get("emergence", 0.0)
+            logger.info("SOiOS: emergence=%.3f intelligence=%.3f",
+                        soios_emergence, cycle.get("intelligence", 0.0))
+        except ImportError:
+            logger.debug("SOiOS not available — proceeding without")
+        except Exception as e:
+            logger.warning("SOiOS cycle failed: %s", e)
+
+        # -----------------------------------------------------------------
         # Kitchen — interpretation passes (every turn, TASTE or OPEN)
-        # Uses the ORIGINAL question, not the augmented baseline string.
-        # If curiosity found prior knowledge, prepend it as context.
+        # Fed by: Roux material + curiosity context + original question
+        # The Kitchen scores and shapes. The Roux gives it something to chew on.
         # -----------------------------------------------------------------
         kitchen_input = original_question
+        if roux_material:
+            kitchen_input = f"[ROUX: {roux_material}]\n\n{original_question}"
         if curiosity_context:
-            kitchen_input = f"{curiosity_context}\n\n{original_question}"
+            kitchen_input = f"{curiosity_context}\n\n{kitchen_input}"
 
         raw = run_pass_pipeline(
             kitchen_input,
