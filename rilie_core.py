@@ -553,17 +553,21 @@ def construct_response(stimulus: str, snippet: str) -> str:
     """
     Construct a response from a domain snippet + stimulus.
     
-    The snippet is MEANING INPUT, not output. She must build a sentence
-    that carries the meaning, not regurgitate the snippet.
+    The snippet is a SEED — could be a word, a phrase, or a sentence.
+    She must BUILD a response that connects the seed to the question.
     
-    If Chompky is available: parse both, construct from structure.
-    If not: restructure around the stimulus so it's never raw.
+    If the seed is a single word or short phrase (< 5 words):
+      She uses it as a concept anchor and constructs around it.
+    If the seed is a full sentence:
+      She restructures it through the stimulus lens.
     """
     if not snippet or not stimulus:
         return snippet or ""
 
     stim_lower = stimulus.lower().strip()
     snippet_clean = snippet.strip()
+    snippet_words = snippet_clean.split()
+    is_word_seed = len(snippet_words) < 5
 
     # --- Chompky-powered construction ---
     if CHOMPKY_AVAILABLE:
@@ -571,59 +575,64 @@ def construct_response(stimulus: str, snippet: str) -> str:
             parsed = parse_question(stimulus)
             subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
             focus = " ".join(parsed.focus_tokens) if parsed.focus_tokens else ""
-            time_bucket = parsed.temporal.bucket
 
-            # Build a sentence that connects stimulus subject to snippet meaning
-            # Extract the core insight from the snippet (not the whole thing)
-            snippet_words = snippet_clean.split()
-            # Take the semantic core — skip attributions and framing
-            core = snippet_clean
+            if is_word_seed:
+                # WORD MODE: The snippet is an ingredient, not a dish.
+                # Build a thought connecting the stimulus to the concept.
+                seed = snippet_clean.lower()
+                if subject and focus:
+                    return (
+                        f"When you look at {subject} through the lens of {focus}, "
+                        f"it comes back to {seed} — that's where the real weight is. "
+                        f"Everything else is decoration."
+                    )
+                if subject:
+                    return (
+                        f"The core of {subject} is {seed}. "
+                        f"Strip away everything else and that's what's left. "
+                        f"That's what actually moves."
+                    )
+                return (
+                    f"It starts with {seed}. "
+                    f"That's not a detail, that's the foundation. "
+                    f"Everything builds from there."
+                )
+            else:
+                # SENTENCE MODE: Restructure through stimulus
+                core = snippet_clean
+                if subject:
+                    return f"What makes {subject} work — {core[0].lower()}{core[1:]}"
+                return f"Here's the thing — {core[0].lower()}{core[1:]}"
 
-            if subject:
-                if time_bucket == "past":
-                    return f"What happened with {subject} is that {core[0].lower()}{core[1:]}"
-                elif time_bucket == "future":
-                    return f"Where {subject} goes from here — {core[0].lower()}{core[1:]}"
-                else:
-                    if focus:
-                        return f"The thing about {subject} and {focus} is {core[0].lower()}{core[1:]}"
-                    return f"What makes {subject} work is that {core[0].lower()}{core[1:]}"
-            
-            # No subject extracted — build around the question type
-            if "why" in stim_lower:
-                return f"The reason is {core[0].lower()}{core[1:]}"
-            if "how" in stim_lower:
-                return f"The way it works — {core[0].lower()}{core[1:]}"
-            if "what" in stim_lower:
-                return f"What it comes down to is {core[0].lower()}{core[1:]}"
-            if "who" in stim_lower:
-                return f"The person behind that — {core[0].lower()}{core[1:]}"
-
-            return f"The way I see it, {core[0].lower()}{core[1:]}"
         except Exception:
             pass
 
-    # --- No Chompky: lightweight but never raw ---
-    if stim_lower.startswith("why "):
-        return f"The reason comes down to this: {snippet_clean[0].lower()}{snippet_clean[1:]}"
-    
-    if stim_lower.startswith(("who ", "who's ", "who is ")):
-        return f"That traces back to how {snippet_clean[0].lower()}{snippet_clean[1:]}"
+    # --- No Chompky: build from seed ---
+    if is_word_seed:
+        seed = snippet_clean.lower()
+        # Extract question topic from stimulus
+        topic_words = [w for w in stim_lower.split()
+                       if w not in {"what", "why", "how", "who", "when", "where",
+                                    "is", "are", "the", "a", "an", "do", "does",
+                                    "can", "could", "would", "should", "about",
+                                    "tell", "me", "you", "your", "my", "i"}]
+        topic = " ".join(topic_words[:3]) if topic_words else "this"
 
-    if stim_lower.startswith(("what ", "what's ", "what is ")):
-        return f"What it really means is {snippet_clean[0].lower()}{snippet_clean[1:]}"
+        return (
+            f"With {topic}, the thing that matters most is {seed}. "
+            f"Not the surface — the {seed} underneath it. "
+            f"That's where the real conversation is."
+        )
 
-    if stim_lower.startswith("how "):
-        return f"The mechanism behind it — {snippet_clean[0].lower()}{snippet_clean[1:]}"
-
-    # Default: frame it as her take, never raw
-    return f"The way I understand it, {snippet_clean[0].lower()}{snippet_clean[1:]}"
+    # SENTENCE MODE without Chompky
+    core = snippet_clean
+    return f"Here's what it comes down to — {core[0].lower()}{core[1:]}"
 
 
 def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
     """
     Construct a cross-domain blend — two ideas connected through the question.
-    Never raw. Always constructed.
+    Handles both word-level seeds and full sentences.
     """
     s1 = snippet1.strip()
     s2 = snippet2.strip()
@@ -631,31 +640,61 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
     if not s1 or not s2:
         return s1 or s2 or ""
 
-    # Find shared concepts between the two snippets
-    words1 = set(s1.lower().split())
-    words2 = set(s2.lower().split())
-    shared = words1 & words2 - {"the", "a", "an", "is", "are", "of", "in", "and", "to", "that", "it", "for", "with", "as", "on", "by"}
-
+    s1_is_word = len(s1.split()) < 5
+    s2_is_word = len(s2.split()) < 5
     stim_lower = stimulus.lower().strip()
-    
+
     if CHOMPKY_AVAILABLE:
         try:
             parsed = parse_question(stimulus)
             subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
-            if subject:
-                if shared:
-                    bridge = sorted(shared, key=len, reverse=True)[0]
-                    return f"With {subject}, there's a connection through {bridge} — {s1[0].lower()}{s1[1:]}, and that links to how {s2[0].lower()}{s2[1:]}"
-                return f"Two things about {subject}: {s1[0].lower()}{s1[1:]}, and on the other side, {s2[0].lower()}{s2[1:]}"
+
+            if s1_is_word and s2_is_word:
+                # Both are concept seeds — connect them
+                if subject:
+                    return (
+                        f"With {subject}, there are two forces at work — "
+                        f"{s1.lower()} and {s2.lower()}. "
+                        f"They look separate but they're the same principle "
+                        f"wearing different clothes. Pull one thread and the other moves."
+                    )
+                return (
+                    f"Two things that seem unrelated: {s1.lower()} and {s2.lower()}. "
+                    f"But look closer — they're connected. "
+                    f"One doesn't work without the other."
+                )
+            elif s1_is_word or s2_is_word:
+                # One word, one sentence — anchor through the word
+                word = s1 if s1_is_word else s2
+                sentence = s2 if s1_is_word else s1
+                return (
+                    f"Start with {word.lower()} — "
+                    f"{sentence[0].lower()}{sentence[1:]} "
+                    f"That connection is where it gets interesting."
+                )
+            else:
+                # Both sentences
+                if subject:
+                    return (
+                        f"Two things about {subject}: "
+                        f"{s1[0].lower()}{s1[1:]}, and on the flip side, "
+                        f"{s2[0].lower()}{s2[1:]}"
+                    )
+                return (
+                    f"On one hand — {s1[0].lower()}{s1[1:]}. "
+                    f"But then — {s2[0].lower()}{s2[1:]}"
+                )
         except Exception:
             pass
 
-    # No Chompky fallback — still constructed, never raw
-    if shared:
-        bridge = sorted(shared, key=len, reverse=True)[0]
-        return f"There's a thread through {bridge} here — {s1[0].lower()}{s1[1:]}, and that connects to how {s2[0].lower()}{s2[1:]}"
+    # No Chompky fallback
+    if s1_is_word and s2_is_word:
+        return (
+            f"There's a connection between {s1.lower()} and {s2.lower()} "
+            f"that most people miss. One feeds the other."
+        )
+    return f"Two sides — {s1[0].lower()}{s1[1:]}, and {s2[0].lower()}{s2[1:]}"
 
-    return f"Two sides of this: {s1[0].lower()}{s1[1:]}. And then flip it — {s2[0].lower()}{s2[1:]}"
 
 # ============================================================================
 # DOMAIN DETECTION & EXCAVATION
@@ -722,7 +761,213 @@ def excavate_domains(stimulus: str, domains: List[str]) -> Dict[str, List[str]]:
         else:
             excavated[domain] = []
 
+    # --- WORD ENRICHMENT: dictionary + synonyms for word-level ingredients ---
+    # If the ingredient is a word (< 5 tokens), expand it so she has
+    # more to cook with. "density" → "density (closeness, concentration, richness)"
+    for domain, items in excavated.items():
+        enriched = []
+        for item in items:
+            if len(item.split()) < 5:
+                # It's a word seed — enrich it
+                word = item.strip().lower()
+                definition = _WORD_DEFINITIONS.get(word, "")
+                synonyms = _WORD_SYNONYMS.get(word, [])
+                homonyms = _WORD_HOMONYMS.get(word, [])
+                parts = [item]
+                if definition:
+                    parts.append(definition)
+                if synonyms:
+                    parts.append("also: " + ", ".join(synonyms[:4]))
+                if homonyms:
+                    parts.append("other meanings: " + "; ".join(homonyms[:3]))
+                enriched.append(" — ".join(parts))
+            else:
+                enriched.append(item)
+        excavated[domain] = enriched
+
     return excavated
+
+
+# --- Built-in word definitions and synonyms ---
+# She carries a pocket dictionary. Not Wikipedia — just enough to cook with.
+_WORD_DEFINITIONS: Dict[str, str] = {
+    # Music
+    "density": "maximum information packed into minimum space",
+    "rhythm": "pattern of beats recurring in time",
+    "compression": "reducing to essence without losing meaning",
+    "bars": "measured units of musical time",
+    "tight": "precise with zero waste",
+    "minimal": "stripped to only what matters",
+    "call": "an invitation that demands response",
+    "response": "the answer that completes the exchange",
+    "connection": "the bridge between two points",
+    "harmony": "different notes working as one",
+    "voice": "the instrument that carries identity",
+    "emotion": "energy in motion through feeling",
+    "dissonance": "tension between things that clash",
+    "tension": "the pull between opposing forces",
+    "comedy": "truth delivered through surprise",
+    "trojan": "something hidden inside something inviting",
+    "truth": "what remains when everything else is stripped",
+    "expose": "to reveal what was hidden",
+    "noise": "information that hasn't been organized yet",
+    "collage": "fragments assembled into new meaning",
+    "architecture": "intentional structure that serves purpose",
+    "intent": "purpose behind the action",
+    "sample": "a piece of something larger carried forward",
+    "layers": "depth built by stacking",
+    # Culture
+    "reframe": "to change how something is seen without changing what it is",
+    "broadcast": "to send signal in all directions",
+    "political": "concerning who has power and how it moves",
+    "street": "where theory meets lived experience",
+    "institution": "a structure that outlasts the people in it",
+    "blueprint": "a plan you can build from",
+    "mobilize": "to turn stillness into movement",
+    "trickster": "the one who breaks rules to reveal truth",
+    "weapon": "any tool used to shift power",
+    # Physics
+    "conserve": "nothing lost only transformed",
+    "transform": "to change form while preserving essence",
+    "symmetry": "the pattern that stays the same when you rotate it",
+    "frozen": "energy held still in a form",
+    "energy": "the capacity to make change happen",
+    "matter": "energy in a form you can touch",
+    "equivalence": "different expressions of the same thing",
+    "frame": "the perspective that determines what you see",
+    "perception": "reality filtered through position",
+    "superposition": "being in multiple states until forced to choose",
+    "collapse": "the moment possibility becomes specific",
+    "observe": "to interact with something by paying attention",
+    "entangle": "connected regardless of distance",
+    "uncertainty": "precision in one dimension costs precision in another",
+    "tradeoff": "getting one thing by giving up another",
+    # Life
+    "cancer": "growth without regard for the whole",
+    "ego": "self-prioritization that forgets the system",
+    "sacrifice": "giving up the part for the whole",
+    "adapt": "changing shape to fit new conditions",
+    "symbiosis": "two things thriving because they serve each other",
+    "emergence": "complex behavior from simple rules repeated",
+    "recursive": "applying the same pattern at every level",
+    "diversity": "strength through difference",
+    "stability": "the ability to absorb shock without breaking",
+    # Games
+    "dilemma": "a choice where every option has cost",
+    "collective": "the group acting as one",
+    "equilibrium": "the point where no one gains by moving alone",
+    "trust": "risk taken on the belief another will reciprocate",
+    "drops": "small consistent deposits over time",
+    "buckets": "large sudden losses",
+    "grace": "giving more than what's owed",
+    "mirror": "reflecting back what you receive",
+    "memory": "the past informing present choices",
+    "commit": "removing the option to retreat",
+    "misaligned": "pointed in different directions",
+    # Thermodynamics
+    "entropy": "disorder increasing over time without input",
+    "disorder": "the absence of intentional arrangement",
+    "waste": "energy that did no useful work",
+    "beige": "safe mediocrity that offends no one and moves no one",
+    "harm": "damage that can't be fully undone",
+    "irreversible": "a change that only goes one direction",
+    "cascade": "one failure triggering the next",
+    "propagate": "spreading through connected nodes",
+    "negentropy": "order created by pumping energy into a system",
+    # Cosmology
+    "boolean": "the simplest possible distinction — yes or no",
+    "tick": "the smallest unit of change",
+    "fractal": "the same pattern at every scale",
+    "scale": "the level at which you observe",
+    "humility": "acknowledging what you cannot know",
+    # Finance
+    "destiny": "where the weight of evidence points",
+    "signal": "information that predicts what comes next",
+    "conviction": "certainty earned by evidence",
+    "quality": "the ratio of signal to noise",
+    "accordion": "expanding and contracting with conditions",
+    "regime": "the current rules the system operates under",
+    "chaos": "conditions where normal rules break down",
+    "patience": "the willingness to wait for the right moment",
+    "compound": "growth building on previous growth",
+    "integrity": "alignment between what you say and what you do",
+}
+
+_WORD_SYNONYMS: Dict[str, List[str]] = {
+    "density": ["concentration", "thickness", "richness", "weight"],
+    "rhythm": ["pulse", "cadence", "groove", "cycle"],
+    "compression": ["condensation", "distillation", "essence", "reduction"],
+    "harmony": ["accord", "unity", "resonance", "blend"],
+    "tension": ["friction", "pull", "strain", "charge"],
+    "truth": ["reality", "authenticity", "core", "foundation"],
+    "noise": ["static", "chaos", "raw signal", "unfiltered"],
+    "architecture": ["structure", "framework", "design", "blueprint"],
+    "energy": ["force", "drive", "capacity", "potential"],
+    "transform": ["convert", "reshape", "evolve", "transmute"],
+    "symmetry": ["balance", "equivalence", "mirror", "pattern"],
+    "collapse": ["resolve", "crystallize", "decide", "converge"],
+    "emergence": ["arising", "surfacing", "spontaneous order", "self-organization"],
+    "trust": ["faith", "confidence", "reliability", "bond"],
+    "grace": ["generosity", "mercy", "kindness", "gift"],
+    "entropy": ["decay", "disorder", "dissipation", "degradation"],
+    "cascade": ["chain reaction", "domino effect", "ripple", "avalanche"],
+    "signal": ["indicator", "cue", "marker", "evidence"],
+    "conviction": ["certainty", "confidence", "resolve", "commitment"],
+    "patience": ["endurance", "persistence", "steady", "long game"],
+    "integrity": ["wholeness", "alignment", "honesty", "consistency"],
+    "ego": ["self-interest", "pride", "self-image", "vanity"],
+    "sacrifice": ["surrender", "offering", "cost", "trade"],
+    "adapt": ["adjust", "evolve", "flex", "pivot"],
+    "diversity": ["variety", "range", "spectrum", "multiplicity"],
+    "connection": ["link", "bridge", "thread", "bond"],
+    "blueprint": ["plan", "template", "map", "schema"],
+    "fractal": ["self-similar", "nested", "recursive", "layered"],
+    "compound": ["accumulate", "snowball", "build", "stack"],
+}
+
+# --- Homonyms: same word, different meanings ---
+# The polymorphic layer. This is how Ohad thinks.
+# Multiple meanings in one word. She should too.
+_WORD_HOMONYMS: Dict[str, List[str]] = {
+    "bars": ["music: measured units of rhythm", "prison: what cages are made of", "drinking: where people gather", "legal: the bar exam"],
+    "scale": ["music: sequence of notes", "size: the level you observe at", "fish: protective covering", "climbing: to ascend"],
+    "bridge": ["music: the section that connects verse to chorus", "structure: what connects two shores", "guitar: where strings meet the body", "connection: what links two ideas"],
+    "key": ["music: tonal center", "lock: what opens a door", "answer: the crucial element", "keyboard: what you press"],
+    "beat": ["music: rhythmic pulse", "defeat: to overcome", "tired: exhausted", "patrol: a cop's route"],
+    "note": ["music: a single pitch", "writing: a short message", "observe: to notice something", "money: a bill"],
+    "rest": ["music: silence with duration", "sleep: to recover", "remainder: what's left over"],
+    "pitch": ["music: frequency of sound", "sales: a presentation to convince", "baseball: to throw", "angle: degree of slope"],
+    "record": ["music: an album", "data: a stored entry", "achievement: the best ever done", "capture: to document"],
+    "track": ["music: a single song", "path: a route to follow", "monitor: to keep watch on", "racing: where you run"],
+    "hook": ["music: the catchy part", "fishing: what catches", "boxing: a curved punch", "coding: a callback function"],
+    "sample": ["music: a borrowed sound", "science: a specimen", "taste: a small portion to try"],
+    "channel": ["music: a signal path", "water: a passage between lands", "tv: a station", "communication: a medium"],
+    "wave": ["physics: energy moving through space", "ocean: water rising and falling", "greeting: a hand gesture", "trend: a cultural movement"],
+    "field": ["physics: a force distribution in space", "farm: cultivated land", "expertise: a domain of knowledge", "sports: where you play"],
+    "charge": ["physics: electrical property", "money: a cost", "attack: to rush forward", "responsibility: to be in charge of"],
+    "bond": ["chemistry: atoms held together", "finance: a debt instrument", "connection: emotional attachment", "spy: 007"],
+    "cell": ["biology: basic unit of life", "prison: a small room", "phone: mobile device", "power: battery unit"],
+    "culture": ["society: shared values and practices", "biology: growing organisms in a lab", "agriculture: to cultivate"],
+    "matter": ["physics: stuff with mass", "importance: it matters", "problem: what's the matter"],
+    "frame": ["physics: reference point", "picture: what holds the image", "blame: to set someone up", "structure: the skeleton of something"],
+    "flow": ["water: movement of liquid", "music: rhythmic delivery", "psychology: optimal state of performance", "traffic: movement through a system"],
+    "drive": ["car: to operate a vehicle", "motivation: internal push", "computer: storage device", "golf: a long shot"],
+    "collapse": ["physics: wave function resolving", "building: structural failure", "medical: to fall down", "folding: to make compact"],
+    "foundation": ["building: what supports the structure", "philosophy: the base assumption", "makeup: the base layer", "charity: an organization that gives"],
+    "deposit": ["bank: money put in", "geology: sediment laid down", "trust: something left as guarantee"],
+    "fire": ["element: combustion", "work: to terminate employment", "passion: intense motivation", "weapon: to discharge"],
+    "plant": ["biology: a growing organism", "factory: a manufacturing facility", "spy: to secretly place", "evidence: to fabricate"],
+    "toast": ["bread: heated until crispy", "celebration: raising a glass", "done: finished or ruined"],
+    "patient": ["medical: someone receiving care", "virtue: willing to wait", "steady: unhurried and calm"],
+    "gravity": ["physics: the force of attraction", "seriousness: the weight of a situation"],
+    "volume": ["sound: loudness level", "book: a single tome", "space: amount of three-dimensional space", "quantity: amount"],
+    "current": ["water: flow direction", "electricity: flow of charge", "time: happening now", "awareness: up to date"],
+    "resolution": ["conflict: settling a dispute", "screen: pixel density", "decision: a firm commitment", "music: tension releasing to rest"],
+    "minor": ["music: a sad-sounding key", "age: not yet adult", "importance: of lesser significance"],
+    "major": ["music: a bright-sounding key", "military: a rank", "importance: significant", "college: area of study"],
+    "sharp": ["music: a half step up", "blade: able to cut", "mind: quick and intelligent", "image: clear and defined"],
+    "flat": ["music: a half step down", "surface: level and even", "tire: deflated", "apartment: a dwelling"],
+}
 
 
 # ============================================================================
