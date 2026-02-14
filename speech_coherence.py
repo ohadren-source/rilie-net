@@ -11,6 +11,9 @@ from typing import Optional
 logger = logging.getLogger("speech_coherence")
 
 
+# Dayenu: Validate once per stimulus
+coherence_check_count = 0
+
 def ensure_coherence(text: str, stimulus: Optional[str] = None) -> str:
     """Ensure speech is understandable."""
     
@@ -165,6 +168,10 @@ def clean_formatting(text: str) -> str:
 
 
 def validate(text: str, stimulus: Optional[str] = None) -> str:
+    """
+    Validate speech for coherence.
+    Dayenu: Validate ONCE. No re-checking.
+    """
     """Validate speech for coherence."""
     
     if not text or not isinstance(text, str):

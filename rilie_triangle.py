@@ -30,6 +30,27 @@ from typing import List, Dict, Optional, Tuple, Any
 logger = logging.getLogger("triangle")
 
 
+
+# ============================================================================
+# DAYENU SAFETY STATE
+# ============================================================================
+
+class SafetyState:
+    """Track safety checks for Dayenu enforcement"""
+    def __init__(self):
+        self.checks = 0
+        self.max_checks = 3
+    
+    def increment(self):
+        self.checks += 1
+    
+    def should_exit(self) -> bool:
+        """After 3 checks, exit. Dayenu."""
+        return self.checks >= self.max_checks
+    
+    def reset(self):
+        self.checks = 0
+
 # ============================================================================
 # ROUX CITIES & CHANNELS — expanded grid
 # ============================================================================

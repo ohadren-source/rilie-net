@@ -51,19 +51,21 @@ def process_kitchen_output(
     kitchen_result: Dict[str, Any],
     stimulus: str,
     disclosure_level: str = "full",
+    exchange_count: int = 0,
 ) -> Dict[str, Any]:
     """
     Take Kitchen's raw output and transform it into speech.
     
-    This is the main integration point where:
-      - Kitchen semantic content becomes structured response
-      - Response gets validated for coherence
-      - Speech gets grammatically transformed
+    Dayenu: Each layer processes ONCE.
+      - Response generator: acknowledges (if < exchange 2)
+      - Coherence: validates once
+      - Chomsky: transforms once
     
     Args:
         kitchen_result: Dict with 'result' (semantic content) + metadata
         stimulus: Original user question
         disclosure_level: "taste", "open", or "full"
+        exchange_count: Current exchange number (for dayenu gates)
     
     Returns:
         Updated kitchen_result with 'result' now containing spoken text
@@ -79,13 +81,14 @@ def process_kitchen_output(
         logger.warning("No semantic content from Kitchen")
         return kitchen_result
     
-    # Step 1: Generate structured response
+    # Step 1: Generate structured response (dayenu: once)
     if RESPONSE_GENERATOR_AVAILABLE:
         try:
             structured = generate_response(
                 kitchen_meaning=kitchen_semantic,
                 question=stimulus,
                 disclosure_level=disclosure_level,
+                exchange_count=exchange_count,
             )
             logger.debug("Response generated: %d chars", len(structured))
         except Exception as e:
@@ -94,18 +97,18 @@ def process_kitchen_output(
     else:
         structured = kitchen_semantic
     
-    # Step 2: Validate and fix coherence
+    # Step 2: Validate and fix coherence (dayenu: once only)
     if COHERENCE_VALIDATOR_AVAILABLE:
         try:
             coherent = validate_coherence(structured, stimulus)
-            logger.debug("Coherence validated")
+            logger.debug("Coherence validated (once)")
         except Exception as e:
             logger.warning("Coherence validation failed: %s", e)
             coherent = structured
     else:
         coherent = structured
     
-    # Step 3: Transform through Chomsky grammar engine
+    # Step 3: Transform through Chomsky grammar engine (dayenu: once only)
     if CHOMSKY_AVAILABLE:
         try:
             spoken = transform_through_chomsky(
@@ -113,7 +116,7 @@ def process_kitchen_output(
                 stimulus=stimulus,
                 disclosure_level=disclosure_level,
             )
-            logger.debug("Speech transformed through Chomsky")
+            logger.debug("Speech transformed (once)")
         except Exception as e:
             logger.warning("Chomsky transformation failed: %s", e)
             spoken = coherent
