@@ -699,39 +699,39 @@ class RILIE:
         # response_generator → speech_coherence → chomsky_speech_engine
         # -----------------------------------------------------------------
         if SPEECH_PIPELINE_AVAILABLE:
-        try:
-            raw = process_kitchen_output(
-                kitchen_result=raw,
-                stimulus=original_question,
-                disclosure_level=disclosure.value,
-                exchange_count=self.conversation.exchange_count,
-        )
-        except Exception as e:
-        logger.warning("Speech pipeline failed: %s — using raw Kitchen output", e)
-        # <--- remove the `else:` block completely
+            try:
+                raw = process_kitchen_output(
+                    kitchen_result=raw,
+                    stimulus=original_question,
+                    disclosure_level=disclosure.value,
+                    exchange_count=self.conversation.exchange_count,
+                )
+            except Exception as e:
+                logger.warning("Speech pipeline failed: %s — using raw Kitchen output", e)
+        else:
+            # No speech pipeline — use DDD shaping as fallback
+            raw["result"] = shape_for_disclosure(
+                raw["result"], self.conversation,
+            )
 
-
-        # NORMAL PATH
+        # -----------------------------------------------------------------
+        # Normal path — finalize and record
+        # -----------------------------------------------------------------
         shaped = raw.get("result", result_text)
 
-        # NEW: let the Hostess shape what is actually spoken
-        shaped = shape_for_disclosure(shaped, self.conversation)
-
-        # Record what she actually said
         self.conversation.record_exchange(original_question, shaped)
 
-        # Make sure downstream sees the shaped text
+        # Propagate Kitchen metrics but swap in shaped text.
         raw["result"] = shaped
         raw["disclosure_level"] = disclosure.value
         raw["triangle_reason"] = "CLEAN"
+
+        # Attach metadata
         raw["person_context"] = self.person.has_context()
         raw["banks_hits"] = banks_hits
         raw["stimulus_hash"] = hash_stimulus(original_question)
 
-return raw
-
-
-
+        return raw
 
     # ---------------------------------------------------------------------
     # Déjà Vu — lightweight repeat awareness
