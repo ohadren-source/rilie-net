@@ -97,53 +97,22 @@ SERIOUS_TASTE_TEMPLATES_2 = [
     "Keep going — I'm with you.",
 ]
 
+
 # ============================================================================
 # PUBLIC API: Build response by exchange count
 # ============================================================================
+
 
 def shape_for_disclosure(
     raw_result: str,
     conversation: ConversationState,
 ) -> str:
     """
-    Decide what text should actually be spoken this turn.
-
-    - TASTE (turns 1–2): ignore Kitchen text and emit Hostess templates.
-      Kitchen may still run under the hood; we just don't serve its words yet.
-    - OPEN and beyond: keep Kitchen text as-is.
+    TASTE is internal. It never speaks for her.
+    Everything goes to the speech pipeline.
+    She generates or she's silent.
     """
-
-    level = conversation.disclosure_level
-
-    # OPEN / beyond: let Kitchen text through unchanged.
-    if level is not DisclosureLevel.TASTE:
-        return raw_result
-
-    # We are in TASTE: pick from the right template bucket.
-    taste_turn = conversation.taste_turn  # 0, 1, or 2+
-    # Use the latest stimulus, if available, to judge seriousness.
-    last_stimulus = (
-        conversation.stimuli_history[-1]
-        if conversation.stimuli_history
-        else raw_result
-    )
-    serious = is_serious_subject_text(last_stimulus)
-
-    if taste_turn == 0:
-        # First TASTE turn.
-        pool = SERIOUS_TASTE_TEMPLATES_1 if serious else TASTE_TEMPLATES_1
-    elif taste_turn == 1:
-        # Second TASTE turn.
-        pool = SERIOUS_TASTE_TEMPLATES_2 if serious else TASTE_TEMPLATES_2
-    else:
-        # Past turn 2: Hostess is off-duty, treat as OPEN.
-        return raw_result
-
-    if not pool:
-        # Safety fallback: never go silent just because templates are empty.
-        return raw_result
-
-    return random.choice(pool)
+    return raw_result
 
 
 def is_serious_subject_text(text: str) -> bool:
@@ -153,6 +122,5 @@ def is_serious_subject_text(text: str) -> bool:
         "suicide", "disease", "war", "racism", "politics",
         "diaspora", "suffering", "grief",
     ]
-
     text_lower = text.lower()
     return any(word in text_lower for word in serious_words)
