@@ -111,161 +111,47 @@ PRIORITY_HIERARCHY: Dict[str, Dict[str, float]] = {
 
 DOMAIN_KNOWLEDGE: Dict[str, Dict[str, List[str]]] = {
     "music": {
-        "compression": [
-            "Rhythmic density: maximum information in minimal bar count",
-            "Harmonic compression: tight voice-leading to pack emotion",
-        ],
-        "love": [
-            "Call and response as musical structure of connection",
-            "Major-seventh harmony carrying bittersweet romantic tension",
-        ],
-        "fear": [
-            "Tritone and dissonance as universal triggers for unease",
-            "Rising tempo mimicking physiological panic escalation",
-        ],
-        "satire": [
-            "Flavor Flav used comedy as a Trojan horse — the clock, the hype, the clowning — to deliver truths that a straight face couldn't",
-            "911 Is a Joke exposed emergency response failure in Black neighborhoods by making you laugh first, then making you think",
-            "Satire in hip-hop works because it gives the listener permission to engage with uncomfortable truth through rhythm",
-        ],
-        "production": [
-            "Bomb Squad production built dense, noisy collages — media overload as art form",
-            "Sample layering as cultural archaeology — every chop carries the weight of its source",
-            "The wall of noise wasn't chaos, it was architecture — every siren and scream placed with intent",
-        ],
+        "compression": [],
+        "love": [],
+        "fear": [],
+        "satire": [],
+        "production": [],
     },
     "culture": {
-        "hip_hop": [
-            "Public Enemy reframed hip-hop as political broadcast, not just party music",
-            "Chuck D's voice carried news at street-level when institutions failed",
-            "Flavor Flav embodied the trickster archetype — making bitter truth palatable through performance",
-            "Fear of a Black Planet was sonic journalism — every track a dispatch from the front lines of American racism",
-        ],
-        "film": [
-            "Montage as compression at speed in visual storytelling",
-            "Diegetic sound grounding abstract ideas in physical worlds",
-        ],
-        "resistance": [
-            "Fight the Power wasn't just a song — it was a blueprint for how art mobilizes communities",
-            "It Takes a Nation of Millions showed that an album could function as both entertainment and education simultaneously",
-            "The Bomb Squad's production on Fear of a Black Planet turned information overload into a weapon against complacency",
-        ],
+        "hip_hop": [],
+        "film": [],
+        "resistance": [],
     },
-
-    # --- NEW DOMAINS (matching library_index engines) ---
-
     "physics": {
-        "conservation": [
-            "Conservation laws: energy, momentum, charge — nothing is created or destroyed, only transformed",
-            "Symmetry underlies every conservation law — Noether's theorem is the universe's own compression algorithm",
-            "The arrow of time flows one direction — entropy increases, and that's the cost of every transaction",
-        ],
-        "relativity": [
-            "Mass-energy equivalence: E=mc² means matter is just frozen energy waiting to move",
-            "Frame of reference determines what you observe — position shapes perception, in physics and in life",
-            "Spacetime curves around mass — influence bends the fabric, doesn't just travel through it",
-        ],
-        "quantum": [
-            "Superposition: both states exist until observation collapses the wave function — Catch 44's Track 0",
-            "Entanglement: separated particles stay correlated — connection doesn't require proximity",
-            "Uncertainty principle: the more precisely you know position, the less you know momentum — you can't pin everything down",
-        ],
+        "conservation": [],
+        "relativity": [],
+        "quantum": [],
     },
     "life": {
-        "biology": [
-            "Cancer is a cell that forgot ego → 0 — it prioritizes self-replication over the organism",
-            "Apoptosis: programmed cell death is the ultimate service — dying so the whole can thrive",
-            "Ecosystem stability depends on biodiversity — monocultures collapse, diversity sustains",
-        ],
-        "evolution": [
-            "Natural selection isn't survival of the fittest — it's survival of the most adapted to change",
-            "Symbiosis: cooperation is as fundamental to evolution as competition",
-            "Emergence: complex behavior arises from simple rules applied recursively — ants, brains, markets",
-        ],
-        "health": [
-            "The immune system distinguishes self from non-self — identity is a biological imperative",
-            "Gut-brain axis: what you feed yourself shapes how you think — nourishment is literal",
-            "Circadian rhythms: the body has its own clock — ignoring it costs more than you think",
-        ],
+        "biology": [],
+        "evolution": [],
+        "health": [],
     },
     "games": {
-        "game_theory": [
-            "Prisoner's dilemma: individual rationality produces collective irrationality — ego vs WE",
-            "Tit-for-tat wins iterated games: cooperate first, then mirror — grace with memory",
-            "Nash equilibrium: no one can improve by changing strategy alone — the system holds",
-        ],
-        "trust": [
-            "Trust is built in drops and lost in buckets — 49 years of grace, one violation to lose it",
-            "Reputation is a public good — once established, it reduces transaction costs for everyone",
-            "Commitment devices work because they remove the option to defect — burning the ships",
-        ],
-        "incentives": [
-            "Misaligned incentives produce misaligned behavior — if you reward extraction, you get extraction",
-            "Public goods are under-provided because free-riders can't be excluded — tragedy of the commons",
-            "Mechanism design: build the rules so the selfish choice is also the cooperative choice",
-        ],
+        "game_theory": [],
+        "trust": [],
+        "incentives": [],
     },
     "thermodynamics": {
-        "entropy": [
-            "Entropy always increases in a closed system — disorder is the natural direction without input",
-            "Free energy is what does work — the rest is waste heat, noise, beige",
-            "Equilibrium is death — living systems maintain themselves far from equilibrium through constant energy flow",
-        ],
-        "harm_repair": [
-            "Harm is thermodynamically irreversible — you can repair but never fully restore the original state",
-            "The cost of repair always exceeds the cost of prevention — the physics of 'sorry' vs 'careful'",
-            "Cascade failure: one broken component under load breaks the next — harm propagates through topology",
-        ],
-        "catch44": [
-            "Catch-44 integrity check: is the system still far from equilibrium? Still doing work? Still alive?",
-            "Ego as entropy source: self-centered action increases disorder in the network",
-            "Grace as negentropy: service, care, and ego → 0 are the energy input that keeps the system alive",
-        ],
+        "entropy": [],
+        "harm_repair": [],
+        "catch44": [],
     },
     "cosmology": {
-        "origin": [
-            "The universe began as a boolean tick — something rather than nothing, 0 becoming 1",
-            "Reality as simulation hypothesis: the substrate doesn't change the experience",
-            "DuckSauce: the universe kernel where existence bootstraps from the simplest possible operation",
-        ],
-        "scale": [
-            "Fractal structure: the same patterns at every scale — atoms, cells, societies, galaxies",
-            "The observable universe is a horizon, not a boundary — there's more we can't see",
-            "Dark energy: 68% of the universe is something we can detect but not explain — humility built in",
-        ],
+        "origin": [],
+        "scale": [],
     },
     "finance": {
-        "density": [
-            "Density is destiny — 5 signals compressed into 1 conviction score beats 50 weak indicators",
-            "Signal quality over frequency: one DIAMOND trade beats nine BRONZE trades",
-            "Market density = pattern quality + volume confirmation + breadth alignment + momentum + conviction",
-            "Adaptive thresholds: what counted as strong signal yesterday may be noise today",
-        ],
-        "risk": [
-            "Accordion risk: expand allocation when performance earns it, contract when chaos arrives",
-            "Baby → Diamond evolution: a system must prove itself at small scale before earning larger bets",
-            "Position sizing by conviction tier: DIAMOND gets full allocation, BRONZE gets a quarter",
-            "2% floor: even in maximum contraction, never go fully to zero — ego → 0, not ego = 0",
-            "Risk is not the enemy. UNEARNED risk is the enemy. Let the track record decide.",
-        ],
-        "regime": [
-            "Market regimes: NORMAL (trade), CHAOS (contract), STAGNATION (wait) — like thermodynamic states",
-            "VIX > 25 = fear dominates. Fear is information, not instruction. Contract but don't flee.",
-            "Stagnation is entropy maximized — the market has no energy differential to exploit. Wait for the gradient.",
-        ],
-        "literacy": [
-            "Survival → Security → Moves: three circles of financial awareness, like Maslow for money",
-            "Get rich slow cook + live tryin: wealth is a process, not an event. Compound, don't gamble.",
-            "The cheese pull: good financial advice stretches — one insight connects to the next",
-            "Financial literacy is not about knowing numbers. It's about understanding which numbers matter.",
-            "Budget is ego → 0 applied to money: what do you actually NEED vs what does your ego want?",
-        ],
-        "catch44": [
-            "Night Trader works while you sleep — the market is a 24-hour topology that rewards the patient",
-            "Fortune 100 only: trade the strongest companies, not lottery tickets. Quality ingredients make quality meals.",
-            "Every trade has a stop loss because claim must equal deed — if the thesis is wrong, exit with integrity",
-            "The market is the ultimate Catch 44: you need conviction to win but ego to lose",
-        ],
+        "density": [],
+        "risk": [],
+        "regime": [],
+        "literacy": [],
+        "catch44": [],
     },
 }
 

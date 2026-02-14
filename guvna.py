@@ -1140,6 +1140,19 @@ class Guvna:
         # 0: Keep the original stimulus for all detection.
         original_stimulus = stimulus.strip()
 
+        logger.info("GUVNA PROCESS: turn=%d stimulus='%s'", self.turn_count, original_stimulus[:80])
+
+        # 0.25: Social primer — 9 phrases only (3 hello, 3 goodbye, 3 emergency)
+        primer_result = self._social_primer(original_stimulus)
+        if primer_result is not None:
+            logger.info("GUVNA: _social_primer fired, status=%s", primer_result.get("status"))
+            self.memory.turn_count += 1
+            self.turn_count += 1
+            tone = detect_tone_from_stimulus(original_stimulus)
+            primer_result["tone"] = tone
+            primer_result["tone_emoji"] = TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "\U0001f4a1"))
+            return primer_result
+
         # 0.5: Triangle (bouncer) — runs BEFORE self-awareness.
         try:
             from rilie_triangle import triangle_check
@@ -1292,9 +1305,11 @@ class Guvna:
 
         # 8: augment + send to RILIE
         augmented = self._augment_with_baseline(original_stimulus, baseline_text)
+        logger.info("GUVNA: sending to RILIE, augmented='%s'", augmented[:100])
         raw = self.rilie.process(augmented, maxpass=maxpass)
         rilie_text = str(raw.get("result", "") or "").strip()
         status = str(raw.get("status", "") or "").upper()
+        logger.info("GUVNA: RILIE returned status=%s result='%s'", status, rilie_text[:120])
         quality = float(
             raw.get("quality_score", 0.0)
             or raw.get("qualityscore", 0.0)
