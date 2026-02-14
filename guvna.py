@@ -640,42 +640,19 @@ class Guvna:
             # Triangle not available – proceed without bouncer
             pass
 
-        # 0.75a: primer/goodbye handled by _social_primer only (9 phrases).
-        # conversation_memory primer/goodbye DISABLED – no script leaks.
-
-        # Turn-0 greeting + get-to-work:
-        greeting_prefix = ""
+        # 0.75a: Turn-0 greeting for social openers (hi/hello/etc.).
+        # If it's a pure greeting on the very first turn, use greet() and stop there.
         if self.turn_count == 0:
-            # Build greeting but do NOT early-return;
-            # we want "Case 1 + get to work" on first safe turn.
-            # Reuse the same name-extraction logic as greet(), but keep it inline
-            # to avoid a second tone header.
-            known_name = self.user_name
-            if not known_name:
-                s = original_stimulus.lower().strip()
-                name_intros = ["my name is", "i'm ", "i am ", "call me", "name's"]
-                for intro in name_intros:
-                    if intro in s:
-                        idx = s.index(intro) + len(intro)
-                        rest = original_stimulus[idx:].strip().split()[0] if idx < len(original_stimulus) else ""
-                        name = rest.strip(".,!?;:'\"")
-                        if name and len(name) > 1:
-                            known_name = name.capitalize()
-                            break
-            if known_name:
-                self.user_name = known_name
-
-            if self.user_name:
-                greeting_text = (
-                    f"Hi {self.user_name}! It's great talking to you again..."
-                    "what's on your mind today?"
-                )
-            else:
-                greeting_text = (
-                    "Hi there! What's your name? You can call me RILIE if you please... :)"
-                )
-
-            greeting_prefix = greeting_text + "\n\n"
+            s = original_stimulus.lower().strip()
+            greeting_words = [
+                "hi", "hey", "hello", "yo", "what's up", "whats up",
+                "good morning", "good afternoon", "good evening",
+                "hola", "shalom", "bonjour",
+            ]
+            if any(s == g or s.startswith(g + " ") for g in greeting_words):
+                primer = self.greet(original_stimulus)
+                if primer is not None:
+                    return self._finalize_response(primer)
 
         # Normal processing turn increments
         self.memory.turn_count += 1
@@ -817,11 +794,10 @@ class Guvna:
 
         # 11–12: apply tone header + expose pillars
         if chosen and chosen.strip():
-            full_text = greeting_prefix + chosen if greeting_prefix else chosen
-            raw["result"] = apply_tone_header(full_text, tone)
+            raw["result"] = apply_tone_header(chosen, tone)
         else:
             # Nuclear: no fallback. Empty is honest.
-            raw["result"] = greeting_prefix if greeting_prefix else ""
+            raw["result"] = ""
 
         raw["tone"] = tone
         raw["tone_emoji"] = TONE_EMOJIS.get(tone, TONE_EMOJIS["insightful"])
