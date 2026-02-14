@@ -152,10 +152,6 @@ class Guvna:
         Either know them by name, or meet them.
         Returns greeting response or None if not turn 0.
         """
-        # Only fire on turn 0
-        if self.turn_count != 0:
-            return None
-
         # Extract name from stimulus if not provided
         if not known_name:
             s = stimulus.lower().strip()
