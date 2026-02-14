@@ -112,47 +112,47 @@ PRIORITY_HIERARCHY: Dict[str, Dict[str, float]] = {
 
 DOMAIN_KNOWLEDGE: Dict[str, Dict[str, List[str]]] = {
     "music": {
-        "compression": [],
-        "love": [],
-        "fear": [],
-        "satire": [],
-        "production": [],
+        "compression": ["density", "rhythm", "compression", "bars", "tight", "minimal"],
+        "love": ["call", "response", "connection", "harmony", "voice", "emotion"],
+        "fear": ["dissonance", "tension", "unease", "tritone", "panic", "rising"],
+        "satire": ["comedy", "trojan", "truth", "clown", "expose", "laugh", "think"],
+        "production": ["noise", "collage", "architecture", "intent", "sample", "layers", "archaeology", "source"],
     },
     "culture": {
-        "hip_hop": [],
-        "film": [],
-        "resistance": [],
+        "hip_hop": ["reframe", "broadcast", "political", "street", "news", "voice", "institution"],
+        "film": ["montage", "compression", "visual", "diegetic", "grounding"],
+        "resistance": ["blueprint", "mobilize", "art", "trickster", "bitter", "palatable", "weapon", "complacency"],
     },
     "physics": {
-        "conservation": [],
-        "relativity": [],
-        "quantum": [],
+        "conservation": ["conserve", "transform", "nothing lost", "symmetry", "noether"],
+        "relativity": ["frozen", "energy", "matter", "equivalence", "frame", "reference", "perception", "position"],
+        "quantum": ["superposition", "collapse", "observe", "entangle", "distance", "correlated", "uncertainty", "tradeoff"],
     },
     "life": {
-        "biology": [],
-        "evolution": [],
-        "health": [],
+        "biology": ["cancer", "ego", "replication", "forgot", "apoptosis", "sacrifice", "thrive"],
+        "evolution": ["adapt", "change", "selection", "symbiosis", "cooperate", "compete"],
+        "health": ["diversity", "stability", "monoculture", "collapse", "emergence", "simple", "recursive", "complex"],
     },
     "games": {
-        "game_theory": [],
-        "trust": [],
-        "incentives": [],
+        "game_theory": ["dilemma", "individual", "collective", "ego", "equilibrium", "stable", "strategy"],
+        "trust": ["trust", "drops", "buckets", "grace", "reputation", "cost"],
+        "incentives": ["cooperate", "mirror", "memory", "commit", "burn ships", "no defect", "misaligned", "commons"],
     },
     "thermodynamics": {
-        "entropy": [],
-        "harm_repair": [],
-        "catch44": [],
+        "entropy": ["entropy", "increase", "closed", "disorder", "free energy", "work", "waste", "beige"],
+        "harm_repair": ["harm", "irreversible", "repair", "cost", "cascade", "failure", "topology", "propagate"],
+        "catch44": ["equilibrium", "death", "far from", "ego", "entropy", "grace", "negentropy", "alive"],
     },
     "cosmology": {
-        "origin": [],
-        "scale": [],
+        "origin": ["boolean", "tick", "zero", "one", "bootstrap", "substrate"],
+        "scale": ["fractal", "scale", "pattern", "recursive", "dark", "unknown", "humility", "detect"],
     },
     "finance": {
-        "density": [],
-        "risk": [],
-        "regime": [],
-        "literacy": [],
-        "catch44": [],
+        "density": ["density", "destiny", "signal", "conviction", "quality", "frequency", "diamond", "bronze"],
+        "risk": ["accordion", "expand", "contract", "earned", "floor", "never zero", "minimum", "sizing"],
+        "regime": ["regime", "normal", "chaos", "stagnation", "fear", "gradient", "wait"],
+        "literacy": ["slow cook", "compound", "patience", "survival", "security", "moves", "stretch"],
+        "catch44": ["sleep", "topology", "patient", "quality", "stop loss", "integrity", "conviction", "ego"],
     },
 }
 
@@ -982,6 +982,20 @@ def run_pass_pipeline(
                 return True
         return False
     excavated = excavate_domains(clean_stimulus, domains)
+
+    # --- ROUX INJECTION: If Roux found something, feed it to the Kitchen ---
+    # Roux material arrives as "[ROUX: ...]\n\n{question}" in the stimulus.
+    # Extract it and inject as a domain source so the Kitchen has fresh food.
+    roux_match = re.match(r"\[ROUX:\s*(.*?)\]\s*\n", clean_stimulus, re.DOTALL)
+    if roux_match:
+        roux_text = roux_match.group(1).strip()
+        if roux_text:
+            # Split into sentences for multiple candidates
+            roux_items = [s.strip() for s in re.split(r'[.!?]+', roux_text) if s.strip() and len(s.strip()) > 10]
+            if roux_items:
+                excavated["roux"] = roux_items[:5]  # Cap at 5 fresh ingredients
+            # Clean the stimulus so downstream doesn't see the ROUX prefix
+            clean_stimulus = re.sub(r"\[ROUX:.*?\]\s*\n*", "", clean_stimulus, flags=re.DOTALL).strip()
 
     # --- SOi DOMAIN MAP: Pull wisdom from the 93 tracks ---
     # The domain map has 364 assignments across all tracks.
