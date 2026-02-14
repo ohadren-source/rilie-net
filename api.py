@@ -603,6 +603,12 @@ def health() -> HealthResponse:
 
 
 
+from talk import talk, TalkMemory
+
+# One memory per session — TALK remembers what she served
+talk_memory = TalkMemory()
+
+
 def build_plate(raw_envelope):
     result_text = raw_envelope.get("result", "")
     priorities_met = int(raw_envelope.get("priorities_met", 0) or 0)
@@ -618,8 +624,14 @@ def build_plate(raw_envelope):
     smap = {"COMPRESSED":"served","OK":"served","GUESS":"served","DEJAVU":"revisited",
             "COURTESYEXIT":"exploring","DISCOURSE":"warming up","SAFETYREDIRECT":"redirected",
             "EMPTY":"waiting","GREETING":"served","PRIMER":"served","GOODBYE":"served",
-            "SELF_REFLECTION":"served","RESEARCHED":"served"}
-    return {"result": result_text, "vibe": vibe, "status": smap.get(rs, "served")}
+            "SELF_REFLECTION":"served","RESEARCHED":"served","TALK_EXHAUSTED":"thinking",
+            "DEJAVU_BLOCKED":"revisited"}
+    plate = {"result": result_text, "vibe": vibe, "status": smap.get(rs, "served")}
+    if "talk_attempts" in raw_envelope:
+        plate["talk_attempts"] = raw_envelope["talk_attempts"]
+    if "talk_rejections" in raw_envelope:
+        plate["talk_rejections"] = raw_envelope["talk_rejections"]
+    return plate
 
 @app.post("/v1/rilie")
 def run_rilie(req: RilieRequest) -> Dict[str, Any]:
@@ -658,9 +670,21 @@ def run_rilie(req: RilieRequest) -> Dict[str, Any]:
     if queued_count > 0:
         result["curiosity_queued"] = queued_count
 
+    # TALK — the only return. The waitress checks the plate.
+    def _retry(stim):
+        return guvna.process(stim, maxpass=req.max_pass)
+
+    served = talk(
+        plate=result,
+        stimulus=stimulus,
+        memory=talk_memory,
+        max_retries=2,
+        retry_fn=_retry,
+    )
+
     if req.chef_mode:
-        return result
-    return build_plate(result)
+        return served
+    return build_plate(served)
 
 
 @app.post("/v1/google_search")
