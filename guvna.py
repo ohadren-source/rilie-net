@@ -10,6 +10,7 @@
 #
 # The Governor adds:
 # - Final authority on what gets served
+# - YELLOW GATE — conversation health monitoring + tone degradation detection
 # - Optional web lookup (Brave/Google) as a KISS pre-pass
 # - Tone signaling via a single governing emoji per response
 # - Comparison between web baseline and RILIE's own compression
@@ -1368,6 +1369,30 @@ class Guvna:
                 "I don't have a strong take on that yet. "
                 "Can you give me more to work with?"
             )
+
+        # 9.5: YELLOW GATE — check conversation health + tone degradation
+        try:
+            from guvna_yellow_gate import guvna_yellow_gate, lower_response_intensity
+            
+            health_monitor = self.rilie.get_health_monitor() if hasattr(self.rilie, 'get_health_monitor') else None
+            
+            if health_monitor:
+                yellow_decision = guvna_yellow_gate(
+                    original_stimulus,
+                    (False, None, "CLEAN"),  # Triangle already checked above
+                    health_monitor
+                )
+                
+                # If yellow state detected, prepend message and lower intensity
+                if yellow_decision.get('trigger_type') == 'YELLOW':
+                    if yellow_decision.get('prepend_message'):
+                        chosen = yellow_decision['prepend_message'] + '\n\n' + chosen
+                    
+                    if yellow_decision.get('lower_intensity'):
+                        chosen = lower_response_intensity(chosen)
+        except (ImportError, AttributeError):
+            # Yellow gate not available — proceed normally
+            pass
 
         # 10: wilden_swift — tone modulation
         if status not in {"SAFETYREDIRECT", "SELF_REFLECTION"} and chosen:
