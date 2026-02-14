@@ -509,7 +509,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     restore_talk_memory(talk_memory, session)
 
     # --- 3. Process through Guvna ---
-    result = guvna.process(stimulus, max_pass=req.max_pass)
+    result = guvna.process(stimulus, maxpass=req.max_pass)
 
     # --- 4. Conversation memory behaviors ---
     # Extract domains and quality from result for memory recording
@@ -542,7 +542,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     # --- 6. Talk (the waitress) ---
     def retry(stim):
-        return guvna.process(stim, max_pass=req.max_pass)
+        return guvna.process(stim, maxpass=req.max_pass)
 
     def self_search(sentence):
         try:
@@ -713,7 +713,7 @@ def generate_file(req: GenerateFileRequest) -> Dict[str, Any]:
     stimulus = req.stimulus.strip()
     if not stimulus:
         return {"stimulus": "", "ext": sanitize_ext(req.ext), "content": "", "status": "EMPTY", "filename": "", "download_url": ""}
-    result = guvna.process(stimulus, max_pass=3)
+    result = guvna.process(stimulus, maxpass=3)
     content = str(result.get("result", ""))
     ext = sanitize_ext(req.ext)
     filename = save_generated_file(ext, content)

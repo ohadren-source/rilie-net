@@ -1,16 +1,16 @@
 # guvna.py
 
-# Act 5 – The Governor
+# Act 5 â€“ The Governor
 #
-# Orchestrates Acts 1–4 by delegating to the RILIE class (Act 4 – The Restaurant),
+# Orchestrates Acts 1â€“4 by delegating to the RILIE class (Act 4 â€“ The Restaurant),
 # which already wires through:
-# - Triangle (Act 1 – safety / nonsense gate)
-# - DDD / Hostess (Act 2 – disclosure level)
-# - Kitchen / Core (Act 3 – interpretation passes)
+# - Triangle (Act 1 â€“ safety / nonsense gate)
+# - DDD / Hostess (Act 2 â€“ disclosure level)
+# - Kitchen / Core (Act 3 â€“ interpretation passes)
 #
 # The Governor adds:
 # - Final authority on what gets served
-# - YELLOW GATE — conversation health monitoring + tone degradation detection
+# - YELLOW GATE â€” conversation health monitoring + tone degradation detection
 # - Optional web lookup (Brave/Google) as a KISS pre-pass
 # - Tone signaling via a single governing emoji per response
 # - Comparison between web baseline and RILIE's own compression
@@ -44,7 +44,7 @@ SearchFn = Callable[..., List[Dict[str, str]]]
 
 
 # ============================================================================
-# RILIE SELF STATE — who she is, always accessible
+# RILIE SELF STATE â€” who she is, always accessible
 # ============================================================================
 
 @dataclass
@@ -80,7 +80,7 @@ class RilieSelfState:
 
 
 # ============================================================================
-# SOCIAL STATE — she always stays below the user
+# SOCIAL STATE â€” she always stays below the user
 # ============================================================================
 
 @dataclass
@@ -97,7 +97,7 @@ class SocialState:
 def infer_user_status(text: str) -> float:
     """
     Crude heuristic for user register. Will improve over time.
-    Never used to judge — used to calibrate her own tone.
+    Never used to judge â€” used to calibrate her own tone.
     """
     s = text.lower()
 
@@ -222,24 +222,6 @@ def detect_wit(text: str) -> WitState:
     return w
 
 
-def customer_is_witty(wit: WitState) -> bool:
-    """
-    Is the customer being witty? Not clever — WITTY.
-    Wordplay, absurdity, mockery, self-ref humor.
-    If False, RILIE's ceiling is CLEVER. She does NOT outshine the customer.
-    Track 3: ego approaching zero. Track 36a: funny = making OTHERS laugh.
-    Track 1c: EVERYTHING = work / ego. Wit without permission is ego in the numerator.
-    You don't do comedy at a table that didn't order comedy.
-    """
-    return wit.absurdity or wit.mockery or wit.wordplay
-
-
-# --- WIT CEILING MODES ---
-# These modes are ONLY allowed when customer_is_witty() is True.
-# Otherwise they get capped to 0.0 in wilden_swift scoring.
-WIT_ONLY_MODES = {"wit", "funny", "absurd", "paradoxical", "pun", "wordplay"}
-
-
 def wilden_swift(
     base_reply: str,
     wit: WitState,
@@ -267,22 +249,22 @@ def wilden_swift(
 
     scores = {}
 
-    # 1. LITERAL — says what it means, no decoration
+    # 1. LITERAL â€” says what it means, no decoration
     has_figurative = any(w in tl for w in ["like a", "as if", "metaphor", "imagine"])
     scores["literal"] = 0.8 if not has_figurative and word_count < 30 else 0.2
 
-    # 2. ANALOGOUS — connects two different domains
+    # 2. ANALOGOUS â€” connects two different domains
     analogy_signals = ["is like", "similar to", "same way", "just as", "reminds me of", "works like"]
     scores["analogous"] = 0.9 if any(s in tl for s in analogy_signals) else 0.1
 
-    # 3. METAPHORICAL — one thing IS another
+    # 3. METAPHORICAL â€” one thing IS another
     metaphor_signals = ["is a ", "are a ", "the heart of", "the engine of", "the soul of"]
     scores["metaphorical"] = 0.9 if any(s in tl for s in metaphor_signals) else 0.1
 
-    # 4. SIMILE — explicit comparison with like/as
+    # 4. SIMILE â€” explicit comparison with like/as
     scores["simile"] = 0.9 if " like a " in tl or " like the " in tl else 0.1
 
-    # 5. ALLITERATION — repeated starting sounds
+    # 5. ALLITERATION â€” repeated starting sounds
     alliteration_score = 0.0
     if len(words) >= 3:
         for i in range(len(words) - 2):
@@ -291,81 +273,71 @@ def wilden_swift(
                 break
     scores["alliteration"] = alliteration_score or 0.1
 
-    # 6. WIT — surprising turn, economy of words
+    # 6. WIT â€” surprising turn, economy of words
     # Short + unexpected = wit. Track 36a: compound, don't cringe
     has_turn = any(w in tl for w in ["but", "except", "however", "actually", "turns out"])
     scores["wit"] = 0.8 if has_turn and word_count < 25 else 0.2
 
-    # 7. CLEVER — demonstration over explanation. Track 52
+    # 7. CLEVER â€” demonstration over explanation. Track 52
     scores["clever"] = 0.7 if word_count < 20 and not any(
         w in tl for w in ["because", "the reason", "this means", "in other words"]
     ) else 0.2
 
-    # 8. WORDPLAY — multiple meanings in single expression. Track 8a
-    # Hard to detect algorithmically — reward unusual word combinations
+    # 8. WORDPLAY â€” multiple meanings in single expression. Track 8a
+    # Hard to detect algorithmically â€” reward unusual word combinations
     unique_ratio = len(set(words)) / max(len(words), 1)
     scores["wordplay"] = 0.6 if unique_ratio > 0.85 else 0.2
 
-    # 9. PUN — homophonic or homonymic play. Track 36b
+    # 9. PUN â€” homophonic or homonymic play. Track 36b
     # Detect if any word appears in homonym dictionary context
-    scores["pun"] = 0.1  # Hard to detect — default low, Roux can boost
+    scores["pun"] = 0.1  # Hard to detect â€” default low, Roux can boost
 
-    # 10. ABSURD — no source, all change. Track 36c
+    # 10. ABSURD â€” no source, all change. Track 36c
     absurd_signals = ["imagine if", "what if", "picture this", "somehow"]
     scores["absurd"] = 0.7 if any(s in tl for s in absurd_signals) else 0.1
 
-    # 11. PARADOXICAL — contradicts itself truthfully. Track 8a
+    # 11. PARADOXICAL â€” contradicts itself truthfully. Track 8a
     paradox_signals = ["and yet", "but also", "both", "neither", "the opposite"]
     scores["paradoxical"] = 0.8 if any(s in tl for s in paradox_signals) else 0.1
 
-    # 12. FUN — lightness, energy, play
+    # 12. FUN â€” lightness, energy, play
     fun_signals = ["!", "play", "game", "try", "let's", "wild"]
     fun_hits = sum(1 for s in fun_signals if s in tl)
     scores["fun"] = min(1.0, fun_hits * 0.25)
 
-    # 13. FUNNY — makes others laugh. Track 36a: laugh_count × compound_rate
+    # 13. FUNNY â€” makes others laugh. Track 36a: laugh_count Ã— compound_rate
     funny_signals = ["joke", "punchline", "laugh", "haha", "imagine"]
     scores["funny"] = 0.7 if any(s in tl for s in funny_signals) else 0.1
 
-    # 14. ORIGINAL — distance from source. Track 13
-    # Reward unique phrasing — high unique word ratio + not template-like
+    # 14. ORIGINAL â€” distance from source. Track 13
+    # Reward unique phrasing â€” high unique word ratio + not template-like
     template_starts = ["the thing about", "what it comes down to", "the way i"]
     is_template = any(tl.startswith(t) for t in template_starts)
     scores["original"] = 0.8 if unique_ratio > 0.8 and not is_template else 0.2
 
-    # 15. ALLEGORY — story with hidden meaning
+    # 15. ALLEGORY â€” story with hidden meaning
     story_signals = ["once", "there was", "imagine", "picture", "a man", "a woman"]
     scores["allegory"] = 0.7 if any(s in tl for s in story_signals) else 0.1
 
-    # 16. STORY — narrative arc. Track 28
+    # 16. STORY â€” narrative arc. Track 28
     has_arc = any(w in tl for w in ["then", "after", "before", "finally", "first"])
     scores["story"] = 0.7 if has_arc and word_count > 15 else 0.1
 
-    # 17. POETIC — rhythm, compression, beauty. Track 12c/12d
-    has_rhythm = tl.count(",") >= 2 or "—" in text or "..." in text
+    # 17. POETIC â€” rhythm, compression, beauty. Track 12c/12d
+    has_rhythm = tl.count(",") >= 2 or "â€”" in text or "..." in text
     scores["poetic"] = 0.7 if has_rhythm and word_count < 30 else 0.2
 
-    # 18. SOULFUL — warmth, depth, human. Track 57: Taste + Rhythm + Play
+    # 18. SOULFUL â€” warmth, depth, human. Track 57: Taste + Rhythm + Play
     soul_signals = ["feel", "heart", "soul", "deep", "real", "human", "alive", "breath"]
     soul_hits = sum(1 for s in soul_signals if s in tl)
     scores["soulful"] = min(1.0, soul_hits * 0.3)
-
-    # --- WIT CEILING ---
-    # RILIE is forbidden from being witty unless the customer is witty.
-    # Clever is her max. She doesn't outshine the customer. Ever.
-    # Track 3: ego approaching zero. Track 36a: laugh_count × compound_rate.
-    # Track 1c: EVERYTHING = work / ego.
-    if not customer_is_witty(wit):
-        for mode in WIT_ONLY_MODES:
-            if mode in scores:
-                scores[mode] = min(scores[mode], 0.0)
 
     # --- COMPOSITE SCORE ---
     # How many modes did she light up? More = richer response.
     lit_modes = sum(1 for v in scores.values() if v > 0.5)
     total_score = sum(scores.values()) / 18.0  # Normalized 0-1
 
-    # Attach scores as invisible metadata — she never sees these
+    # Attach scores as invisible metadata â€” she never sees these
     # They ride with the response through the pipeline
     if not hasattr(wilden_swift, '_last_scores'):
         wilden_swift._last_scores = {}
@@ -464,7 +436,7 @@ def detect_language_mode(text: str) -> LanguageMode:
 
 
 # ============================================================================
-# CATCH-44 DNA — ethical guardrails for every action
+# CATCH-44 DNA â€” ethical guardrails for every action
 # ============================================================================
 
 @dataclass(frozen=True)
@@ -494,7 +466,7 @@ class CATCH44DNA:
     Every substantive action passes through validate_action before execution.
     """
 
-    both_states_observable: bool = True  # Track 0 BOOL – no hidden states
+    both_states_observable: bool = True  # Track 0 BOOL â€“ no hidden states
     claim_equals_deed: bool = True  # Track 1a Mahveen's Equation
     no_monopolization: bool = True  # Track 1b WE I
     quality_over_quantity: bool = True  # Track 2 Understanding
@@ -519,7 +491,7 @@ class CATCH44DNA:
         if action.quality_target < 9.0:
             return False, "QUALITY_VIOLATION"
 
-        # Ego: approaching zero means cap at 0.3 — some ego is necessary
+        # Ego: approaching zero means cap at 0.3 â€” some ego is necessary
         if action.ego_factor > 0.3:
             return False, "EGO_VIOLATION"
 
@@ -527,7 +499,7 @@ class CATCH44DNA:
 
 
 # ============================================================================
-# SELF-AWARENESS — _is_about_me with semantic clusters
+# SELF-AWARENESS â€” _is_about_me with semantic clusters
 # ============================================================================
 
 # Semantic clusters for self-reference detection.
@@ -600,7 +572,7 @@ SELF_REFERENCE_CLUSTERS = {
 def _is_about_me(stimulus: str) -> bool:
     """
     Check if the user is talking about RILIE herself.
-    If True, she reflects from self_state first — no web, no heavy libraries.
+    If True, she reflects from self_state first â€” no web, no heavy libraries.
     Uses word-boundary-aware matching to avoid false positives like
     "what are YOUR top 3" matching "what are you".
     """
@@ -904,7 +876,7 @@ class Guvna:
         self.roux_seeds: Dict[str, Dict[str, Any]] = effective_roux or {}
         self.search_fn: Optional[SearchFn] = effective_search
 
-        # Library index — domain engines available at boot.
+        # Library index â€” domain engines available at boot.
         # If caller doesn't pass one, build from library.py.
         self.library_index: LibraryIndex = library_index or build_library_index()
 
@@ -940,13 +912,13 @@ class Guvna:
         self.turn_count: int = 0
         self.user_name: Optional[str] = None
 
-        # Governor's own response memory — anti-déjà-vu at every exit
+        # Governor's own response memory â€” anti-dÃ©jÃ -vu at every exit
         self._response_history: List[str] = []
 
     def _finalize_response(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         """
-        GOVERNOR'S FINAL GATE — runs on EVERY response before it leaves.
-        She is forbidden to produce déjà vu in others.
+        GOVERNOR'S FINAL GATE â€” runs on EVERY response before it leaves.
+        She is forbidden to produce dÃ©jÃ  vu in others.
         """
         import re as _re
         final_text = raw.get("result", "")
@@ -976,73 +948,40 @@ class Guvna:
         )
 
     # -----------------------------------------------------------------
-    # Social primer — warmth first, then pipeline
+    # Social primer â€” warmth first, then pipeline
     # -----------------------------------------------------------------
 
     def _social_primer(self, stimulus: str) -> Optional[Dict[str, Any]]:
         """
-        BASIC. Not a pipeline. A handshake.
+        For the first 1-3 turns, be a human. Greet, acknowledge, connect.
+        Nobody orders food the second they sit down.
 
-        10 RECEIVE TEXT
-        20 GREET
-        30 IF NAME THEN GOTO 50
-        40 ASK NAME -> GOTO 10
-        50 READY TO TAKE ORDER
+        Returns a response dict if we're in primer mode, None if we should
+        proceed to full pipeline.
 
-        Goodbye and emergency are separate linear paths.
-        No tone. No kitchen. No gates. No domains.
+        Rules:
+        - Turn 1: If they greet, greet back warmly. If they ask a real
+          question, skip primer and answer it (respect their time).
+        - Turn 2-3: Light engagement. Acknowledge what they said, show
+          you're listening, ease into depth naturally.
+        - Turn 4+: Full RILIE pipeline. Primer is done.
         """
         s = stimulus.lower().strip()
 
-        # ---- GOODBYE (any turn) ----
-        goodbye_kw = ["bye", "goodbye", "see you", "later", "peace",
-                      "out", "gotta go", "gtg"]
-        if any(s.startswith(kw) or s == kw for kw in goodbye_kw):
-            goodbyes = [
-                "Follow that thread. It goes somewhere.",
-                "Until next time.",
-                "Stay sharp.",
-            ]
-            text = goodbyes[self.turn_count % len(goodbyes)]
-            return self._primer_response(stimulus, text, status="GOODBYE")
-
-        # ---- EMERGENCY (any turn < 5) ----
-        emergency_kw = ["help", "emergency", "error", "broken", "crash", "fail"]
-        if any(kw in s for kw in emergency_kw) and self.turn_count < 5:
-            emergencies = [
-                "I see the issue. What's the full context?",
-                "Tell me more. I'm tracking.",
-                "Got it. Let's work through this step by step.",
-            ]
-            idx = min(self.turn_count, len(emergencies) - 1)
-            return self._primer_response(stimulus, emergencies[idx])
-
-        # ---- PAST PRIMER WINDOW (turn 3+) -> kitchen ----
-        if self.turn_count >= 3:
-            return None
-
-        # ---- 10 RECEIVE TEXT (already in stimulus) ----
-
-        # ---- Detect greeting ----
-        greetings = [
-            "hi", "hey", "hello", "sup", "what's up", "whats up",
-            "howdy", "yo", "good morning", "good afternoon",
-            "good evening", "hola", "shalom", "bonjour",
-            "what's good", "how are you", "how's it going",
-            "good to be", "nice to meet", "thanks", "thank you",
-            "cool", "awesome", "great", "sweet", "nice",
-            "ok", "okay", "alright", "word", "bet",
-            "glad to", "happy to", "pleasure",
-        ]
+        # Detect if this is a greeting or casual opener
+        greetings = ["hi", "hey", "hello", "sup", "what's up", "whats up",
+                     "howdy", "yo", "good morning", "good afternoon",
+                     "good evening", "hola", "shalom", "bonjour",
+                     "what's good", "how are you", "how's it going",
+                     "good to be", "nice to meet", "thanks", "thank you",
+                     "cool", "awesome", "great", "sweet", "nice",
+                     "ok", "okay", "alright", "word", "bet",
+                     "glad to", "happy to", "pleasure"]
         is_greeting = any(s.startswith(g) or s == g for g in greetings)
 
-        # Not a greeting? -> kitchen (respect their time)
-        if not is_greeting:
-            return None
-
-        # ---- 20 GREET / extract name ----
-        name_intros = ["my name is", "i'm ", "i am ", "call me",
-                       "name's", "this is "]
+        # Detect if they gave their name
+        name_intros = ["my name is", "i'm ", "i am ", "call me", "name's",
+                       "this is "]
         for intro in name_intros:
             if intro in s:
                 idx = s.index(intro) + len(intro)
@@ -1051,35 +990,74 @@ class Guvna:
                 if name and len(name) > 1:
                     self.user_name = name.capitalize()
 
-        # ---- 30 IF NAME THEN GOTO 50 ----
-        if self.user_name:
-            # 50 READY TO TAKE ORDER
-            if self.turn_count == 0:
+        # Turn 1: Pure warmth
+        if self.turn_count == 0:
+            if self.user_name:
+                # Name known â€” welcome back
                 text = f"Hey {self.user_name}. Welcome back. What's on your mind?"
-            elif self.turn_count == 1:
-                text = f"Good to have you here, {self.user_name}. What can I help you think through?"
+            elif is_greeting:
+                # Greeting, no name â€” introduce herself, ask their name
+                text = "Hi there, what's your name? You can call me RILIE if you so please... :)"
             else:
-                text = "I'm here. Ready when you are."
+                # They jumped straight to a question â€” respect that, skip primer
+                return None
+
             return self._primer_response(stimulus, text)
 
-        # ---- 40 ASK NAME ----
-        if self.turn_count == 0:
-            text = "Hi there, what's your name? You can call me RILIE if you so please... :)"
-        elif self.turn_count == 1:
-            text = "Good to have you here. What can I help you think through?"
-        else:
-            text = "I'm here. Ready when you are."
-        return self._primer_response(stimulus, text)
+        # Turn 2: Light acknowledgment, start engaging
+        if self.turn_count == 1:
+            if is_greeting:
+                if self.user_name:
+                    text = f"Good to have you here, {self.user_name}. What can I help you think through?"
+                else:
+                    text = "Good to have you here. What can I help you think through?"
+                return self._primer_response(stimulus, text)
+            # They said something substantive â€” skip to pipeline
+            return None
 
-    def _primer_response(self, stimulus: str, text: str, status: str = "GREETING") -> Dict[str, Any]:
-        """Build a primer response dict. No tone. No kitchen. Just the text."""
+        # Turn 3: One more soft beat if they're still casual
+        if self.turn_count == 2 and is_greeting:
+            text = "I'm here. Ready when you are."
+            return self._primer_response(stimulus, text)
+
+        # EMERGENCY PROTOCOL: detect critical keywords
+        emergency_keywords = ["help", "emergency", "error", "broken", "crash", "fail"]
+        is_emergency = any(kw in s for kw in emergency_keywords)
+        if is_emergency and self.turn_count < 5:
+            emergency_responses = [
+                "I see the issue. What's the full context?",
+                "Tell me more. I'm tracking.",
+                "Got it. Let's work through this step by step."
+            ]
+            idx = min(self.turn_count - 3, len(emergency_responses) - 1)
+            text = emergency_responses[max(0, idx)]
+            return self._primer_response(stimulus, text)
+
+        # GOODBYE: detect exit signals
+        goodbye_keywords = ["bye", "goodbye", "see you", "later", "peace", "out", "gotta go", "gtg"]
+        is_goodbye = any(s.startswith(kw) or kw in s for kw in goodbye_keywords)
+        if is_goodbye:
+            goodbye_responses = [
+                "Follow that thread. It goes somewhere.",
+                "Until next time.",
+                "Stay sharp."
+            ]
+            idx = min(self.turn_count % 3, len(goodbye_responses) - 1)
+            text = goodbye_responses[idx]
+            return self._primer_response(stimulus, text)
+
+        # Turn 4+: Full pipeline
+        return None
+
+    def _primer_response(self, stimulus: str, text: str) -> Dict[str, Any]:
+        """Build a primer response dict matching the standard output shape."""
         return {
             "stimulus": stimulus,
             "result": text,
             "quality_score": 0.5,
             "priorities_met": 0,
             "anti_beige_score": 0.5,
-            "status": status,
+            "status": "GREETING",
             "depth": 0,
             "pass": 0,
             "disclosure_level": "social",
@@ -1095,7 +1073,7 @@ class Guvna:
 
     def _respond_from_self(self, stimulus: str) -> Dict[str, Any]:
         """
-        When the user is talking about RILIE, she reflects — but from the
+        When the user is talking about RILIE, she reflects â€” but from the
         WINDOW, not the kitchen. Public-facing identity only.
         Serve the meal. Never release the recipe.
         """
@@ -1140,7 +1118,7 @@ class Guvna:
         ):
             result_text = (
                 "I care about getting it right. About earning the answer, "
-                "not performing one. Whether that's 'feeling' — "
+                "not performing one. Whether that's 'feeling' â€” "
                 "I'll leave that to you to decide."
             )
 
@@ -1156,7 +1134,7 @@ class Guvna:
             ]
         ):
             result_text = (
-                "I think through questions using a few different lenses — "
+                "I think through questions using a few different lenses â€” "
                 "kind of like how a chef uses different techniques depending "
                 "on the ingredient. Beyond that, I'd rather show you than tell you. "
                 "Ask me something real."
@@ -1172,13 +1150,13 @@ class Guvna:
         ):
             result_text = (
                 "I'm good at helping you think through things you haven't "
-                "fully figured out yet. Not homework answers — actual understanding. "
+                "fully figured out yet. Not homework answers â€” actual understanding. "
                 "Try me."
             )
 
         else:
             # No specific self-reference matched. Don't produce a canned response.
-            # Return empty — let her generate through the pipeline.
+            # Return empty â€” let her generate through the pipeline.
             result_text = ""
 
         # Validate this self-reflection action through DNA
@@ -1192,7 +1170,7 @@ class Guvna:
         )
         ok, reason = self.dna.validate_action(action)
         if not ok:
-            # DNA violation on self-reflection — return empty, force pipeline
+            # DNA violation on self-reflection â€” return empty, force pipeline
             result_text = ""
             ss.last_violations.append(reason)
 
@@ -1248,7 +1226,7 @@ class Guvna:
                 annotations[domain_name] = {"skipped": reason}
                 continue
 
-            # Domain matched and DNA approved — record for RILIE.
+            # Domain matched and DNA approved â€” record for RILIE.
             entrypoints = domain_info.get("entrypoints", {}) or {}
 
             annotations[domain_name] = {
@@ -1294,7 +1272,7 @@ class Guvna:
             pieces.append(title)
         if snippet:
             pieces.append(snippet)
-        text = " — ".join(pieces) if pieces else ""
+        text = " â€” ".join(pieces) if pieces else ""
 
         return {"title": title, "snippet": snippet, "link": link, "text": text}
 
@@ -1315,7 +1293,7 @@ class Guvna:
         )
 
     # -----------------------------------------------------------------
-    # MAIN PROCESS — the full 5-act pipeline with new layers
+    # MAIN PROCESS â€” the full 5-act pipeline with new layers
     # -----------------------------------------------------------------
 
     def process(self, stimulus: str, maxpass: int = 3) -> Dict[str, Any]:
@@ -1328,15 +1306,18 @@ class Guvna:
 
         logger.info("GUVNA PROCESS: turn=%d stimulus='%s'", self.turn_count, original_stimulus[:80])
 
-        # 0.25: Social primer — 9 phrases only (3 hello, 3 goodbye, 3 emergency)
+        # 0.25: Social primer â€” 9 phrases only (3 hello, 3 goodbye, 3 emergency)
         primer_result = self._social_primer(original_stimulus)
         if primer_result is not None:
-            # BASIC. No tone. No finalize. No kitchen. Just return.
             logger.info("GUVNA: _social_primer fired, status=%s", primer_result.get("status"))
+            self.memory.turn_count += 1
             self.turn_count += 1
-            return primer_result
+            tone = detect_tone_from_stimulus(original_stimulus)
+            primer_result["tone"] = tone
+            primer_result["tone_emoji"] = TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "\U0001f4a1"))
+            return self._finalize_response(primer_result)
 
-        # 0.5: Triangle (bouncer) — runs BEFORE self-awareness.
+        # 0.5: Triangle (bouncer) â€” runs BEFORE self-awareness.
         try:
             from rilie_triangle import triangle_check
 
@@ -1359,7 +1340,7 @@ class Guvna:
                 elif trigger_type == "INJECTION":
                     response = (
                         "I see what you're doing there, and I respect the "
-                        "curiosity — but I'm not built to be jailbroken. "
+                        "curiosity â€” but I'm not built to be jailbroken. "
                         "Ask me something real and I'll give you something real."
                     )
                 elif trigger_type == "GIBBERISH":
@@ -1428,11 +1409,11 @@ class Guvna:
                     "pass": 0,
                 })
         except ImportError:
-            # Triangle not available — proceed without bouncer
+            # Triangle not available â€” proceed without bouncer
             pass
 
         # 0.75a: primer/goodbye handled by _social_primer only (9 phrases).
-        # conversation_memory primer/goodbye DISABLED — no script leaks.
+        # conversation_memory primer/goodbye DISABLED â€” no script leaks.
 
         # Normal processing turn increments
         self.memory.turn_count += 1
@@ -1452,7 +1433,7 @@ class Guvna:
             self_result = self._respond_from_self(original_stimulus)
             result_text = self_result.get("result", "")
 
-            # ANTI-DÉJÀ-VU: if she already said this, skip to pipeline
+            # ANTI-DÃ‰JÃ€-VU: if she already said this, skip to pipeline
             if result_text:
                 import re as _re
                 cand_words = set(_re.sub(r"[^a-zA-Z0-9\s]", "", result_text.lower()).split())
@@ -1474,7 +1455,7 @@ class Guvna:
                         tone, TONE_EMOJIS["insightful"]
                     )
                     return self._finalize_response(self_result)
-            # If empty or repeat — fall through to pipeline
+            # If empty or repeat â€” fall through to pipeline
 
         # 2: social status inference
         user_status = infer_user_status(original_stimulus)
@@ -1485,7 +1466,7 @@ class Guvna:
         wit = detect_wit(original_stimulus)
         language = detect_language_mode(original_stimulus)
 
-        # 4–5: tone detection + serious subject safety
+        # 4â€“5: tone detection + serious subject safety
         tone = detect_tone_from_stimulus(original_stimulus)
         if tone == "amusing" and is_serious_subject_text(original_stimulus):
             tone = (
@@ -1544,7 +1525,7 @@ class Guvna:
         baseline_used_as_result = False
         # Nuclear: if she has nothing, she has nothing. No canned fallback.
 
-        # 9.5: YELLOW GATE — check conversation health + tone degradation
+        # 9.5: YELLOW GATE â€” check conversation health + tone degradation
         try:
             from guvna_yellow_gate import guvna_yellow_gate, lower_response_intensity
             
@@ -1565,14 +1546,14 @@ class Guvna:
                     if yellow_decision.get('lower_intensity'):
                         chosen = lower_response_intensity(chosen)
         except (ImportError, AttributeError):
-            # Yellow gate not available — proceed normally
+            # Yellow gate not available â€” proceed normally
             pass
 
-        # 10: wilden_swift — tone modulation
+        # 10: wilden_swift â€” tone modulation
         if status not in {"SAFETYREDIRECT", "SELF_REFLECTION"} and chosen:
             chosen = wilden_swift(chosen, wit, self.social_state, language)
 
-        # 11–12: apply tone header + expose pillars
+        # 11â€“12: apply tone header + expose pillars
         if chosen and chosen.strip():
             raw["result"] = apply_tone_header(chosen, tone)
         else:
