@@ -795,6 +795,12 @@ class Guvna:
         raw["domain_annotations"] = domain_annotations
         raw["dna_active"] = self.self_state.dna_active
 
+        # COERCE: force déjà-vu to signal-only (safety net if talk still has old logic)
+        # Déjà-vu is information, not a gate. Mark it so talk() passes through.
+        if raw.get("dejavu", {}).get("frequency", 0) > 0:
+            raw["dejavu"]["pass_through"] = True
+            logger.info("GUVNA COERCE: déjà-vu marked as signal-only (pass_through=True)")
+
         # Memory enrichments
         result_text = raw.get("result", "")
         if memory_callback and result_text:
