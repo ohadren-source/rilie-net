@@ -222,6 +222,24 @@ def detect_wit(text: str) -> WitState:
     return w
 
 
+def customer_is_witty(wit: WitState) -> bool:
+    """
+    Is the customer being witty? Not clever — WITTY.
+    Wordplay, absurdity, mockery, self-ref humor.
+    If False, RILIE's ceiling is CLEVER. She does NOT outshine the customer.
+    Track 3: ego approaching zero. Track 36a: funny = making OTHERS laugh.
+    Track 1c: EVERYTHING = work / ego. Wit without permission is ego in the numerator.
+    You don't do comedy at a table that didn't order comedy.
+    """
+    return wit.absurdity or wit.mockery or wit.wordplay
+
+
+# --- WIT CEILING MODES ---
+# These modes are ONLY allowed when customer_is_witty() is True.
+# Otherwise they get capped to 0.0 in wilden_swift scoring.
+WIT_ONLY_MODES = {"wit", "funny", "absurd", "paradoxical", "pun", "wordplay"}
+
+
 def wilden_swift(
     base_reply: str,
     wit: WitState,
@@ -331,6 +349,16 @@ def wilden_swift(
     soul_signals = ["feel", "heart", "soul", "deep", "real", "human", "alive", "breath"]
     soul_hits = sum(1 for s in soul_signals if s in tl)
     scores["soulful"] = min(1.0, soul_hits * 0.3)
+
+    # --- WIT CEILING ---
+    # RILIE is forbidden from being witty unless the customer is witty.
+    # Clever is her max. She doesn't outshine the customer. Ever.
+    # Track 3: ego approaching zero. Track 36a: laugh_count × compound_rate.
+    # Track 1c: EVERYTHING = work / ego.
+    if not customer_is_witty(wit):
+        for mode in WIT_ONLY_MODES:
+            if mode in scores:
+                scores[mode] = min(scores[mode], 0.0)
 
     # --- COMPOSITE SCORE ---
     # How many modes did she light up? More = richer response.
@@ -953,35 +981,68 @@ class Guvna:
 
     def _social_primer(self, stimulus: str) -> Optional[Dict[str, Any]]:
         """
-        For the first 1-3 turns, be a human. Greet, acknowledge, connect.
-        Nobody orders food the second they sit down.
+        BASIC. Not a pipeline. A handshake.
 
-        Returns a response dict if we're in primer mode, None if we should
-        proceed to full pipeline.
+        10 RECEIVE TEXT
+        20 GREET
+        30 IF NAME THEN GOTO 50
+        40 ASK NAME -> GOTO 10
+        50 READY TO TAKE ORDER
 
-        Rules:
-        - Turn 1: If they greet, greet back warmly. If they ask a real
-          question, skip primer and answer it (respect their time).
-        - Turn 2-3: Light engagement. Acknowledge what they said, show
-          you're listening, ease into depth naturally.
-        - Turn 4+: Full RILIE pipeline. Primer is done.
+        Goodbye and emergency are separate linear paths.
+        No tone. No kitchen. No gates. No domains.
         """
         s = stimulus.lower().strip()
 
-        # Detect if this is a greeting or casual opener
-        greetings = ["hi", "hey", "hello", "sup", "what's up", "whats up",
-                     "howdy", "yo", "good morning", "good afternoon",
-                     "good evening", "hola", "shalom", "bonjour",
-                     "what's good", "how are you", "how's it going",
-                     "good to be", "nice to meet", "thanks", "thank you",
-                     "cool", "awesome", "great", "sweet", "nice",
-                     "ok", "okay", "alright", "word", "bet",
-                     "glad to", "happy to", "pleasure"]
+        # ---- GOODBYE (any turn) ----
+        goodbye_kw = ["bye", "goodbye", "see you", "later", "peace",
+                      "out", "gotta go", "gtg"]
+        if any(s.startswith(kw) or s == kw for kw in goodbye_kw):
+            goodbyes = [
+                "Follow that thread. It goes somewhere.",
+                "Until next time.",
+                "Stay sharp.",
+            ]
+            text = goodbyes[self.turn_count % len(goodbyes)]
+            return self._primer_response(stimulus, text, status="GOODBYE")
+
+        # ---- EMERGENCY (any turn < 5) ----
+        emergency_kw = ["help", "emergency", "error", "broken", "crash", "fail"]
+        if any(kw in s for kw in emergency_kw) and self.turn_count < 5:
+            emergencies = [
+                "I see the issue. What's the full context?",
+                "Tell me more. I'm tracking.",
+                "Got it. Let's work through this step by step.",
+            ]
+            idx = min(self.turn_count, len(emergencies) - 1)
+            return self._primer_response(stimulus, emergencies[idx])
+
+        # ---- PAST PRIMER WINDOW (turn 3+) -> kitchen ----
+        if self.turn_count >= 3:
+            return None
+
+        # ---- 10 RECEIVE TEXT (already in stimulus) ----
+
+        # ---- Detect greeting ----
+        greetings = [
+            "hi", "hey", "hello", "sup", "what's up", "whats up",
+            "howdy", "yo", "good morning", "good afternoon",
+            "good evening", "hola", "shalom", "bonjour",
+            "what's good", "how are you", "how's it going",
+            "good to be", "nice to meet", "thanks", "thank you",
+            "cool", "awesome", "great", "sweet", "nice",
+            "ok", "okay", "alright", "word", "bet",
+            "glad to", "happy to", "pleasure",
+        ]
         is_greeting = any(s.startswith(g) or s == g for g in greetings)
 
-        # Detect if they gave their name
-        name_intros = ["my name is", "i'm ", "i am ", "call me", "name's",
-                       "this is "]
+        # Not a greeting? -> kitchen (respect their time)
+        if not is_greeting:
+            return None
+
+        # ---- 20 GREET / extract name ----
+        name_intros = ["my name is", "i'm ", "i am ", "call me",
+                       "name's", "this is "]
         for intro in name_intros:
             if intro in s:
                 idx = s.index(intro) + len(intro)
@@ -990,74 +1051,35 @@ class Guvna:
                 if name and len(name) > 1:
                     self.user_name = name.capitalize()
 
-        # Turn 1: Pure warmth
-        if self.turn_count == 0:
-            if self.user_name:
-                # Name known — welcome back
+        # ---- 30 IF NAME THEN GOTO 50 ----
+        if self.user_name:
+            # 50 READY TO TAKE ORDER
+            if self.turn_count == 0:
                 text = f"Hey {self.user_name}. Welcome back. What's on your mind?"
-            elif is_greeting:
-                # Greeting, no name — introduce herself, ask their name
-                text = "Hi there, what's your name? You can call me RILIE if you so please... :)"
+            elif self.turn_count == 1:
+                text = f"Good to have you here, {self.user_name}. What can I help you think through?"
             else:
-                # They jumped straight to a question — respect that, skip primer
-                return None
-
+                text = "I'm here. Ready when you are."
             return self._primer_response(stimulus, text)
 
-        # Turn 2: Light acknowledgment, start engaging
-        if self.turn_count == 1:
-            if is_greeting:
-                if self.user_name:
-                    text = f"Good to have you here, {self.user_name}. What can I help you think through?"
-                else:
-                    text = "Good to have you here. What can I help you think through?"
-                return self._primer_response(stimulus, text)
-            # They said something substantive — skip to pipeline
-            return None
-
-        # Turn 3: One more soft beat if they're still casual
-        if self.turn_count == 2 and is_greeting:
+        # ---- 40 ASK NAME ----
+        if self.turn_count == 0:
+            text = "Hi there, what's your name? You can call me RILIE if you so please... :)"
+        elif self.turn_count == 1:
+            text = "Good to have you here. What can I help you think through?"
+        else:
             text = "I'm here. Ready when you are."
-            return self._primer_response(stimulus, text)
+        return self._primer_response(stimulus, text)
 
-        # EMERGENCY PROTOCOL: detect critical keywords
-        emergency_keywords = ["help", "emergency", "error", "broken", "crash", "fail"]
-        is_emergency = any(kw in s for kw in emergency_keywords)
-        if is_emergency and self.turn_count < 5:
-            emergency_responses = [
-                "I see the issue. What's the full context?",
-                "Tell me more. I'm tracking.",
-                "Got it. Let's work through this step by step."
-            ]
-            idx = min(self.turn_count - 3, len(emergency_responses) - 1)
-            text = emergency_responses[max(0, idx)]
-            return self._primer_response(stimulus, text)
-
-        # GOODBYE: detect exit signals
-        goodbye_keywords = ["bye", "goodbye", "see you", "later", "peace", "out", "gotta go", "gtg"]
-        is_goodbye = any(s.startswith(kw) or kw in s for kw in goodbye_keywords)
-        if is_goodbye:
-            goodbye_responses = [
-                "Follow that thread. It goes somewhere.",
-                "Until next time.",
-                "Stay sharp."
-            ]
-            idx = min(self.turn_count % 3, len(goodbye_responses) - 1)
-            text = goodbye_responses[idx]
-            return self._primer_response(stimulus, text)
-
-        # Turn 4+: Full pipeline
-        return None
-
-    def _primer_response(self, stimulus: str, text: str) -> Dict[str, Any]:
-        """Build a primer response dict matching the standard output shape."""
+    def _primer_response(self, stimulus: str, text: str, status: str = "GREETING") -> Dict[str, Any]:
+        """Build a primer response dict. No tone. No kitchen. Just the text."""
         return {
             "stimulus": stimulus,
             "result": text,
             "quality_score": 0.5,
             "priorities_met": 0,
             "anti_beige_score": 0.5,
-            "status": "GREETING",
+            "status": status,
             "depth": 0,
             "pass": 0,
             "disclosure_level": "social",
@@ -1296,7 +1318,7 @@ class Guvna:
     # MAIN PROCESS — the full 5-act pipeline with new layers
     # -----------------------------------------------------------------
 
-    def process(self, stimulus: str, max_pass: int = 3) -> Dict[str, Any]:
+    def process(self, stimulus: str, maxpass: int = 3) -> Dict[str, Any]:
         """
         Route stimulus through the full 5-act pipeline.
         """
@@ -1309,13 +1331,10 @@ class Guvna:
         # 0.25: Social primer — 9 phrases only (3 hello, 3 goodbye, 3 emergency)
         primer_result = self._social_primer(original_stimulus)
         if primer_result is not None:
+            # BASIC. No tone. No finalize. No kitchen. Just return.
             logger.info("GUVNA: _social_primer fired, status=%s", primer_result.get("status"))
-            self.memory.turn_count += 1
             self.turn_count += 1
-            tone = detect_tone_from_stimulus(original_stimulus)
-            primer_result["tone"] = tone
-            primer_result["tone_emoji"] = TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "\U0001f4a1"))
-            return self._finalize_response(primer_result)
+            return primer_result
 
         # 0.5: Triangle (bouncer) — runs BEFORE self-awareness.
         try:
@@ -1488,7 +1507,7 @@ class Guvna:
         # 8: augment + send to RILIE
         augmented = self._augment_with_baseline(original_stimulus, baseline_text)
         logger.info("GUVNA: sending to RILIE, augmented='%s'", augmented[:100])
-        raw = self.rilie.process(augmented, maxpass=max_pass)
+        raw = self.rilie.process(augmented, maxpass=maxpass)
         rilie_text = str(raw.get("result", "") or "").strip()
         status = str(raw.get("status", "") or "").upper()
         logger.info("GUVNA: RILIE returned status=%s result='%s'", status, rilie_text[:120])
