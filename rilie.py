@@ -532,31 +532,13 @@ class RILIE:
             }
 
         # -----------------------------------------------------------------
-        # DDD / Hostess — choose disclosure level
-        # Sequential: TASTE (turns 1-2), OPEN (turn 3+)
+        # DDD / Hostess — disclosure level (internal state only)
+        # TASTE is a flag, not a gate. She always speaks through the pipeline.
         # -----------------------------------------------------------------
         disclosure = self.conversation.disclosure_level
 
-        # TASTE: amuse-bouche, Kitchen not invoked. Hostess shapes directly.
-        if disclosure == DisclosureLevel.TASTE:
-            taste = shape_for_disclosure(original_question, self.conversation)
-            self.conversation.record_exchange(original_question, taste)
-            return {
-                "stimulus": stimulus,
-                "result": taste,
-                "quality_score": 0.5,
-                "priorities_met": 1,
-                "anti_beige_score": 1.0,
-                "status": "DISCOURSE",
-                "depth": 0,
-                "pass": 1,
-                "disclosure_level": disclosure.value,
-                "triangle_reason": "CLEAN",
-                "person_context": self.person.has_context(),
-            }
-
         # -----------------------------------------------------------------
-        # Kitchen — interpretation passes (OPEN level only)
+        # Kitchen — interpretation passes (every turn, TASTE or OPEN)
         # Uses the ORIGINAL question, not the augmented baseline string.
         # If curiosity found prior knowledge, prepend it as context.
         # -----------------------------------------------------------------

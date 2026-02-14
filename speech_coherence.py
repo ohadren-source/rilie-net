@@ -73,27 +73,20 @@ def has_clear_subject(sentence: str) -> bool:
 
 
 def ensure_has_subject(text: str) -> str:
-    """Ensure text has clear subject."""
+    """Ensure text has clear subject. No band-aid prefixes."""
     
     if not text:
         return text
     
+    # If it already has a subject, leave it alone
     sentences = text.split(".")
-    has_any = False
-    
     for sent in sentences:
         if has_clear_subject(sent):
-            has_any = True
-            break
+            return text
     
-    if has_any:
-        return text
-    
-    # Add subject conversationally
-    if text.startswith(("Here", "The", "This", "That", "About")):
-        return text
-    
-    return f"Here's the thing: {text}"
+    # No subject found. Return as-is — don't slap a prefix on it.
+    # The pipeline upstream should be generating real sentences.
+    return text
 
 
 def align_temporal_sense(response: str, stimulus: Optional[str]) -> str:
@@ -131,15 +124,12 @@ def has_temporal_marker(text: str, time_type: str) -> bool:
 
 
 def resolve_critical_references(text: str) -> str:
-    """Fix dangling references."""
+    """Fix dangling references. No band-aid prefixes."""
     
     if not text or len(text) < 10:
         return text
     
-    # Only fix if completely ambiguous
-    if has_critical_ambiguity(text):
-        text = f"Here's what I mean: {text}"
-    
+    # Return as-is. Pipeline should generate complete sentences.
     return text
 
 

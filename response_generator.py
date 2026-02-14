@@ -26,22 +26,26 @@ def generate(
     question: str,
     disclosure_level: str = "full",
 ) -> str:
-    """Generate response with earnest effort."""
+    """
+    Nuclear: generate or return empty.
+    No scripts. No "I'm thinking about that."
+    She speaks or she's silent.
+    """
     
     if not question or not question.strip():
-        return kitchen_meaning or "I'm thinking about that."
+        return kitchen_meaning or ""
     
     if not kitchen_meaning or not kitchen_meaning.strip():
-        try:
-            if CHOMSKY_AVAILABLE:
+        if CHOMSKY_AVAILABLE:
+            try:
                 time_bucket = infer_time_bucket(question)
                 subject = extract_main_subject(question)
                 ack = build_acknowledgment([subject], time_bucket, question)
                 if ack:
-                    return f"{ack} I'm still working on this one."
-        except Exception:
-            pass
-        return "I'm working on that. Let me think more."
+                    return ack
+            except Exception:
+                pass
+        return ""
     
     try:
         if CHOMSKY_AVAILABLE:
@@ -50,8 +54,7 @@ def generate(
             acknowledgment = build_acknowledgment([subject], time_bucket, question)
             
             if acknowledgment:
-                response = f"{acknowledgment} {kitchen_meaning}"
-                return shape_for_disclosure(response, disclosure_level)
+                return f"{acknowledgment} {kitchen_meaning}"
         
         return kitchen_meaning
         

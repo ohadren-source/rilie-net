@@ -108,41 +108,11 @@ def shape_for_disclosure(
     conversation: ConversationState,
 ) -> str:
     """
-    Shape by disclosure level based on EXCHANGE COUNT, not conditions.
-    
-    Simple sequence:
-      Exchange 0-1: TASTE turn 1 (invitation)
-      Exchange 2: TASTE turn 2 (invitation)
-      Exchange 3+: OPEN (actual response through speech pipeline)
+    TASTE is internal. It never speaks for her.
+    Everything goes to the speech pipeline.
+    She generates or she's silent.
     """
-    
-    level = conversation.disclosure_level
-    taste_turn = conversation.taste_turn
-    
-    # TASTE TURN 1 (exchange 0)
-    if taste_turn == 0:
-        serious = is_serious_subject_text(raw_result)
-        templates = SERIOUS_TASTE_TEMPLATES_1 if serious else TASTE_TEMPLATES_1
-        used = set(conversation.response_history)
-        available = [t for t in templates if t not in used]
-        if not available:
-            available = templates
-        return random.choice(available)
-    
-    # TASTE TURN 2 (exchange 1)
-    elif taste_turn == 1:
-        serious = is_serious_subject_text(raw_result)
-        templates = SERIOUS_TASTE_TEMPLATES_2 if serious else TASTE_TEMPLATES_2
-        used = set(conversation.response_history)
-        available = [t for t in templates if t not in used]
-        if not available:
-            available = templates
-        return random.choice(available)
-    
-    # OPEN LEVEL (exchange 2+) — OFF to speech pipeline
-    else:
-        # Return raw_result; it goes through speech pipeline
-        return raw_result
+    return raw_result
 
 
 def is_serious_subject_text(text: str) -> bool:

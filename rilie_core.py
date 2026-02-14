@@ -1036,11 +1036,10 @@ def run_pass_pipeline(
             "domain": best_global.domain,
         }
 
-    # Absolute fallback: Mise en Place.  This is extremely rare now
-    # because the beige curve no longer kills candidates outright.
+    # Absolute fallback: nothing survived. She's silent.
     return {
         "stimulus": clean_stimulus,
-        "result": "Everything in its right place",
+        "result": "",
         "quality_score": 0.0,
         "priorities_met": 0,
         "anti_beige_score": 0.0,
