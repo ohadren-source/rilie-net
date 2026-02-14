@@ -46,6 +46,7 @@ def ensure_session_table() -> None:
         client_ip         TEXT NOT NULL,
         name_source       TEXT NOT NULL DEFAULT 'default',
         turn_count        INTEGER DEFAULT 0,
+        whosonfirst       BOOLEAN DEFAULT TRUE,
         response_history  JSONB DEFAULT '[]'::jsonb,
         talk_served       JSONB DEFAULT '[]'::jsonb,
         social_state      JSONB DEFAULT '{}'::jsonb,
@@ -115,7 +116,7 @@ def load_session(client_ip: str) -> Dict[str, Any]:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT session_id, user_name, client_ip, name_source, "
-                    "turn_count, response_history, talk_served, social_state, "
+                    "turn_count, whosonfirst, response_history, talk_served, social_state, "
                     "topics, created_at, updated_at "
                     "FROM banks_sessions WHERE session_id = %s",
                     (sid,),
@@ -147,6 +148,7 @@ def _fresh_session(client_ip: str) -> Dict[str, Any]:
         "client_ip": client_ip,
         "name_source": "default",
         "turn_count": 0,
+        "whosonfirst": True,
         "response_history": [],
         "talk_served": [],
         "social_state": {"user_status": 0.5, "self_status": 0.4},
@@ -168,16 +170,17 @@ def save_session(session: Dict[str, Any]) -> None:
     sid = session["session_id"]
     sql = """
     INSERT INTO banks_sessions
-        (session_id, user_name, client_ip, name_source, turn_count,
+        (session_id, user_name, client_ip, name_source, turn_count, whosonfirst,
          response_history, talk_served, social_state, topics,
          created_at, updated_at)
     VALUES
-        (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb,
+        (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb,
          now(), now())
     ON CONFLICT (session_id) DO UPDATE SET
         user_name        = EXCLUDED.user_name,
         name_source      = EXCLUDED.name_source,
         turn_count       = EXCLUDED.turn_count,
+        whosonfirst      = EXCLUDED.whosonfirst,
         response_history = EXCLUDED.response_history,
         talk_served      = EXCLUDED.talk_served,
         social_state     = EXCLUDED.social_state,
@@ -193,6 +196,7 @@ def save_session(session: Dict[str, Any]) -> None:
                     session["client_ip"],
                     session.get("name_source", "default"),
                     session.get("turn_count", 0),
+                    session.get("whosonfirst", True),
                     json.dumps(session.get("response_history", [])),
                     json.dumps(session.get("talk_served", [])),
                     json.dumps(session.get("social_state", {})),
@@ -289,6 +293,7 @@ def restore_guvna_state(guvna, session: Dict[str, Any]) -> None:
     """Load session state back into the Guvna instance."""
     guvna.turn_count = session.get("turn_count", 0)
     guvna.user_name = session.get("user_name", DEFAULT_NAME)
+    guvna.whosonfirst = session.get("whosonfirst", True)
     guvna._response_history = list(session.get("response_history", []))
 
     social = session.get("social_state", {})
@@ -304,6 +309,7 @@ def restore_guvna_state(guvna, session: Dict[str, Any]) -> None:
 def snapshot_guvna_state(guvna, session: Dict[str, Any]) -> Dict[str, Any]:
     """Capture current Guvna state back into the session dict."""
     session["turn_count"] = guvna.turn_count
+    session["whosonfirst"] = guvna.whosonfirst
     session["response_history"] = guvna._response_history[-20:]  # cap at 20
     session["social_state"] = {
         "user_status": guvna.social_state.user_status,
