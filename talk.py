@@ -70,23 +70,21 @@ def gate_empty(plate: Dict[str, Any]) -> tuple:
 
 
 def gate_dejavu(plate: Dict[str, Any], memory: TalkMemory) -> tuple:
-    """Gate 2: Did we already serve this?"""
-    text = plate.get("result", "").strip()
-    if not text:
-        return True, "OK"  # Nothing to check
-
-    cand_words = _words(text)
-    if len(cand_words) < 4:
-        return True, "OK"  # Too short to judge
-
-    for prior in memory.recent(5):
-        prior_words = _words(prior)
-        if not prior_words:
-            continue
-        smaller = min(len(cand_words), len(prior_words))
-        if smaller > 0 and len(cand_words & prior_words) / smaller > 0.6:
-            return False, "DEJAVU"
-
+    """
+    Gate 2: Déjà-vu is SIGNAL, not rejection.
+    Guvna tracks it in metadata. TALK passes it through.
+    The signal tells us about rhythm and theme—whether she's riffing or stuck.
+    Downstream can decide what to do with it.
+    """
+    # Guvna already tracked déjà-vu in the plate
+    dejavu_info = plate.get("dejavu", {})
+    if dejavu_info.get("frequency", 0) > 0:
+        similarity = dejavu_info.get("similarity", "none")
+        logger.debug("TALK: Déjà-vu signal detected (freq=%d, similarity=%s) - PASS",
+                     dejavu_info["frequency"],
+                     similarity)
+        return True, "OK"  # Pass it through. Signal rides with the plate.
+    
     return True, "OK"
 
 
