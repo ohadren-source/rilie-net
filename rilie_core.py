@@ -733,6 +733,7 @@ def generate_9_interpretations(
     stimulus: str,
     excavated: Dict[str, List[str]],
     depth: int,
+    domains: Optional[List[str]] = None,
 ) -> List[Interpretation]:
     """
     Generate up to 9 internal candidate interpretations by:
@@ -777,7 +778,7 @@ def generate_9_interpretations(
     # RELEVANCE: Did she answer what was asked?
     # Domain match count + tone alignment
     # ------------------------------------------------------------------
-    stimulus_domains = set(domains)  # domains detected from stimulus
+    stimulus_domains = set(domains) if domains else set()  # domains detected from stimulus
     try:
         from guvna import detect_tone_from_stimulus
         stimulus_tone = detect_tone_from_stimulus(stimulus)
@@ -1013,13 +1014,36 @@ def run_pass_pipeline(
         max_pass = min(max_pass, 3)
 
     best_global: Interpretation | None = None
+    # DEBUG: collect all candidates across all passes for the audit trail
+    _debug_all_candidates: List[Dict] = []
+    _debug_dejavu_killed: List[Dict] = []
+    _debug_passes: List[Dict] = []
 
     for current_pass in range(1, max_pass + 1):
         depth = current_pass - 1
-        nine = generate_9_interpretations(clean_stimulus, excavated, depth)
+        nine = generate_9_interpretations(clean_stimulus, excavated, depth, domains=domains)
 
         if not nine:
+            _debug_passes.append({"pass": current_pass, "candidates": 0, "note": "empty"})
             continue
+
+        # Log all candidates for this pass
+        pass_candidates = []
+        for i in nine:
+            dejavu = _is_dejavu(i.text)
+            entry = {
+                "id": i.id,
+                "domain": i.domain,
+                "text": i.text[:120],
+                "overall_score": round(i.overall_score, 4),
+                "count_met": i.count_met,
+                "anti_beige": round(i.anti_beige_score, 3),
+                "dejavu_blocked": dejavu,
+            }
+            pass_candidates.append(entry)
+            _debug_all_candidates.append(entry)
+            if dejavu:
+                _debug_dejavu_killed.append(entry)
 
         # Thresholds — she doesn't need to be Oscar Wilde. Just not trite.
         filtered = [
@@ -1054,6 +1078,13 @@ def run_pass_pipeline(
             ranked = sorted(nine, key=lambda x: _dejavu_score(x.text))
             filtered = [ranked[0]]
 
+        _debug_passes.append({
+            "pass": current_pass,
+            "candidates": len(nine),
+            "survived_filter": len(filtered),
+            "dejavu_killed": sum(1 for c in pass_candidates if c["dejavu_blocked"]),
+        })
+
         if filtered:
             best = max(filtered, key=lambda x: (x.count_met, x.overall_score))
         else:
@@ -1069,6 +1100,11 @@ def run_pass_pipeline(
             QuestionType.CHOICE,
             QuestionType.DEFINITION,
         }:
+            # BUILD DEBUG AUDIT
+            debug_audit = _build_debug_audit(
+                clean_stimulus, domains, best, _debug_all_candidates,
+                _debug_dejavu_killed, _debug_passes, "COMPRESSED"
+            )
             return {
                 "stimulus": clean_stimulus,
                 "result": best.text,
@@ -1083,10 +1119,15 @@ def run_pass_pipeline(
                 "curiosity_informed": bool(curiosity_ctx),
                 "domains_used": domains,
                 "domain": best.domain,
+                "debug_audit": debug_audit,
             }
 
     # After all passes, if we saw *any* candidates, return the global best as GUESS.
     if best_global is not None:
+        debug_audit = _build_debug_audit(
+            clean_stimulus, domains, best_global, _debug_all_candidates,
+            _debug_dejavu_killed, _debug_passes, "GUESS"
+        )
         return {
             "stimulus": clean_stimulus,
             "result": best_global.text,
@@ -1101,9 +1142,14 @@ def run_pass_pipeline(
             "curiosity_informed": bool(curiosity_ctx),
             "domains_used": domains,
             "domain": best_global.domain,
+            "debug_audit": debug_audit,
         }
 
     # Absolute fallback: nothing survived. She's silent.
+    debug_audit = _build_debug_audit(
+        clean_stimulus, domains, None, _debug_all_candidates,
+        _debug_dejavu_killed, _debug_passes, "MISE_EN_PLACE"
+    )
     return {
         "stimulus": clean_stimulus,
         "result": "",
@@ -1118,4 +1164,62 @@ def run_pass_pipeline(
         "curiosity_informed": bool(curiosity_ctx),
         "domains_used": domains,
         "domain": "",
+        "debug_audit": debug_audit,
     }
+
+
+def _build_debug_audit(
+    stimulus: str,
+    domains: List[str],
+    winner: Optional['Interpretation'],
+    all_candidates: List[Dict],
+    dejavu_killed: List[Dict],
+    passes: List[Dict],
+    status: str,
+) -> Dict:
+    """
+    DEBUG MODE: She defends every response.
+    This is her receipt. Her work shown. Her pick justified.
+    If she can't defend it, the pick is wrong.
+    """
+    audit = {
+        "stimulus": stimulus,
+        "domains_detected": domains,
+        "status": status,
+        "passes": passes,
+        "total_candidates": len(all_candidates),
+        "dejavu_killed_count": len(dejavu_killed),
+        "dejavu_killed": dejavu_killed[:5],  # Show up to 5
+        "all_candidates": sorted(
+            all_candidates,
+            key=lambda x: x.get("overall_score", 0),
+            reverse=True,
+        )[:9],  # Top 9 by score
+    }
+
+    if winner:
+        audit["winner"] = {
+            "text": winner.text,
+            "domain": winner.domain,
+            "overall_score": round(winner.overall_score, 4),
+            "count_met": winner.count_met,
+            "anti_beige": round(winner.anti_beige_score, 3),
+        }
+        # DEFENSE: Why this one?
+        reasons = []
+        if winner.overall_score > 0:
+            reasons.append(f"Scored {winner.overall_score:.4f} (highest surviving)")
+        if winner.count_met > 0:
+            reasons.append(f"Met {winner.count_met}/5 priorities")
+        if winner.anti_beige_score > 0.5:
+            reasons.append(f"Anti-beige {winner.anti_beige_score:.2f} (fresh)")
+        if winner.domain:
+            reasons.append(f"Domain: {winner.domain}")
+        if not reasons:
+            reasons.append("Last resort — all others worse or blocked")
+        audit["defense"] = reasons
+    else:
+        audit["winner"] = None
+        audit["defense"] = ["NO CANDIDATES SURVIVED. All gates rejected everything."]
+
+    return audit
