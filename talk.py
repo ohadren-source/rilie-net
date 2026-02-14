@@ -207,6 +207,19 @@ def talk(
         wilden_swift_fn:   Optional callable(text) -> text for rhetorical scoring
     """
 
+    # APERTURE FAST PATH: greeting and goodbye bypass all gates
+    status = str(plate.get("status", "")).upper()
+    if status in ("APERTURE", "GOODBYE"):
+        logger.info("TALK: %s - serve directly (no gates)", status)
+        result_text = plate.get("result", "")
+        if result_text and result_text.strip():
+            memory.record(result_text)
+        
+        plate["talk_status"] = "SERVED"
+        plate["talk_attempts"] = 1
+        plate["talk_rejections"] = []
+        return plate
+
     attempts = 0
     current_plate = plate
     rejection_log: List[Dict[str, str]] = []
