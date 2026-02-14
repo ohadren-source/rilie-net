@@ -386,7 +386,6 @@ class CATCH44DNA:
 # If the user is talking ABOUT RILIE, she looks inside first.
 SELF_REFERENCE_CLUSTERS = {
     "identity": [
-        "rilie",
         "who are you",
         "what are you",
         "tell me about yourself",
@@ -395,6 +394,8 @@ SELF_REFERENCE_CLUSTERS = {
         "introduce yourself",
         "what's your name",
         "what is your name",
+        "who is rilie",
+        "what is rilie",
     ],
     "capability": [
         "can you do",
@@ -791,6 +792,35 @@ class Guvna:
         self.turn_count: int = 0
         self.user_name: Optional[str] = None
 
+        # Governor's own response memory — anti-déjà-vu at every exit
+        self._response_history: List[str] = []
+
+    def _finalize_response(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        GOVERNOR'S FINAL GATE — runs on EVERY response before it leaves.
+        She is forbidden to produce déjà vu in others.
+        """
+        import re as _re
+        final_text = raw.get("result", "")
+        if final_text and len(self._response_history) > 0:
+            cand_words = set(_re.sub(r"[^a-zA-Z0-9\s]", "", final_text.lower()).split())
+            if len(cand_words) > 3:
+                for prior in self._response_history[-5:]:
+                    prior_words = set(_re.sub(r"[^a-zA-Z0-9\s]", "", prior.lower()).split())
+                    if not prior_words:
+                        continue
+                    smaller = min(len(cand_words), len(prior_words))
+                    if smaller > 0 and len(cand_words & prior_words) / smaller > 0.6:
+                        logger.warning("GOVERNOR ANTI-DEJAVU: blocked repeat")
+                        raw["result"] = ""
+                        raw["status"] = "DEJAVU_BLOCKED"
+                        break
+
+        out_text = raw.get("result", "")
+        if out_text and out_text.strip():
+            self._response_history.append(out_text)
+        return raw
+
         # Load the Charculterie Manifesto as her constitution
         self.self_state.constitution_flags = load_charculterie_manifesto(manifesto_path)
         self.self_state.constitution_loaded = self.self_state.constitution_flags.get(
@@ -990,10 +1020,9 @@ class Guvna:
             )
 
         else:
-            result_text = (
-                "I'm RILIE. I'd rather show you what I do than explain it. "
-                "What's your question?"
-            )
+            # No specific self-reference matched. Don't produce a canned response.
+            # Return empty — let her generate through the pipeline.
+            result_text = ""
 
         # Validate this self-reflection action through DNA
         action = RilieAction(
@@ -1151,7 +1180,7 @@ class Guvna:
             tone = detect_tone_from_stimulus(original_stimulus)
             primer_result["tone"] = tone
             primer_result["tone_emoji"] = TONE_EMOJIS.get(tone, TONE_EMOJIS.get("insightful", "\U0001f4a1"))
-            return primer_result
+            return self._finalize_response(primer_result)
 
         # 0.5: Triangle (bouncer) — runs BEFORE self-awareness.
         try:
@@ -1231,7 +1260,7 @@ class Guvna:
                     )
 
                 tone = detect_tone_from_stimulus(original_stimulus)
-                return {
+                return self._finalize_response({
                     "stimulus": original_stimulus,
                     "result": apply_tone_header(response, tone),
                     "status": "SAFETYREDIRECT",
@@ -1243,7 +1272,7 @@ class Guvna:
                     "anti_beige_score": 1.0,
                     "depth": 0,
                     "pass": 0,
-                }
+                })
         except ImportError:
             # Triangle not available — proceed without bouncer
             pass
@@ -1267,13 +1296,31 @@ class Guvna:
         # 1: self-awareness fast path
         if _is_about_me(original_stimulus):
             self_result = self._respond_from_self(original_stimulus)
-            tone = detect_tone_from_stimulus(original_stimulus)
-            self_result["result"] = apply_tone_header(self_result["result"], tone)
-            self_result["tone"] = tone
-            self_result["tone_emoji"] = TONE_EMOJIS.get(
-                tone, TONE_EMOJIS["insightful"]
-            )
-            return self_result
+            result_text = self_result.get("result", "")
+
+            # ANTI-DÉJÀ-VU: if she already said this, skip to pipeline
+            if result_text:
+                import re as _re
+                cand_words = set(_re.sub(r"[^a-zA-Z0-9\s]", "", result_text.lower()).split())
+                is_repeat = False
+                for prior in (self.rilie.conversation.response_history[-5:]
+                              if hasattr(self, 'rilie') and self.rilie else []):
+                    prior_words = set(_re.sub(r"[^a-zA-Z0-9\s]", "", prior.lower()).split())
+                    if prior_words and cand_words:
+                        smaller = min(len(cand_words), len(prior_words))
+                        if smaller > 0 and len(cand_words & prior_words) / smaller > 0.6:
+                            is_repeat = True
+                            break
+
+                if not is_repeat and result_text.strip():
+                    tone = detect_tone_from_stimulus(original_stimulus)
+                    self_result["result"] = apply_tone_header(result_text, tone)
+                    self_result["tone"] = tone
+                    self_result["tone_emoji"] = TONE_EMOJIS.get(
+                        tone, TONE_EMOJIS["insightful"]
+                    )
+                    return self._finalize_response(self_result)
+            # If empty or repeat — fall through to pipeline
 
         # 2: social status inference
         user_status = infer_user_status(original_stimulus)
@@ -1420,4 +1467,4 @@ class Guvna:
         raw["conversation_health"] = memory_result.get("conversation_health", 100)
         raw["domains_used"] = soi_domain_names
 
-        return raw
+        return self._finalize_response(raw)

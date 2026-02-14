@@ -743,14 +743,128 @@ def generate_9_interpretations(
     idx = 0
 
     # Single-domain items — CONSTRUCTED, not shelf-served.
+    # KNOWN CANNED FRAGMENTS — if these appear, it's a script not generation
+    _CANNED_MARKERS = [
+        "the way i understand it",
+        "the way i see it",
+        "what it comes down to",
+        "the thing about",
+        "what makes",
+        "the reason is",
+        "the way it works",
+        "the person behind",
+        "what happened with",
+        "where",
+        "goes from here",
+    ]
+
+    def _originality_multiplier(text: str, domain: str) -> float:
+        """
+        Rig the game. Stack the deck. Stand on the scale.
+        Generated > Searched > Canned. Always.
+        """
+        t = text.lower().strip()
+        is_canned = any(t.startswith(marker) for marker in _CANNED_MARKERS)
+        if is_canned:
+            return 0.5
+        if domain.startswith("roux") or "[roux:" in t:
+            return 2.0
+        if "_" in domain and domain.count("_") >= 1:
+            return 2.5
+        return 3.0
+
+    # ------------------------------------------------------------------
+    # RELEVANCE: Did she answer what was asked?
+    # Domain match count + tone alignment
+    # ------------------------------------------------------------------
+    stimulus_domains = set(domains)  # domains detected from stimulus
+    try:
+        from guvna import detect_tone_from_stimulus
+        stimulus_tone = detect_tone_from_stimulus(stimulus)
+    except ImportError:
+        stimulus_tone = "insightful"
+
+    # Tone keywords for matching response tone to stimulus tone
+    _TONE_WORDS = {
+        "amusing": {"funny", "humor", "laugh", "joke", "absurd", "ironic", "haha", "lol"},
+        "insightful": {"because", "reason", "means", "actually", "truth", "real", "works"},
+        "nourishing": {"grow", "learn", "build", "create", "teach", "develop", "nurture"},
+        "compassionate": {"feel", "hurt", "care", "understand", "hear", "support", "sorry"},
+        "strategic": {"plan", "move", "step", "leverage", "position", "execute", "next"},
+    }
+
+    def _relevance_score(text: str, domain: str) -> float:
+        """
+        Relevance = domain match + tone alignment.
+        0 matched domains = 0. 2+ = high. Tone close = bonus.
+        """
+        # Domain match
+        response_domains = set()
+        if domain:
+            for d in domain.split("_"):
+                response_domains.add(d)
+        domain_overlap = len(response_domains & stimulus_domains)
+
+        if domain_overlap == 0 and stimulus_domains:
+            domain_score = 0.1  # Almost nothing — wrong topic
+        elif domain_overlap == 1:
+            domain_score = 0.6
+        elif domain_overlap >= 2:
+            domain_score = 1.0
+        else:
+            domain_score = 0.3  # No stimulus domains detected
+
+        # Tone alignment
+        t_lower = text.lower()
+        tone_words = _TONE_WORDS.get(stimulus_tone, set())
+        tone_hits = sum(1 for tw in tone_words if tw in t_lower)
+        tone_score = min(1.0, tone_hits * 0.25)  # 4 hits = max
+
+        return (domain_score * 0.7) + (tone_score * 0.3)
+
+    # ------------------------------------------------------------------
+    # RESONANCE: Flow = Skill × Challenge
+    # Response depth must match question depth
+    # ------------------------------------------------------------------
+    def _resonance_score(text: str) -> float:
+        """
+        Flow = Skill × Challenge.
+        Simple question + simple answer = flow.
+        Complex question + complex answer = flow.
+        Mismatch = penalty.
+        """
+        # Estimate question complexity (challenge)
+        stim_words = len(stimulus.split())
+        stim_questions = stimulus.count("?")
+        challenge = min(1.0, (stim_words / 30) + (stim_questions * 0.2))
+
+        # Estimate response complexity (skill)
+        resp_words = len(text.split())
+        resp_has_structure = 1.0 if any(c in text for c in ["—", ":", ";"]) else 0.0
+        skill = min(1.0, (resp_words / 40) + (resp_has_structure * 0.1))
+
+        # Flow = closeness of skill to challenge
+        # Perfect match = 1.0, big gap = low
+        gap = abs(skill - challenge)
+        return max(0.1, 1.0 - gap)
+
+    # ------------------------------------------------------------------
+    # COMBINED SCORE: originality × relevance × resonance
+    # ------------------------------------------------------------------
+    def _final_score(raw_overall: float, text: str, domain: str) -> float:
+        orig = _originality_multiplier(text, domain)
+        relev = _relevance_score(text, domain)
+        reson = _resonance_score(text)
+        return raw_overall * orig * relev * reson
+
     for domain, items in excavated.items():
         for item in items[:4]:
             text = construct_response(stimulus, item)
             anti = anti_beige_check(text)
-            # NO BINARY GATE — anti_beige is a multiplier now
             scores = {k: fn(text) for k, fn in SCORERS.items()}
             count = sum(1 for v in scores.values() if v > 0.3)
-            overall = sum(scores[k] * WEIGHTS[k] for k in scores) / 4.5
+            raw_overall = sum(scores[k] * WEIGHTS[k] for k in scores) / 4.5
+            overall = _final_score(raw_overall, text, domain)
             interpretations.append(
                 Interpretation(
                     id=depth * 1000 + idx,
@@ -784,7 +898,9 @@ def generate_9_interpretations(
         anti = anti_beige_check(text)
         scores = {k: fn(text) for k, fn in SCORERS.items()}
         count = sum(1 for v in scores.values() if v > 0.3)
-        overall = sum(scores[k] * WEIGHTS[k] for k in scores) / 4.5
+        raw_overall = sum(scores[k] * WEIGHTS[k] for k in scores) / 4.5
+        blend_domain = f"{d1}_{d2}"
+        overall = _final_score(raw_overall, text, blend_domain)
         interpretations.append(
             Interpretation(
                 id=depth * 1000 + idx,
