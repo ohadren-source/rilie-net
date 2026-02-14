@@ -684,6 +684,11 @@ def run_rilie(req: RilieRequest) -> Dict[str, Any]:
             pass
         return ""
 
+    def _wilden_swift_score(text):
+        """Score on 18 rhetorical modes. Oscar Wilde + Jonathan Swift."""
+        from guvna import wilden_swift, WitState
+        return wilden_swift(text, WitState())
+
     served = talk(
         plate=result,
         stimulus=stimulus,
@@ -691,6 +696,7 @@ def run_rilie(req: RilieRequest) -> Dict[str, Any]:
         max_retries=2,
         retry_fn=_retry,
         search_fn=_self_search,
+        wilden_swift_fn=_wilden_swift_score,
     )
 
     if req.chef_mode:

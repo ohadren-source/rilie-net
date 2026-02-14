@@ -228,7 +228,127 @@ def wilden_swift(
     social: Optional[SocialState] = None,
     language: Optional["LanguageMode"] = None,
 ) -> str:
-    """Tone modulation. She does the thing, doesn't narrate it."""
+    """
+    Tone modulation. She does the thing, doesn't narrate it.
+    Named for Oscar Wilde and Jonathan Swift.
+
+    Scores the response against 18 rhetorical modes.
+    The score is attached to the response as metadata.
+    She never sees the formula. Just the result.
+    """
+    if not base_reply or not base_reply.strip():
+        return base_reply
+
+    text = base_reply.strip()
+    tl = text.lower()
+    words = tl.split()
+    word_count = len(words)
+
+    # --- 18 RHETORICAL MODE DETECTORS ---
+    # Each returns 0.0 to 1.0. She doesn't know these exist.
+
+    scores = {}
+
+    # 1. LITERAL — says what it means, no decoration
+    has_figurative = any(w in tl for w in ["like a", "as if", "metaphor", "imagine"])
+    scores["literal"] = 0.8 if not has_figurative and word_count < 30 else 0.2
+
+    # 2. ANALOGOUS — connects two different domains
+    analogy_signals = ["is like", "similar to", "same way", "just as", "reminds me of", "works like"]
+    scores["analogous"] = 0.9 if any(s in tl for s in analogy_signals) else 0.1
+
+    # 3. METAPHORICAL — one thing IS another
+    metaphor_signals = ["is a ", "are a ", "the heart of", "the engine of", "the soul of"]
+    scores["metaphorical"] = 0.9 if any(s in tl for s in metaphor_signals) else 0.1
+
+    # 4. SIMILE — explicit comparison with like/as
+    scores["simile"] = 0.9 if " like a " in tl or " like the " in tl else 0.1
+
+    # 5. ALLITERATION — repeated starting sounds
+    alliteration_score = 0.0
+    if len(words) >= 3:
+        for i in range(len(words) - 2):
+            if words[i][0] == words[i+1][0] == words[i+2][0]:
+                alliteration_score = 0.8
+                break
+    scores["alliteration"] = alliteration_score or 0.1
+
+    # 6. WIT — surprising turn, economy of words
+    # Short + unexpected = wit. Track 36a: compound, don't cringe
+    has_turn = any(w in tl for w in ["but", "except", "however", "actually", "turns out"])
+    scores["wit"] = 0.8 if has_turn and word_count < 25 else 0.2
+
+    # 7. CLEVER — demonstration over explanation. Track 52
+    scores["clever"] = 0.7 if word_count < 20 and not any(
+        w in tl for w in ["because", "the reason", "this means", "in other words"]
+    ) else 0.2
+
+    # 8. WORDPLAY — multiple meanings in single expression. Track 8a
+    # Hard to detect algorithmically — reward unusual word combinations
+    unique_ratio = len(set(words)) / max(len(words), 1)
+    scores["wordplay"] = 0.6 if unique_ratio > 0.85 else 0.2
+
+    # 9. PUN — homophonic or homonymic play. Track 36b
+    # Detect if any word appears in homonym dictionary context
+    scores["pun"] = 0.1  # Hard to detect — default low, Roux can boost
+
+    # 10. ABSURD — no source, all change. Track 36c
+    absurd_signals = ["imagine if", "what if", "picture this", "somehow"]
+    scores["absurd"] = 0.7 if any(s in tl for s in absurd_signals) else 0.1
+
+    # 11. PARADOXICAL — contradicts itself truthfully. Track 8a
+    paradox_signals = ["and yet", "but also", "both", "neither", "the opposite"]
+    scores["paradoxical"] = 0.8 if any(s in tl for s in paradox_signals) else 0.1
+
+    # 12. FUN — lightness, energy, play
+    fun_signals = ["!", "play", "game", "try", "let's", "wild"]
+    fun_hits = sum(1 for s in fun_signals if s in tl)
+    scores["fun"] = min(1.0, fun_hits * 0.25)
+
+    # 13. FUNNY — makes others laugh. Track 36a: laugh_count × compound_rate
+    funny_signals = ["joke", "punchline", "laugh", "haha", "imagine"]
+    scores["funny"] = 0.7 if any(s in tl for s in funny_signals) else 0.1
+
+    # 14. ORIGINAL — distance from source. Track 13
+    # Reward unique phrasing — high unique word ratio + not template-like
+    template_starts = ["the thing about", "what it comes down to", "the way i"]
+    is_template = any(tl.startswith(t) for t in template_starts)
+    scores["original"] = 0.8 if unique_ratio > 0.8 and not is_template else 0.2
+
+    # 15. ALLEGORY — story with hidden meaning
+    story_signals = ["once", "there was", "imagine", "picture", "a man", "a woman"]
+    scores["allegory"] = 0.7 if any(s in tl for s in story_signals) else 0.1
+
+    # 16. STORY — narrative arc. Track 28
+    has_arc = any(w in tl for w in ["then", "after", "before", "finally", "first"])
+    scores["story"] = 0.7 if has_arc and word_count > 15 else 0.1
+
+    # 17. POETIC — rhythm, compression, beauty. Track 12c/12d
+    has_rhythm = tl.count(",") >= 2 or "—" in text or "..." in text
+    scores["poetic"] = 0.7 if has_rhythm and word_count < 30 else 0.2
+
+    # 18. SOULFUL — warmth, depth, human. Track 57: Taste + Rhythm + Play
+    soul_signals = ["feel", "heart", "soul", "deep", "real", "human", "alive", "breath"]
+    soul_hits = sum(1 for s in soul_signals if s in tl)
+    scores["soulful"] = min(1.0, soul_hits * 0.3)
+
+    # --- COMPOSITE SCORE ---
+    # How many modes did she light up? More = richer response.
+    lit_modes = sum(1 for v in scores.values() if v > 0.5)
+    total_score = sum(scores.values()) / 18.0  # Normalized 0-1
+
+    # Attach scores as invisible metadata — she never sees these
+    # They ride with the response through the pipeline
+    if not hasattr(wilden_swift, '_last_scores'):
+        wilden_swift._last_scores = {}
+    wilden_swift._last_scores = {
+        "modes_lit": lit_modes,
+        "total_score": round(total_score, 3),
+        "top_modes": sorted(scores.items(), key=lambda x: x[1], reverse=True)[:3],
+        "scores": {k: round(v, 2) for k, v in scores.items()},
+    }
+
+    # She doesn't change. The score just rides with her.
     return base_reply
 
 

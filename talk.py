@@ -181,6 +181,7 @@ def talk(
     max_retries: int = 2,
     retry_fn=None,
     search_fn=None,
+    wilden_swift_fn=None,
 ) -> Dict[str, Any]:
     """
     THE WAITRESS.
@@ -192,13 +193,20 @@ def talk(
 
     This is the ONLY function that returns to the customer.
 
+    Order:
+        1. Gates (empty, dejavu, relevance, resonance)
+        2. wilden_swift scores on 18 rhetorical modes
+        3. Self-search googles her sentence
+        4. Decide: serve or send back
+
     Parameters:
-        plate:       The response dict from the kitchen
-        stimulus:    What the customer ordered
-        memory:      TalkMemory — what we've served before
-        max_retries: How many times to send it back before giving up
-        retry_fn:    Optional callable(stimulus) -> plate for retrying
-        search_fn:   Optional callable(query) -> str for self-search verification
+        plate:             The response dict from the kitchen
+        stimulus:          What the customer ordered
+        memory:            TalkMemory — what we've served before
+        max_retries:       How many times to send it back before giving up
+        retry_fn:          Optional callable(stimulus) -> plate for retrying
+        search_fn:         Optional callable(query) -> str for self-search verification
+        wilden_swift_fn:   Optional callable(text) -> text for rhetorical scoring
     """
 
     attempts = 0
@@ -223,22 +231,34 @@ def talk(
         if failed is None:
             # All gates passed.
             result_text = current_plate.get("result", "")
-
-            # SELF-SEARCH: Before serving, google her own sentence
-            # to verify/enrich. Skip for primers (greetings etc).
             status = str(current_plate.get("status", "")).upper()
             is_primer = status in ("GREETING", "PRIMER", "GOODBYE")
 
+            # STEP 1: WILDEN_SWIFT — score on 18 rhetorical modes
+            # She writes it, then it's graded. She never sees the formula.
+            if wilden_swift_fn and result_text and not is_primer:
+                try:
+                    wilden_swift_fn(result_text)
+                    # Scores ride as metadata on the function object
+                    if hasattr(wilden_swift_fn, '_last_scores'):
+                        current_plate["wilden_swift"] = wilden_swift_fn._last_scores
+                    elif hasattr(wilden_swift_fn, '__wrapped__') and hasattr(wilden_swift_fn.__wrapped__, '_last_scores'):
+                        current_plate["wilden_swift"] = wilden_swift_fn.__wrapped__._last_scores
+                    logger.info("TALK: wilden_swift scored response")
+                except Exception as e:
+                    logger.debug("TALK: wilden_swift failed (non-fatal): %s", e)
+
+            # STEP 2: SELF-SEARCH — google her sentence before speaking
             if search_fn and result_text and not is_primer:
                 try:
                     enrichment = search_fn(result_text)
                     if enrichment and len(enrichment.strip()) > 20:
-                        # She found something — blend it in
                         current_plate["self_search"] = enrichment.strip()
                         logger.info("TALK: Self-search enriched response")
                 except Exception as e:
                     logger.debug("TALK: Self-search failed (non-fatal): %s", e)
 
+            # STEP 3: SERVE
             memory.record(result_text)
 
             # Attach the receipt
