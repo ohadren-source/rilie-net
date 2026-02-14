@@ -377,13 +377,12 @@ class RILIE:
         # Extract the original human question for domain detection and Kitchen cooking.
         original_question = _extract_original_question(stimulus)
 
-        # Empty input: very soft bounce, no Triangle.
+        # Empty input: return empty. No script.
         if not original_question:
-            response = "Please enter a driving question for RILIE."
-            self.conversation.record_exchange(stimulus, response)
+            self.conversation.record_exchange(stimulus, "")
             return {
                 "stimulus": stimulus,
-                "result": response,
+                "result": "",
                 "quality_score": 0.0,
                 "priorities_met": 0,
                 "anti_beige_score": 0.0,
@@ -718,23 +717,19 @@ class RILIE:
     def _dejavu_one_swing(self, stimulus: str, context: str) -> str:
         """
         One swing from a new angle. No dwelling. Dayenu.
+        Generate through pipeline or return empty. No scripts.
         """
         if context == "explain":
-            # Her clarity problem. Try a completely different framing.
-            # Run Kitchen with a reframed input to force new domain paths.
+            # Her clarity problem. Reframe to force new Kitchen paths.
             reframed = f"[REFRAME: previous explanation didn't land] {stimulus}"
             try:
                 raw = run_pass_pipeline(reframed, disclosure_level="open", max_pass=2)
                 result = raw.get("result", "")
-                if result and result != "Everything in its right place":
+                if result and result.strip():
                     return result
             except Exception:
                 pass
-            return (
-                "I've been circling this and not landing it. "
-                "Can you tell me what part specifically isn't clicking? "
-                "That'll help me come at it from the right angle."
-            )
+            return ""
 
         elif context == "wrong":
             # Her accuracy problem. New approach entirely.
@@ -742,22 +737,23 @@ class RILIE:
             try:
                 raw = run_pass_pipeline(reframed, disclosure_level="open", max_pass=3)
                 result = raw.get("result", "")
-                if result and result != "Everything in its right place":
+                if result and result.strip():
                     return result
             except Exception:
                 pass
-            return (
-                "I've taken a few runs at this and I'm not nailing it. "
-                "Let me try a different approach — what specifically came back wrong?"
-            )
+            return ""
 
         else:
-            # Loop — they're repeating. Look within first, then redirect.
-            return (
-                "Sounds familiar — I think we've been here. "
-                "Want me to come at this from a different angle, "
-                "or is there something specific I'm missing?"
-            )
+            # Loop — they're repeating. Try a different Kitchen angle.
+            reframed = f"[DIFFERENT ANGLE: user repeating] {stimulus}"
+            try:
+                raw = run_pass_pipeline(reframed, disclosure_level="open", max_pass=2)
+                result = raw.get("result", "")
+                if result and result.strip():
+                    return result
+            except Exception:
+                pass
+            return ""
 
     # ---------------------------------------------------------------------
     # Misc helpers

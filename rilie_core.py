@@ -664,13 +664,13 @@ class Interpretation:
 
 def construct_response(stimulus: str, snippet: str) -> str:
     """
-    Construct a response from a domain snippet, informed by the question structure.
-
-    Instead of serving the snippet raw ("Rhythmic density: maximum info..."),
-    she connects the snippet to the question being asked.
-
-    If Chompky is available, uses parsed structure (subject/focus/time).
-    If not, uses lightweight construction.
+    Construct a response from a domain snippet + stimulus.
+    
+    The snippet is MEANING INPUT, not output. She must build a sentence
+    that carries the meaning, not regurgitate the snippet.
+    
+    If Chompky is available: parse both, construct from structure.
+    If not: restructure around the stimulus so it's never raw.
     """
     if not snippet or not stimulus:
         return snippet or ""
@@ -686,46 +686,57 @@ def construct_response(stimulus: str, snippet: str) -> str:
             focus = " ".join(parsed.focus_tokens) if parsed.focus_tokens else ""
             time_bucket = parsed.temporal.bucket
 
-            # If the question is about a specific subject, frame the answer around it
-            if subject and subject.lower() not in snippet_clean.lower():
-                # Connect the subject to the snippet
-                if time_bucket == "past":
-                    return f"{subject} — {snippet_clean}"
-                elif time_bucket == "future":
-                    return f"For {subject}: {snippet_clean}"
-                else:
-                    return f"{subject}: {snippet_clean}"
+            # Build a sentence that connects stimulus subject to snippet meaning
+            # Extract the core insight from the snippet (not the whole thing)
+            snippet_words = snippet_clean.split()
+            # Take the semantic core — skip attributions and framing
+            core = snippet_clean
 
-            return snippet_clean
+            if subject:
+                if time_bucket == "past":
+                    return f"What happened with {subject} is that {core[0].lower()}{core[1:]}"
+                elif time_bucket == "future":
+                    return f"Where {subject} goes from here — {core[0].lower()}{core[1:]}"
+                else:
+                    if focus:
+                        return f"The thing about {subject} and {focus} is {core[0].lower()}{core[1:]}"
+                    return f"What makes {subject} work is that {core[0].lower()}{core[1:]}"
+            
+            # No subject extracted — build around the question type
+            if "why" in stim_lower:
+                return f"The reason is {core[0].lower()}{core[1:]}"
+            if "how" in stim_lower:
+                return f"The way it works — {core[0].lower()}{core[1:]}"
+            if "what" in stim_lower:
+                return f"What it comes down to is {core[0].lower()}{core[1:]}"
+            if "who" in stim_lower:
+                return f"The person behind that — {core[0].lower()}{core[1:]}"
+
+            return f"The way I see it, {core[0].lower()}{core[1:]}"
         except Exception:
             pass
 
-    # --- Lightweight construction (no Chompky) ---
-    # Extract the core question words to frame the response
-
-    # "What is X" / "Who is X" -> frame answer as "X is/means..."
-    for prefix in ["what is ", "what are ", "who is ", "who are "]:
-        if stim_lower.startswith(prefix):
-            topic = stimulus[len(prefix):].strip().rstrip("?").strip()
-            if topic:
-                return f"{topic} — {snippet_clean}"
-
-    # "Why" questions -> frame as reasoning
+    # --- No Chompky: lightweight but never raw ---
     if stim_lower.startswith("why "):
-        return f"Because {snippet_clean[0].lower()}{snippet_clean[1:]}" if snippet_clean else snippet_clean
+        return f"The reason comes down to this: {snippet_clean[0].lower()}{snippet_clean[1:]}"
+    
+    if stim_lower.startswith(("who ", "who's ", "who is ")):
+        return f"That traces back to how {snippet_clean[0].lower()}{snippet_clean[1:]}"
 
-    # "How" questions -> frame as mechanism
+    if stim_lower.startswith(("what ", "what's ", "what is ")):
+        return f"What it really means is {snippet_clean[0].lower()}{snippet_clean[1:]}"
+
     if stim_lower.startswith("how "):
-        return snippet_clean
+        return f"The mechanism behind it — {snippet_clean[0].lower()}{snippet_clean[1:]}"
 
-    # Default: return the snippet but don't just shelf-serve it raw
-    return snippet_clean
+    # Default: frame it as her take, never raw
+    return f"The way I understand it, {snippet_clean[0].lower()}{snippet_clean[1:]}"
 
 
 def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
     """
-    Construct a cross-domain blend — connecting two ideas through the question.
-    Instead of "snippet1 — snippet2", find the connection.
+    Construct a cross-domain blend — two ideas connected through the question.
+    Never raw. Always constructed.
     """
     s1 = snippet1.strip()
     s2 = snippet2.strip()
@@ -738,13 +749,26 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
     words2 = set(s2.lower().split())
     shared = words1 & words2 - {"the", "a", "an", "is", "are", "of", "in", "and", "to", "that", "it", "for", "with", "as", "on", "by"}
 
-    if shared:
-        # They share concepts — make it a connection
-        bridge = sorted(shared, key=len, reverse=True)[0]
-        return f"{s1} — and through {bridge}, {s2[0].lower()}{s2[1:]}"
+    stim_lower = stimulus.lower().strip()
+    
+    if CHOMPKY_AVAILABLE:
+        try:
+            parsed = parse_question(stimulus)
+            subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
+            if subject:
+                if shared:
+                    bridge = sorted(shared, key=len, reverse=True)[0]
+                    return f"With {subject}, there's a connection through {bridge} — {s1[0].lower()}{s1[1:]}, and that links to how {s2[0].lower()}{s2[1:]}"
+                return f"Two things about {subject}: {s1[0].lower()}{s1[1:]}, and on the other side, {s2[0].lower()}{s2[1:]}"
+        except Exception:
+            pass
 
-    # No shared concepts — use contrast/parallel
-    return f"{s1}. Flip the lens: {s2}"
+    # No Chompky fallback — still constructed, never raw
+    if shared:
+        bridge = sorted(shared, key=len, reverse=True)[0]
+        return f"There's a thread through {bridge} here — {s1[0].lower()}{s1[1:]}, and that connects to how {s2[0].lower()}{s2[1:]}"
+
+    return f"Two sides of this: {s1[0].lower()}{s1[1:]}. And then flip it — {s2[0].lower()}{s2[1:]}"
 
 # ============================================================================
 # DOMAIN DETECTION & EXCAVATION

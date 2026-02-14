@@ -1006,8 +1006,8 @@ class Guvna:
         )
         ok, reason = self.dna.validate_action(action)
         if not ok:
-            # DNA violation on self-reflection — dial it back
-            result_text = "I'm RILIE. What can I help you think through?"
+            # DNA violation on self-reflection — return empty, force pipeline
+            result_text = ""
             ss.last_violations.append(reason)
 
         return {
@@ -1235,46 +1235,8 @@ class Guvna:
             # Triangle not available — proceed without bouncer
             pass
 
-        # 0.75a: early primer/goodbye
-        primer = self.memory.check_primer(original_stimulus)
-        if primer is not None:
-            self.memory.turn_count += 1
-            self.turn_count += 1
-            tone = detect_tone_from_stimulus(original_stimulus)
-            return {
-                "stimulus": original_stimulus,
-                "result": primer,
-                "quality_score": 0.5,
-                "priorities_met": 0,
-                "anti_beige_score": 0.5,
-                "status": "PRIMER",
-                "depth": 0,
-                "pass": 0,
-                "tone": tone,
-                "tone_emoji": TONE_EMOJIS.get(
-                    tone, TONE_EMOJIS.get("insightful", "\U0001f4a1")
-                ),
-            }
-
-        goodbye = self.memory.check_goodbye(original_stimulus)
-        if goodbye is not None:
-            self.memory.turn_count += 1
-            self.turn_count += 1
-            tone = "compassionate"
-            return {
-                "stimulus": original_stimulus,
-                "result": goodbye,
-                "quality_score": 0.8,
-                "priorities_met": 0,
-                "anti_beige_score": 0.7,
-                "status": "GOODBYE",
-                "depth": 0,
-                "pass": 0,
-                "tone": tone,
-                "tone_emoji": TONE_EMOJIS.get(
-                    tone, TONE_EMOJIS.get("insightful", "\U0001f4a1")
-                ),
-            }
+        # 0.75a: primer/goodbye handled by _social_primer only (9 phrases).
+        # conversation_memory primer/goodbye DISABLED — no script leaks.
 
         # Normal processing turn increments
         self.memory.turn_count += 1
@@ -1364,11 +1326,7 @@ class Guvna:
         # 9: decide which pillar to serve
         chosen = rilie_text
         baseline_used_as_result = False
-        if not chosen or not chosen.strip():
-            chosen = (
-                "I don't have a strong take on that yet. "
-                "Can you give me more to work with?"
-            )
+        # Nuclear: if she has nothing, she has nothing. No canned fallback.
 
         # 9.5: YELLOW GATE — check conversation health + tone degradation
         try:
@@ -1399,11 +1357,11 @@ class Guvna:
             chosen = wilden_swift(chosen, wit, self.social_state, language)
 
         # 11–12: apply tone header + expose pillars
-        if chosen:
+        if chosen and chosen.strip():
             raw["result"] = apply_tone_header(chosen, tone)
         else:
-            fallback_body = rilie_text or baseline_text or ""
-            raw["result"] = apply_tone_header(fallback_body, tone)
+            # Nuclear: no fallback. Empty is honest.
+            raw["result"] = ""
 
         raw["tone"] = tone
         raw["tone_emoji"] = TONE_EMOJIS.get(tone, TONE_EMOJIS["insightful"])
