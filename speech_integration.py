@@ -111,7 +111,7 @@ def process_kitchen_output(
     if CHOMSKY_AVAILABLE:
         try:
             spoken = transform_through_chomsky(
-                deep_structure_text=coherent,
+                deep_structure=coherent,
                 stimulus=stimulus,
                 disclosure_level=disclosure_level,
             )
