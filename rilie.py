@@ -53,6 +53,13 @@ from rilie_triangle import (
 
 from rilie_core import run_pass_pipeline
 
+# Meaning — the substrate. Runs BEFORE everything.
+try:
+    from meaning import read_meaning, MeaningFingerprint
+    MEANING_AVAILABLE = True
+except ImportError:
+    MEANING_AVAILABLE = False
+
 
 # Speech pipeline — graceful fallback if not available
 try:
@@ -494,6 +501,31 @@ class RILIE:
         active_search: Optional[SearchFn] = searchfn or self.searchfn
 
         # -----------------------------------------------------------------
+        # MEANING — the substrate. First read. Birth certificate.
+        # Runs BEFORE Triangle, BEFORE Kitchen, BEFORE everything.
+        # The fingerprint is READ-ONLY downstream.
+        # -----------------------------------------------------------------
+        fingerprint = None
+        if MEANING_AVAILABLE:
+            try:
+                fingerprint = read_meaning(original_question)
+                logger.info(
+                    "MEANING: pulse=%.2f act=%s obj=%s weight=%.2f gap=%s",
+                    fingerprint.pulse, fingerprint.act, fingerprint.object,
+                    fingerprint.weight, fingerprint.gap or "—"
+                )
+                # Dead input — no pulse, no point cooking
+                if not fingerprint.is_alive():
+                    self.conversation.record_exchange(original_question, "")
+                    return {
+                        "result": "",
+                        "status": "DEAD_INPUT",
+                        "meaning": fingerprint.to_dict(),
+                    }
+            except Exception as e:
+                logger.debug("Meaning fingerprint error: %s", e)
+
+        # -----------------------------------------------------------------
         # Person Model — passively observe before anything else
         # -----------------------------------------------------------------
         self.person.observe(original_question)
@@ -844,6 +876,20 @@ class RILIE:
                 clean_bl = re.sub(r"\s+", " ", clean_bl).strip()
                 if len(clean_bl) > 200:
                     clean_bl = clean_bl[:200].rsplit(" ", 1)[0]
+
+                # Use meaning fingerprint to shape HOW she serves the baseline
+                if clean_bl and fingerprint:
+                    gap = fingerprint.gap or ""
+                    if "acknowledgment" in gap:
+                        # They're hurting — lead with care, then answer
+                        clean_bl = f"I hear you. {clean_bl}"
+                    elif fingerprint.act == "GET" and fingerprint.weight > 0.6:
+                        # Heavy question — direct answer, no filler
+                        pass  # serve as-is, don't decorate
+                    elif fingerprint.act == "SHOW":
+                        # They showed something — validate first
+                        clean_bl = f"Got it. {clean_bl}"
+
                 if clean_bl:
                     shaped = clean_bl
                     raw["status"] = "YARDSTICK_BASELINE"
@@ -858,6 +904,10 @@ class RILIE:
         raw["person_context"] = self.person.has_context()
         raw["banks_hits"] = banks_hits
         raw["stimulus_hash"] = hash_stimulus(original_question)
+
+        # Attach meaning fingerprint — birth certificate rides with the plate
+        if fingerprint:
+            raw["meaning"] = fingerprint.to_dict()
 
         return raw
 
