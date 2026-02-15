@@ -34,6 +34,7 @@ CHANGES FROM v3.3:
 import re
 import hashlib
 import logging
+
 from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, Callable, List
 
@@ -52,6 +53,7 @@ from rilie_triangle import (
 
 from rilie_core import run_pass_pipeline
 
+
 # Speech pipeline — graceful fallback if not available
 try:
     from speech_integration import process_kitchen_output
@@ -63,6 +65,7 @@ logger = logging.getLogger("rilie")
 
 # SearchFn: query -> list of {"title": str, "link": str, "snippet": str}
 SearchFn = Callable[..., List[Dict[str, str]]]
+
 
 
 # ============================================================================
@@ -699,22 +702,24 @@ class RILIE:
         # response_generator → speech_coherence → chomsky_speech_engine
         # -----------------------------------------------------------------
         if SPEECH_PIPELINE_AVAILABLE:
-        try:
-            raw = process_kitchen_output(
-                kitchen_result=raw,
-                stimulus=original_question,
-                disclosure_level=disclosure.value,
-                exchange_count=self.conversation.exchange_count,
-        )
-        except Exception as e:
-        logger.warning("Speech pipeline failed: %s — using raw Kitchen output", e)
-        # <--- remove the `else:` block completely
+            try:
+                raw = process_kitchen_output(
+                    kitchen_result=raw,
+                    stimulus=original_question,
+                    disclosure_level=disclosure.value,
+                    exchange_count=self.conversation.exchange_count,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Speech pipeline failed: %s — using raw Kitchen output", e
+                )
 
-
-        # NORMAL PATH
+        # -----------------------------------------------------------------
+        # Normal path — finalize and record
+        # -----------------------------------------------------------------
         shaped = raw.get("result", result_text)
 
-        # NEW: let the Hostess shape what is actually spoken
+        # Let the Hostess shape what is actually spoken (TASTE vs OPEN)
         shaped = shape_for_disclosure(shaped, self.conversation)
 
         # Record what she actually said
@@ -728,8 +733,7 @@ class RILIE:
         raw["banks_hits"] = banks_hits
         raw["stimulus_hash"] = hash_stimulus(original_question)
 
-return raw
-
+        return raw
 
 
 
