@@ -260,6 +260,11 @@ class Guvna:
                 if primer is not None:
                     # Flip WHOSONFIRST now – from this point on, full pipeline
                     self.whosonfirst = False
+                    # Sync RILIE's conversation state so TASTE count is correct
+                    self.rilie.conversation.record_exchange(
+                        original_stimulus,
+                        primer.get("result", ""),
+                    )
                     return self._finalize_response(primer)
             else:
                 # Not a pure greeting (e.g., "Hi, what's 3+6?")
@@ -451,7 +456,7 @@ class Guvna:
         # 8: augment + send to RILIE
         augmented = self._augment_with_baseline(original_stimulus, baseline_text)
         logger.info("GUVNA: sending to RILIE, augmented='%s'", augmented[:100])
-        raw = self.rilie.process(augmented, maxpass=maxpass)
+        raw = self.rilie.process(augmented, maxpass=maxpass, baseline_text=baseline_text)
         rilie_text = str(raw.get("result", "") or "").strip()
         status = str(raw.get("status", "") or "").upper()
         logger.info("GUVNA: RILIE returned status=%s result='%s'", status, rilie_text[:120])
@@ -615,17 +620,28 @@ class Guvna:
 
     def _get_baseline(self, stimulus: str) -> Dict[str, Any]:
         """
-        Get a web baseline for comparison (optional pre-pass).
-        Returns a dict with 'text' and 'source'.
+        STEP 1: Google the answer key.
+        
+        "What is the correct response to [P]?"
+        
+        Whatever comes back is the gold standard. Everything the Kitchen
+        cooks gets measured against this. If nothing beats it, she says
+        a version of this in her own words.
         """
-        baseline = {"text": "", "source": ""}
+        baseline = {"text": "", "source": "", "raw_results": []}
         try:
             if self.search_fn:
-                # Optionally call search_fn for a quick baseline
-                result = self.search_fn(stimulus)
-                if result and isinstance(result, dict):
-                    baseline["text"] = result.get("text", "")
-                    baseline["source"] = result.get("source", "web")
+                # The hack that works: ask Google for the answer directly
+                baseline_query = f"what is the correct response to {stimulus}"
+                results = self.search_fn(baseline_query)
+                if results and isinstance(results, list):
+                    # Store raw results for trite scoring
+                    baseline["raw_results"] = results
+                    # Best snippet = highest quality baseline
+                    snippets = [r.get("snippet", "") for r in results if r.get("snippet")]
+                    if snippets:
+                        baseline["text"] = snippets[0]
+                        baseline["source"] = "google_baseline"
         except Exception as e:
             logger.debug("Baseline lookup error: %s", e)
         return baseline

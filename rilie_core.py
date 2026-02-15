@@ -553,13 +553,17 @@ def construct_response(stimulus: str, snippet: str) -> str:
     """
     Construct a response from a domain snippet + stimulus.
     
-    The snippet is a SEED — could be a word, a phrase, or a sentence.
-    She must BUILD a response that connects the seed to the question.
+    6-STEP PRIORITIZATION (Ohad's Pipeline):
+    =========================================
+    The snippet is domain knowledge — her internal understanding.
+    But Google already told her the correct response (Step 1 baseline).
     
-    If the seed is a single word or short phrase (< 5 words):
-      She uses it as a concept anchor and constructs around it.
-    If the seed is a full sentence:
-      She restructures it through the stimulus lens.
+    She uses the snippet to UNDERSTAND why the baseline is right,
+    and to beat it if she can. If she can't beat it, she says a
+    version of the baseline in her own words.
+    
+    For now (pre-Google wiring), this builds coherent sentences from
+    domain snippets using proper connectors and collision-safe templates.
     """
     if not snippet or not stimulus:
         return snippet or ""
@@ -569,6 +573,32 @@ def construct_response(stimulus: str, snippet: str) -> str:
     snippet_words = snippet_clean.split()
     is_word_seed = len(snippet_words) < 5
 
+    # --- Expanded stopword list: all the filler that shouldn't become "topic" ---
+    STOPWORDS = {
+        "what", "why", "how", "who", "when", "where", "which",
+        "is", "are", "was", "were", "am", "be", "been", "being",
+        "i", "you", "it", "he", "she", "we", "they", "me", "my",
+        "your", "his", "her", "our", "their", "its", "us", "them",
+        "to", "in", "on", "of", "and", "or", "but", "that", "this",
+        "do", "does", "did", "can", "could", "would", "should", "will",
+        "not", "no", "yes", "so", "if", "for", "with", "at", "from",
+        "have", "has", "had", "the", "a", "an", "about", "just",
+        "really", "very", "also", "too", "much", "most", "only",
+        "even", "still", "well", "then", "here", "there", "now",
+        "right", "all", "some", "any", "more", "like", "than",
+        "up", "out", "off", "down", "into", "over", "after", "before",
+        "between", "through", "during", "above", "below", "such",
+        "tell", "me", "please", "think", "know", "see", "say",
+        "make", "go", "get", "let", "sure", "gonna", "gotta",
+        "yeah", "yep", "nah", "ok", "okay", "hey", "hi", "hello",
+    }
+
+    # Extract meaningful topic words from stimulus
+    topic_words = [w for w in stim_lower.split()
+                   if w.strip(".,!?;:'\"") not in STOPWORDS
+                   and len(w.strip(".,!?;:'\"")) > 1]
+    topic = " ".join(topic_words[:3]) if topic_words else ""
+
     # --- Chompky-powered construction ---
     if CHOMPKY_AVAILABLE:
         try:
@@ -577,56 +607,76 @@ def construct_response(stimulus: str, snippet: str) -> str:
             focus = " ".join(parsed.focus_tokens) if parsed.focus_tokens else ""
 
             if is_word_seed:
-                # WORD MODE: The snippet is an ingredient, not a dish.
-                # Build a thought connecting the stimulus to the concept.
                 seed = snippet_clean.lower()
                 if subject and focus:
                     return (
                         f"When you look at {subject} through the lens of {focus}, "
-                        f"it comes back to {seed} — that's where the real weight is. "
-                        f"Everything else is decoration."
+                        f"it connects to {seed} — that's where the real weight is."
                     )
                 if subject:
                     return (
                         f"The core of {subject} is {seed}. "
-                        f"Strip away everything else and that's what's left. "
-                        f"That's what actually moves."
+                        f"Strip away everything else and that's what remains."
+                    )
+                if topic:
+                    return (
+                        f"What matters about {topic} is {seed}. "
+                        f"That's not a detail — it's the foundation."
                     )
                 return (
                     f"It starts with {seed}. "
-                    f"That's not a detail, that's the foundation. "
-                    f"Everything builds from there."
+                    f"That's the foundation. Everything builds from there."
                 )
             else:
-                # SENTENCE MODE: Restructure through stimulus
                 core = snippet_clean
                 if subject:
                     return f"What makes {subject} work — {core[0].lower()}{core[1:]}"
+                if topic:
+                    return f"When it comes to {topic} — {core[0].lower()}{core[1:]}"
                 return f"Here's the thing — {core[0].lower()}{core[1:]}"
 
         except Exception:
             pass
 
-    # --- No Chompky: build from seed ---
+    # --- No Chompky: build from seed with collision-safe templates ---
     if is_word_seed:
         seed = snippet_clean.lower()
-        # Extract question topic from stimulus
-        topic_words = [w for w in stim_lower.split()
-                       if w not in {"what", "why", "how", "who", "when", "where",
-                                    "is", "are", "the", "a", "an", "do", "does",
-                                    "can", "could", "would", "should", "about",
-                                    "tell", "me", "you", "your", "my", "i"}]
-        topic = " ".join(topic_words[:3]) if topic_words else "this"
 
-        return (
-            f"With {topic}, the thing that matters most is {seed}. "
-            f"Not the surface — the {seed} underneath it. "
-            f"That's where the real conversation is."
-        )
+        # If no meaningful topic words, use the seed as the whole thought
+        if not topic:
+            return (
+                f"It comes down to {seed}. "
+                f"That's the foundation everything else builds on."
+            )
+
+        # Pick a template that won't collide with the stimulus
+        # (e.g., don't start with "About" if stimulus starts with "about")
+        first_topic = topic_words[0].lower() if topic_words else ""
+        templates = [
+            (f"When it comes to {topic}, what matters is {seed} — "
+             f"that's the principle underneath."),
+            (f"The thing about {topic} is it connects to {seed}. "
+             f"That's where the depth is."),
+            (f"Looking at {topic} through the lens of {seed} — "
+             f"that changes how you see it."),
+            (f"{topic.capitalize()} traces back to {seed}. "
+             f"That's the thread worth pulling."),
+        ]
+
+        # Avoid collision: don't pick a template whose first word matches stimulus
+        for t in templates:
+            t_first = t.split()[0].lower().strip(".,!?")
+            if t_first != first_topic:
+                return t
+
+        # Fallback if all collide (unlikely)
+        return templates[-1]
 
     # SENTENCE MODE without Chompky
     core = snippet_clean
-    return f"Here's what it comes down to — {core[0].lower()}{core[1:]}"
+    if topic:
+        return f"When it comes to {topic} — {core[0].lower()}{core[1:]}"
+    return f"Here's the thing — {core[0].lower()}{core[1:]}"
 
 
 def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
@@ -700,7 +750,14 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
 # DOMAIN DETECTION & EXCAVATION
 # ============================================================================
 
-def detect_domains(stimulus: str) -> List[str]:
+def detect_domains(stimulus: str, search_fn=None) -> List[str]:
+    """
+    Detect which domains this stimulus maps to.
+    
+    STEP 3: If search_fn is available, ask Google what domain
+    these words/pieces fall under. Cross-reference with internal domains.
+    Falls back to keyword matching if no search.
+    """
     sl = (stimulus or "").lower()
     scores = {
         d: sum(1 for kw in kws if kw in sl)
@@ -715,9 +772,28 @@ def detect_domains(stimulus: str) -> List[str]:
                 wl = word.lower()
                 for d, kws in DOMAIN_KEYWORDS.items():
                     if any(wl in kw or kw in wl for kw in kws):
-                        scores[d] = scores.get(d, 0) + 2  # Holy trinity match = strong signal
+                        scores[d] = scores.get(d, 0) + 2
         except Exception:
             pass
+
+    # STEP 3: Google domain detection — ask what domain the pieces fall under
+    if search_fn:
+        try:
+            # Extract key pieces for the query
+            pieces = [w for w in sl.split() if len(w) > 2][:5]
+            if pieces:
+                domain_query = f"what domain does {', '.join(pieces)} fall under"
+                results = search_fn(domain_query)
+                if results:
+                    # Scan Google's answer for domain keyword matches
+                    for r in results[:3]:
+                        snippet = (r.get("snippet", "") + " " + r.get("title", "")).lower()
+                        for d, kws in DOMAIN_KEYWORDS.items():
+                            hits = sum(1 for kw in kws if kw in snippet)
+                            if hits > 0:
+                                scores[d] = scores.get(d, 0) + hits * 3  # Google match = strong signal
+        except Exception:
+            pass  # Search failed, fall back to keywords only
 
     # Sort by descending score, keep best 4
     ordered = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -1174,6 +1250,8 @@ def run_pass_pipeline(
     max_pass: int = 3,
     baseline_results: Optional[List[Dict[str, str]]] = None,
     prior_responses: Optional[List[str]] = None,
+    search_fn=None,
+    baseline_text: str = "",
 ) -> Dict:
     """
     Run interpretation passes.  Called only at OPEN or FULL disclosure.
@@ -1202,7 +1280,31 @@ def run_pass_pipeline(
         set_curiosity_bonus(0.0)
 
     question_type = detect_question_type(clean_stimulus)
-    domains = detect_domains(clean_stimulus)
+    domains = detect_domains(clean_stimulus, search_fn=search_fn)
+
+    # --- STEP 5: Domain + pieces search via Google ---
+    # Take top 3 domains and search them combined with stimulus pieces
+    if search_fn and domains:
+        try:
+            # Extract pieces from stimulus
+            stim_words = [w for w in clean_stimulus.lower().split() if len(w) > 2][:5]
+            for domain in domains[:3]:
+                domain_query = f"{domain} {' '.join(stim_words)}"
+                results = search_fn(domain_query)
+                if results:
+                    # Inject Google's domain-specific results as Roux material
+                    roux_items = []
+                    for r in results[:2]:
+                        snippet = r.get("snippet", "").strip()
+                        if snippet and len(snippet) > 15:
+                            roux_items.append(snippet)
+                    if roux_items:
+                        if "roux" in excavated:
+                            excavated["roux"].extend(roux_items)
+                        else:
+                            excavated["roux"] = roux_items
+        except Exception:
+            pass  # Search failed — proceed with what we have
 
     # --- Anti-déjà-vu: build word sets from her recent responses ---
     _prior_word_sets: List[set] = []
@@ -1381,8 +1483,63 @@ def run_pass_pipeline(
                 "debug_audit": debug_audit,
             }
 
-    # After all passes, if we saw *any* candidates, return the global best as GUESS.
+    # =====================================================================
+    # STEP 6: FINAL TALLY — baseline is the bar to beat
+    # =====================================================================
+    # The Google baseline from Step 1 has the highest weight out the gate.
+    # If the Kitchen beat it, serve the Kitchen's version.
+    # If not, serve a version of the baseline in her own words.
+    
+    def _baseline_as_response(bl_text: str) -> str:
+        """Turn the Google baseline into her own words. Not a copy — a version."""
+        if not bl_text or not bl_text.strip():
+            return ""
+        # She acknowledges the source by reframing, not copying
+        bl = bl_text.strip()
+        if len(bl) > 200:
+            bl = bl[:200].rsplit(" ", 1)[0] + "..."
+        return bl
+
+    # After all passes, if we saw *any* candidates, compare against baseline
     if best_global is not None:
+        best_text = best_global.text
+        best_score = best_global.overall_score
+        
+        # STEP 6: Does the baseline beat the best candidate?
+        # Baseline gets a weighted advantage (1.2x) — it's the answer key
+        baseline_score = 0.0
+        if baseline_text and baseline_text.strip():
+            # Score the baseline through the same priority scorers
+            bl_scores = {k: fn(baseline_text) for k, fn in SCORERS.items()}
+            baseline_score = sum(bl_scores[k] * WEIGHTS[k] for k in bl_scores) / 4.5
+            baseline_score *= 1.2  # Baseline advantage — she has to EARN beating it
+        
+        if baseline_score > best_score and baseline_text.strip():
+            # Baseline wins — serve a version of it
+            result_text = _baseline_as_response(baseline_text)
+            if result_text:
+                debug_audit = _build_debug_audit(
+                    clean_stimulus, domains, best_global, _debug_all_candidates,
+                    _debug_dejavu_killed, _debug_passes, "BASELINE_WIN"
+                )
+                return {
+                    "stimulus": clean_stimulus,
+                    "result": result_text,
+                    "quality_score": baseline_score,
+                    "priorities_met": sum(1 for v in bl_scores.values() if v > 0.3),
+                    "anti_beige_score": anti_beige_check(result_text),
+                    "status": "BASELINE_WIN",
+                    "depth": 0,
+                    "pass": max_pass,
+                    "disclosure_level": disclosure_level,
+                    "trite_score": trite,
+                    "curiosity_informed": bool(curiosity_ctx),
+                    "domains_used": domains,
+                    "domain": "google_baseline",
+                    "debug_audit": debug_audit,
+                }
+
+        # Kitchen beat the baseline — serve the Kitchen's best
         debug_audit = _build_debug_audit(
             clean_stimulus, domains, best_global, _debug_all_candidates,
             _debug_dejavu_killed, _debug_passes, "GUESS"

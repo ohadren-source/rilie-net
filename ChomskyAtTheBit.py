@@ -274,6 +274,75 @@ def parse_question(text: str) -> ParsedQuestion:
 # ---------------------------------------------------------------------------
 
 
+def classify_stimulus(stimulus: str) -> Dict[str, Any]:
+    """
+    STEP 2: Classify what we're working with.
+    
+    Returns:
+        category: "words" | "incomplete" | "sentence"
+        subject: extracted subject or None
+        object_: extracted object or None
+        operator: extracted focus/verb or None
+        pieces: list of meaningful pieces found
+    """
+    s = (stimulus or "").strip()
+    words = s.split()
+    
+    # Under 3 words: it's just words, not a sentence
+    if len(words) < 3:
+        return {
+            "category": "words",
+            "subject": None,
+            "object_": None,
+            "operator": None,
+            "pieces": [w for w in words if w],
+        }
+    
+    # Try full parse
+    try:
+        pq = parse_question(s)
+        has_subject = bool(pq.subject_tokens)
+        has_object = bool(pq.object_tokens)
+        has_focus = bool(pq.focus_tokens)
+        
+        subject = " ".join(pq.subject_tokens) if pq.subject_tokens else None
+        object_ = " ".join(pq.object_tokens) if pq.object_tokens else None
+        operator = " ".join(pq.focus_tokens) if pq.focus_tokens else None
+        
+        pieces = [p for p in [subject, object_, operator] if p]
+        
+        # Need at least 1 of each for a full sentence
+        if has_subject and has_object and has_focus:
+            return {
+                "category": "sentence",
+                "subject": subject,
+                "object_": object_,
+                "operator": operator,
+                "pieces": pieces,
+            }
+        
+        # Got some but not all — it's an incomplete phrase
+        if pieces:
+            return {
+                "category": "incomplete",
+                "subject": subject,
+                "object_": object_,
+                "operator": operator,
+                "pieces": pieces,
+            }
+    except Exception:
+        pass
+    
+    # Fallback: 3+ words but couldn't parse = incomplete
+    return {
+        "category": "incomplete",
+        "subject": None,
+        "object_": None,
+        "operator": None,
+        "pieces": [w for w in words if len(w) > 2],
+    }
+
+
 def extract_holy_trinity_for_roux(stimulus: str) -> List[str]:
     """
     Thin wrapper used by Roux builder:

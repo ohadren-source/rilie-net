@@ -38,21 +38,30 @@ class ConversationState:
     
     @property
     def disclosure_level(self) -> DisclosureLevel:
-        """Simple sequence: 1-2 = TASTE, 3+ = OPEN."""
-        if self.exchange_count <= 1:
-            return DisclosureLevel.TASTE
-        elif self.exchange_count == 2:
+        """Simple sequence: turns 1-3 = TASTE, turn 4+ = OPEN.
+        
+        NOTE: exchange_count is checked BEFORE record_exchange increments it,
+        so count 0 = first turn, count 1 = second turn, count 2 = third turn,
+        count 3+ = OPEN.
+        """
+        if self.exchange_count < 3:
             return DisclosureLevel.TASTE
         return DisclosureLevel.OPEN
     
     @property
     def taste_turn(self) -> int:
-        """Which TASTE turn are we on? (0, 1, or done)"""
-        if self.exchange_count <= 1:
+        """Which TASTE turn are we on? (0, 1, 2, or done)
+        
+        Count 0 = first TASTE, count 1 = second TASTE, count 2 = third TASTE,
+        3+ = done.
+        """
+        if self.exchange_count == 0:
             return 0  # First TASTE
-        elif self.exchange_count == 2:
+        elif self.exchange_count == 1:
             return 1  # Second TASTE
-        return 2      # OFF to speech
+        elif self.exchange_count == 2:
+            return 2  # Third TASTE (last one)
+        return 3      # OFF to speech
     
     def record_exchange(self, stimulus: str, response: str) -> None:
         """Record and move to next."""
@@ -135,8 +144,11 @@ def shape_for_disclosure(
     elif taste_turn == 1:
         # Second TASTE turn.
         pool = SERIOUS_TASTE_TEMPLATES_2 if serious else TASTE_TEMPLATES_2
+    elif taste_turn == 2:
+        # Third TASTE turn — last one before OPEN.
+        pool = SERIOUS_TASTE_TEMPLATES_2 if serious else TASTE_TEMPLATES_2
     else:
-        # Past turn 2: Hostess is off-duty, treat as OPEN.
+        # Past turn 3: Hostess is off-duty, treat as OPEN.
         return raw_result
 
     if not pool:

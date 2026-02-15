@@ -254,6 +254,37 @@ def hash_stimulus(stimulus: str) -> str:
     return hashlib.sha256(stimulus.strip().lower().encode()).hexdigest()[:16]
 
 
+def _scrub_repetition(text: str) -> str:
+    """
+    Catch Kitchen word-salad before it reaches the customer.
+
+    Detects:
+      - Consecutive duplicate words: "with with with" → "with"
+      - High repetition ratio (> 40% repeated words) → return empty
+        so the courtesy exit or fallback can handle it.
+    """
+    if not text or not text.strip():
+        return text
+
+    # 1. Collapse consecutive duplicate words
+    words = text.split()
+    deduped: list = []
+    for w in words:
+        if not deduped or w.lower() != deduped[-1].lower():
+            deduped.append(w)
+    cleaned = " ".join(deduped)
+
+    # 2. Check repetition ratio — if > 40% of words were duplicates,
+    #    the Kitchen is broken. Return empty to trigger fallback.
+    if len(words) > 5:
+        ratio = 1.0 - (len(deduped) / len(words))
+        if ratio > 0.4:
+            logger.warning("SCRUB: repetition ratio %.0f%% — Kitchen word-salad detected", ratio * 100)
+            return ""
+
+    return cleaned
+
+
 # ============================================================================
 # HELPER — extract original question from augmented stimulus
 # ============================================================================
@@ -358,6 +389,7 @@ class RILIE:
         stimulus: str,
         maxpass: int = 3,
         searchfn: Optional[SearchFn] = None,
+        baseline_text: str = "",
     ) -> Dict[str, Any]:
         """
         Public entrypoint.
@@ -639,6 +671,8 @@ class RILIE:
             disclosure_level=disclosure.value,
             max_pass=maxpass_int,
             prior_responses=self.conversation.response_history,
+            search_fn=active_search,
+            baseline_text=baseline_text,
         )
 
         status = str(raw.get("status", "OK") or "OK").upper()
@@ -721,6 +755,14 @@ class RILIE:
 
         # Let the Hostess shape what is actually spoken (TASTE vs OPEN)
         shaped = shape_for_disclosure(shaped, self.conversation)
+
+        # QUALITY GATE: catch Kitchen word-salad before serving
+        shaped = _scrub_repetition(shaped)
+
+        # If scrubbing killed the response (word-salad), courtesy exit
+        if not shaped or not shaped.strip():
+            shaped = ohad_redirect("")
+            raw["status"] = "COURTESYEXIT"
 
         # Record what she actually said
         self.conversation.record_exchange(original_question, shaped)
