@@ -234,7 +234,6 @@ def talk(
         gates = [
             ("EMPTY", gate_empty(current_plate)),
             ("DEJAVU", gate_dejavu(current_plate, memory)),
-            ("RELEVANCE", gate_relevance(current_plate, stimulus)),
             ("RESONANCE", gate_resonance(current_plate, stimulus)),
         ]
 
