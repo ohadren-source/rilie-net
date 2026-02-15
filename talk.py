@@ -99,6 +99,11 @@ def gate_relevance(plate: Dict[str, Any], stimulus: str) -> tuple:
     text = plate.get("result", "").strip()
     if not text:
         return True, "OK"
+    
+    # NEW: Never block TASTE turns on relevance.
+    disclosure = plate.get("disclosure_level")
+    if disclosure == "taste":
+        return True, "OK"
 
     # Social exchanges skip relevance — they're not about a topic
     s = stimulus.lower().strip()
