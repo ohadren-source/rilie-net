@@ -307,6 +307,73 @@ def _search_banks_if_available(query: str) -> Dict[str, List[Dict]]:
         return {"search_results": [], "curiosity": [], "self_reflections": []}
 
 
+def _google_yardstick(response: str, search_fn) -> int:
+    """
+    GOOGLE YARDSTICK: Search her response in quotes.
+    Returns the number of results found.
+    < 9 results = nobody has ever said this = not a real sentence.
+    """
+    # Take the first ~60 chars to keep the query reasonable
+    snippet = response.strip()
+    if len(snippet) > 60:
+        snippet = snippet[:60].rsplit(" ", 1)[0]
+    # Strip special chars that break quoted search
+    snippet = re.sub(r"[—–\"\'\(\)\[\]]", " ", snippet)
+    snippet = re.sub(r"\s+", " ", snippet).strip()
+    if not snippet or len(snippet) < 10:
+        return 999  # Too short to judge, let it pass
+
+    query = f'"{snippet}"'
+    try:
+        results = search_fn(query)
+        if results and isinstance(results, list):
+            return len(results)
+        return 0
+    except Exception:
+        return 999  # Search failed, let it pass
+
+
+def _store_yardstick_failure(
+    stimulus: str,
+    bad_response: str,
+    correct_response: str,
+    result_count: int,
+) -> None:
+    """
+    Store a yardstick failure in Banks so she never says it again.
+    Bad response + correct response = learning pair.
+    """
+    try:
+        from banks import get_db_connection
+        conn = get_db_connection()
+        if not conn:
+            return
+        cur = conn.cursor()
+        # Ensure table exists
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS banks_yardstick (
+                id SERIAL PRIMARY KEY,
+                stimulus TEXT NOT NULL,
+                bad_response TEXT NOT NULL,
+                correct_response TEXT NOT NULL,
+                result_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute(
+            """INSERT INTO banks_yardstick
+               (stimulus, bad_response, correct_response, result_count)
+               VALUES (%s, %s, %s, %s)""",
+            (stimulus[:500], bad_response[:500], correct_response[:500], result_count),
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+        logger.info("YARDSTICK: stored failure for '%s'", stimulus[:50])
+    except Exception as e:
+        logger.debug("YARDSTICK storage error: %s", e)
+
+
 # ============================================================================
 # THE RESTAURANT
 # ============================================================================
@@ -715,11 +782,71 @@ class RILIE:
         # Let the Hostess shape what is actually spoken (TASTE vs OPEN)
         shaped = shape_for_disclosure(shaped, self.conversation)
 
-        # QUALITY GATE: catch Kitchen word-salad before serving
+        # QUALITY GATE 1: catch Kitchen word-salad before serving
         shaped = _scrub_repetition(shaped)
         if not shaped or not shaped.strip():
             shaped = ohad_redirect("")
             raw["status"] = "COURTESYEXIT"
+
+        # QUALITY GATE 2: CHOMSKY + GOOGLE YARDSTICK (2x reinforced learning)
+        # Gate A: Chomsky — can this even be parsed as a sentence?
+        # Gate B: Google — has anyone ever said anything like this?
+        # Both failures store to Banks. She learns from both.
+        if (disclosure.value != "taste"
+            and shaped and len(shaped.split()) > 4
+            and baseline_text.strip()):
+
+            rejected = False
+
+            # GATE A: CHOMSKY — structural check
+            try:
+                from ChomskyAtTheBit import classify_stimulus
+                parsed = classify_stimulus(shaped)
+                if parsed["category"] in ("words", "incomplete"):
+                    logger.warning(
+                        "CHOMSKY REJECT (%s): '%s'",
+                        parsed["category"], shaped[:80]
+                    )
+                    _store_yardstick_failure(
+                        stimulus=original_question,
+                        bad_response=shaped,
+                        correct_response=baseline_text,
+                        result_count=-1,  # -1 = Chomsky reject
+                    )
+                    rejected = True
+            except Exception as e:
+                logger.debug("Chomsky gate error: %s", e)
+
+            # GATE B: GOOGLE YARDSTICK — only if Chomsky passed
+            if not rejected and active_search:
+                try:
+                    yardstick_result = _google_yardstick(shaped, active_search)
+                    if yardstick_result < 9:
+                        logger.warning(
+                            "YARDSTICK REJECT (%d results): '%s'",
+                            yardstick_result, shaped[:80]
+                        )
+                        _store_yardstick_failure(
+                            stimulus=original_question,
+                            bad_response=shaped,
+                            correct_response=baseline_text,
+                            result_count=yardstick_result,
+                        )
+                        rejected = True
+                except Exception as e:
+                    logger.debug("Yardstick gate error: %s", e)
+
+            # If either gate rejected, serve modified baseline
+            if rejected:
+                import html as _html
+                clean_bl = _html.unescape(baseline_text)
+                clean_bl = re.sub(r"<[^>]+>", "", clean_bl)
+                clean_bl = re.sub(r"\s+", " ", clean_bl).strip()
+                if len(clean_bl) > 200:
+                    clean_bl = clean_bl[:200].rsplit(" ", 1)[0]
+                if clean_bl:
+                    shaped = clean_bl
+                    raw["status"] = "YARDSTICK_BASELINE"
 
         # Record what she actually said
         self.conversation.record_exchange(original_question, shaped)
