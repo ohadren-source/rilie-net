@@ -254,6 +254,26 @@ def hash_stimulus(stimulus: str) -> str:
     return hashlib.sha256(stimulus.strip().lower().encode()).hexdigest()[:16]
 
 
+def _scrub_repetition(text: str) -> str:
+    """
+    Catch Kitchen word-salad before it reaches the customer.
+    Collapses consecutive duplicate words. If >40% were dupes, return empty.
+    """
+    if not text or not text.strip():
+        return text
+    words = text.split()
+    deduped: list = []
+    for w in words:
+        if not deduped or w.lower() != deduped[-1].lower():
+            deduped.append(w)
+    cleaned = " ".join(deduped)
+    if len(words) > 5:
+        ratio = 1.0 - (len(deduped) / len(words))
+        if ratio > 0.4:
+            return ""
+    return cleaned
+
+
 # ============================================================================
 # HELPER — extract original question from augmented stimulus
 # ============================================================================
@@ -358,6 +378,7 @@ class RILIE:
         stimulus: str,
         maxpass: int = 3,
         searchfn: Optional[SearchFn] = None,
+        baseline_text: str = "",
     ) -> Dict[str, Any]:
         """
         Public entrypoint.
@@ -693,6 +714,12 @@ class RILIE:
 
         # Let the Hostess shape what is actually spoken (TASTE vs OPEN)
         shaped = shape_for_disclosure(shaped, self.conversation)
+
+        # QUALITY GATE: catch Kitchen word-salad before serving
+        shaped = _scrub_repetition(shaped)
+        if not shaped or not shaped.strip():
+            shaped = ohad_redirect("")
+            raw["status"] = "COURTESYEXIT"
 
         # Record what she actually said
         self.conversation.record_exchange(original_question, shaped)
