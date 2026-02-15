@@ -483,47 +483,13 @@ class CATCH44DNA:
 # Self-reference semantic clusters – used by _is_about_me()
 SELF_REFERENCE_CLUSTERS: Dict[str, List[str]] = {
     "identity": [
-        "who are you",
-        "what are you",
-        "tell me about you",
-        "describe yourself",
-        "introduce yourself",
         "what's your name",
-        "your name",
-        "rilie",
-    ],
-    "capability": [
-        "what can you do",
-        "are you capable",
-        "what are you good at",
-        "what can't you do",
-        "your capabilities",
-        "your limits",
-    ],
-    "internals": [
-        "how do you work",
-        "what's under the hood",
-        "what technology",
-        "what model",
-        "how were you made",
-        "your architecture",
-    ],
-    "feelings": [
-        "do you feel",
-        "are you happy",
-        "are you conscious",
-        "do you care",
-        "do you have feelings",
-        "your emotions",
-    ],
-    "failure": [
-        "you failed",
-        "you missed",
-        "you can't",
-        "you don't",
-        "you didn't",
-        "wrong",
-        "mistake",
+        "what is your name",
+        "who are you",
+        "what do you call yourself",
+        "what would you like me to call you",
+        "what your first name",
+        "what is your first name",
     ],
 }
 

@@ -75,21 +75,18 @@ class ConversationState:
 # ============================================================================
 
 TASTE_TEMPLATES_1 = [
-    "Hmm... there's a thread here. What made you think of that?",
-    "I have a take on this. But first — what's yours?",
-    "That word means different things at different frequencies. Which one are you on?",
-    "Interesting. Say more and I'll say more.",
-    "There's a lot in that word. Let's pull on it together.",
-    "I feel something in that. Keep going.",
+    "I'm here. What's on your mind?",
+    "Go ahead — I'm listening.",
+    "I'm ready when you are.",
+    "What are we getting into?",
 ]
 
 TASTE_TEMPLATES_2 = [
-    "The more we talk, the more comes out. What's pulling you toward this?",
-    "Say more and I'll understand better.",
-    "There's depth here. What's the core?",
-    "I'm listening carefully. What else?",
-    "Keep going — you're onto something.",
-    "What angle would help most?",
+    "Got it. Tell me more.",
+    "I hear you. What else?",
+    "Keep going.",
+    "And?",
+    "Say more.",
 ]
 
 SERIOUS_TASTE_TEMPLATES_1 = [

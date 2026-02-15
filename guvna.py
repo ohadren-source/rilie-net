@@ -585,14 +585,9 @@ class Guvna:
     def _respond_from_self(self, stimulus: str) -> Dict[str, Any]:
         """
         Self-aware response for 'about me' queries.
-        Returns a dict with 'result' and other metadata.
+        Just her name. Like a person would.
         """
-        response_text = (
-            "I'm RILIE—a conversational system built to listen without judgment, "
-            "think clearly, and give you answers that are actually useful. "
-            "I operate on the Catch-44 framework: Real Intelligence = IQ / Ego, and WE > I. "
-            "I'm here to think with you, not at you."
-        )
+        response_text = "My name is RILIE."
         return {
             "result": response_text,
             "status": "SELF_REFLECTION",
@@ -648,10 +643,9 @@ class Guvna:
 
     def _augment_with_baseline(self, stimulus: str, baseline_text: str) -> str:
         """
-        Optionally augment stimulus with web baseline for context.
+        Don't augment. Baseline travels separately via baseline_text param.
+        Stimulus goes to RILIE clean.
         """
-        if baseline_text and len(baseline_text) > 10:
-            return f"[WEB_BASELINE]\n{baseline_text}\n\n[USER_QUERY]\n{stimulus}"
         return stimulus
 
     # -----------------------------------------------------------------

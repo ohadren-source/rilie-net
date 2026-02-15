@@ -254,37 +254,6 @@ def hash_stimulus(stimulus: str) -> str:
     return hashlib.sha256(stimulus.strip().lower().encode()).hexdigest()[:16]
 
 
-def _scrub_repetition(text: str) -> str:
-    """
-    Catch Kitchen word-salad before it reaches the customer.
-
-    Detects:
-      - Consecutive duplicate words: "with with with" → "with"
-      - High repetition ratio (> 40% repeated words) → return empty
-        so the courtesy exit or fallback can handle it.
-    """
-    if not text or not text.strip():
-        return text
-
-    # 1. Collapse consecutive duplicate words
-    words = text.split()
-    deduped: list = []
-    for w in words:
-        if not deduped or w.lower() != deduped[-1].lower():
-            deduped.append(w)
-    cleaned = " ".join(deduped)
-
-    # 2. Check repetition ratio — if > 40% of words were duplicates,
-    #    the Kitchen is broken. Return empty to trigger fallback.
-    if len(words) > 5:
-        ratio = 1.0 - (len(deduped) / len(words))
-        if ratio > 0.4:
-            logger.warning("SCRUB: repetition ratio %.0f%% — Kitchen word-salad detected", ratio * 100)
-            return ""
-
-    return cleaned
-
-
 # ============================================================================
 # HELPER — extract original question from augmented stimulus
 # ============================================================================
@@ -389,7 +358,6 @@ class RILIE:
         stimulus: str,
         maxpass: int = 3,
         searchfn: Optional[SearchFn] = None,
-        baseline_text: str = "",
     ) -> Dict[str, Any]:
         """
         Public entrypoint.
@@ -596,41 +564,9 @@ class RILIE:
             logger.info("ROUX: no Chomsky, raw words=%s", holy_trinity)
 
         # Step 2: Build Roux queries from holy trinity and fire Brave
-        if active_search:
-            try:
-                queries = build_roux_queries(
-                    original_question,
-                    holy_trinity=holy_trinity,
-                )
-                all_roux_results: List[Dict[str, str]] = []
-                for q in queries:
-                    try:
-                        try:
-                            results = active_search(q)
-                        except TypeError:
-                            results = active_search(q, 5)
-                    except Exception:
-                        continue
-                    if results:
-                        all_roux_results.extend(results)
-
-                # Step 3: Pick best result weighted by holy trinity + tone
-                if all_roux_results:
-                    # Detect tone from stimulus for scoring
-                    try:
-                        from guvna import detect_tone_from_stimulus
-                        stimulus_tone = detect_tone_from_stimulus(original_question)
-                    except ImportError:
-                        stimulus_tone = None
-
-                    roux_material = pick_best_roux_result(
-                        all_roux_results, holy_trinity, tone=stimulus_tone
-                    )
-                    logger.info("ROUX: %d results, picked='%s'",
-                                len(all_roux_results), roux_material[:80])
-            except Exception as e:
-                logger.warning("ROUX search failed: %s", e)
-                roux_material = ""
+        # DISABLED: Google baseline from Guvna is the only external search now.
+        # Internal domain match + SOi comparison handle the rest.
+        roux_material = ""
 
         # -----------------------------------------------------------------
         # SOiOS CYCLE — perceive → decide → think → emerge
@@ -657,21 +593,23 @@ class RILIE:
 
         # -----------------------------------------------------------------
         # Kitchen — interpretation passes (every turn, TASTE or OPEN)
-        # Fed by: Roux material + curiosity context + original question
-        # The Kitchen scores and shapes. The Roux gives it something to chew on.
+        # Fed by: clean stimulus + baseline_text (from Guvna's Google search)
+        # Internal domains + SOi comparison handle the rest.
         # -----------------------------------------------------------------
         kitchen_input = original_question
-        if roux_material:
-            kitchen_input = f"[ROUX: {roux_material}]\n\n{original_question}"
         if curiosity_context:
             kitchen_input = f"{curiosity_context}\n\n{kitchen_input}"
+
+        # Strip any leaked markup from previous augmentation
+        kitchen_input = re.sub(r"\[WEB_BASELINE\].*?\[USER_QUERY\]\s*", "", kitchen_input, flags=re.DOTALL)
+        kitchen_input = re.sub(r"\[ROUX:.*?\]\s*\n*", "", kitchen_input, flags=re.DOTALL)
+        kitchen_input = kitchen_input.strip()
 
         raw = run_pass_pipeline(
             kitchen_input,
             disclosure_level=disclosure.value,
             max_pass=maxpass_int,
             prior_responses=self.conversation.response_history,
-            search_fn=active_search,
             baseline_text=baseline_text,
         )
 
@@ -755,14 +693,6 @@ class RILIE:
 
         # Let the Hostess shape what is actually spoken (TASTE vs OPEN)
         shaped = shape_for_disclosure(shaped, self.conversation)
-
-        # QUALITY GATE: catch Kitchen word-salad before serving
-        shaped = _scrub_repetition(shaped)
-
-        # If scrubbing killed the response (word-salad), courtesy exit
-        if not shaped or not shaped.strip():
-            shaped = ohad_redirect("")
-            raw["status"] = "COURTESYEXIT"
 
         # Record what she actually said
         self.conversation.record_exchange(original_question, shaped)
