@@ -253,6 +253,26 @@ def extract_tangents(
 
 
 # ============================================================================
+# MOJIBAKE CLEANUP — fix double-encoded UTF-8 artifacts
+# ============================================================================
+
+_MOJIBAKE_MAP = {
+    "â€"": "—", "â€"": "–", "â€™": "'", "â€˜": "'",
+    "â€œ": "\u201c", "â€\x9d": "\u201d", "â€¦": "…",
+    "â€¢": "•", "Ã©": "é", "Ã¨": "è", "Ã¼": "ü",
+    "Ã¶": "ö", "Ã¤": "ä", "Ã±": "ñ",
+}
+
+def _fix_mojibake(text: str) -> str:
+    """Replace common UTF-8 double-encoding artifacts."""
+    if not text:
+        return text
+    for bad, good in _MOJIBAKE_MAP.items():
+        text = text.replace(bad, good)
+    return text
+
+
+# ============================================================================
 # STIMULUS HASHING — for banks correlation
 # ============================================================================
 
@@ -896,6 +916,9 @@ class RILIE:
 
         # Record what she actually said
         self.conversation.record_exchange(original_question, shaped)
+
+        # Mojibake cleanup — fix double-encoded UTF-8 artifacts
+        shaped = _fix_mojibake(shaped)
 
         # Make sure downstream sees the shaped text
         raw["result"] = shaped

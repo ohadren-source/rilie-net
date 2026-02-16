@@ -77,17 +77,21 @@ def extract_main_subject(question: str) -> str:
     
     q_lower = question.lower()
     
+    # Internal variable names that should never be a subject
+    _internal_words = {"stimulus", "baseline", "result", "raw", "output", "input"}
+    
     # Remove question words
     question_words = ["why", "what", "how", "when", "where", "who", "which"]
     words = question.split()
     
     # Find first non-question word that's substantial
     for word in words:
-        if word.lower() not in question_words and len(word) > 3:
+        clean = word.rstrip("?").lower()
+        if clean not in question_words and clean not in _internal_words and len(word) > 3:
             return word.rstrip("?")
     
     # Fallback
-    significant = [w.rstrip("?") for w in words if len(w) > 3]
+    significant = [w.rstrip("?") for w in words if len(w) > 3 and w.rstrip("?").lower() not in _internal_words]
     return significant[0] if significant else "that"
 
 

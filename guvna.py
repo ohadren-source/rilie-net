@@ -380,6 +380,26 @@ class Guvna:
         soi_domain_names = domain_annotations.get("matched_domains", [])
 
         # ==============================================================
+        # STEP 3.5: PRIMER CHECK — Hello Brooklyn
+        # If this is first contact, serve the greeting and skip Kitchen.
+        # Every conversation is new for now. She grabs a name or calls
+        # them mate. BASIC. Like a good hostess at the door.
+        # ==============================================================
+        primer_text = self.memory.check_primer(stimulus)
+        if primer_text:
+            raw["result"] = primer_text
+            raw["status"] = "PRIMER"
+            raw["quality_score"] = 1.0
+            raw["priorities_met"] = 1
+            raw["anti_beige_score"] = 1.0
+            raw["depth"] = 0
+            raw["pass"] = 0
+            raw["conversation_health"] = 100
+            raw["tone"] = "warm"
+            raw["tone_emoji"] = "🍳"
+            return self._finalize_response(raw)
+
+        # ==============================================================
         # STEP 4: RILIE CORE PROCESSING (Acts 1-4)
         # ==============================================================
         # RILIE handles: Triangle (safety), DDD (disclosure), 
