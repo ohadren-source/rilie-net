@@ -518,6 +518,49 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     client_ip = get_client_ip(request)
     session = load_session(client_ip)
 
+    # --- BASIC GREETING — Hello Brooklyn ---
+    # First contact: hardcoded print. No pipeline. No Kitchen.
+    # Grab name or call them mate. The end. Then Learn from Go.
+    turn_count = session.get("turn_count", 0)
+
+    if turn_count == 0:
+        # First ever message — ask for name
+        session["turn_count"] = 1
+        save_session(session)
+        return {
+            "stimulus": stimulus,
+            "result": "Hi there! What's your name? You can call me RILIE if you so please... :)",
+            "quality_score": 1.0, "priorities_met": 1,
+            "anti_beige_score": 1.0, "status": "PRIMER",
+            "depth": 0, "pass": 0, "conversation_health": 100,
+            "tone": "warm", "tone_emoji": "\U0001f373",
+        }
+
+    if turn_count == 1:
+        # Second message — they gave their name (or didn't)
+        session["turn_count"] = 2
+        # Try to grab a name from what they said
+        name = stimulus.strip().rstrip(".!?,;:")
+        # Filter out non-name responses
+        _not_names = {"hi", "hello", "hey", "sup", "yo", "ok", "okay", "no",
+                      "yes", "yeah", "nah", "nothing", "idk", "skip", "nope",
+                      "what", "who", "why", "how", "huh", "lol", "haha"}
+        if not name or len(name) > 30 or name.lower() in _not_names or " " in name and len(name.split()) > 3:
+            session["user_name"] = "mate"
+        else:
+            # Capitalize first letter of each word
+            session["user_name"] = name.title()
+        save_session(session)
+        user_name = session["user_name"]
+        return {
+            "stimulus": stimulus,
+            "result": f"Nice to meet you, {user_name}! What's on your mind? \U0001f373",
+            "quality_score": 1.0, "priorities_met": 1,
+            "anti_beige_score": 1.0, "status": "PRIMER",
+            "depth": 0, "pass": 0, "conversation_health": 100,
+            "tone": "warm", "tone_emoji": "\U0001f373",
+        }
+
     # --- 2. Restore state ---
     restore_guvna_state(guvna, session)
     restore_talk_memory(talk_memory, session)
