@@ -384,7 +384,7 @@ class Guvna:
         # ==============================================================
         # RILIE handles: Triangle (safety), DDD (disclosure), 
         # Kitchen (interpretation), RILIE (response generation)
-        rilie_result = self.rilie.talk(
+        rilie_result = self.rilie.process(
             stimulus=stimulus,
             baseline_text=baseline_text,
             conversation_memory=self.memory,
