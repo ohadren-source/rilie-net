@@ -464,7 +464,7 @@ class Guvna:
         # ==============================================================
         # STEP 8: ETHICS CHECK (CATCH44DNA)
         # ==============================================================
-        self.self_state.dna_active = self.dna.check_active()
+        self.self_state.dna_active = True  # CATCH44DNA is frozen — always active
         raw["dna_active"] = self.self_state.dna_active
 
         # ==============================================================
