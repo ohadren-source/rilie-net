@@ -1,16 +1,16 @@
 # guvna.py
 
-# Act 5 – The Governor
+# Act 5 â€“ The Governor
 #
-# Orchestrates Acts 1–4 by delegating to the RILIE class (Act 4 – The Restaurant),
+# Orchestrates Acts 1â€“4 by delegating to the RILIE class (Act 4 â€“ The Restaurant),
 # which already wires through:
-# - Triangle (Act 1 – safety / nonsense gate)
-# - DDD / Hostess (Act 2 – disclosure level)
-# - Kitchen / Core (Act 3 – interpretation passes)
+# - Triangle (Act 1 â€“ safety / nonsense gate)
+# - DDD / Hostess (Act 2 â€“ disclosure level)
+# - Kitchen / Core (Act 3 â€“ interpretation passes)
 #
 # The Governor adds:
 # - Final authority on what gets served
-# - YELLOW GATE – conversation health monitoring + tone degradation detection
+# - YELLOW GATE â€“ conversation health monitoring + tone degradation detection
 # - Optional web lookup (Brave/Google) as a KISS pre-pass
 # - Tone signaling via a single governing emoji per response
 # - Comparison between web baseline and RILIE's own compression
@@ -20,7 +20,7 @@
 # - Language mode detection (literal/figurative/metaphor/simile/poetry)
 # - Social status tracking (user always above self)
 # - Library index for domain engine access
-# - WHOSONFIRST – greeting gate on first contact (before Triangle)
+# - WHOSONFIRST â€“ greeting gate on first contact (before Triangle)
 
 from __future__ import annotations
 
@@ -80,7 +80,7 @@ class Guvna:
     - Tone signaling via a single governing emoji per response.
     - Comparison between web baseline and RILIE's own compression.
     - Library index for domain engine access.
-    - WHOSONFIRST – greeting gate (True = first interaction, False = past greeting).
+    - WHOSONFIRST â€“ greeting gate (True = first interaction, False = past greeting).
     """
 
     def __init__(
@@ -101,7 +101,7 @@ class Guvna:
         self.roux_seeds: Dict[str, Dict[str, Any]] = effective_roux or {}
         self.search_fn: Optional[SearchFn] = effective_search
 
-        # Library index – domain engines available at boot.
+        # Library index â€“ domain engines available at boot.
         # If caller doesn't pass one, build from library.py.
         self.library_index: LibraryIndex = library_index or build_library_index()
 
@@ -138,7 +138,7 @@ class Guvna:
         self.user_name: Optional[str] = None
         self.whosonfirst: bool = True  # True = first interaction, False = past greeting
 
-        # Governor's own response memory – anti-déjà-vu at every exit
+        # Governor's own response memory â€“ anti-dÃ©jÃ -vu at every exit
         self._response_history: list[str] = []
 
         # Load the Charculterie Manifesto as her constitution
@@ -148,12 +148,12 @@ class Guvna:
         )
 
     # -----------------------------------------------------------------
-    # APERTURE – First contact. Before anything else.
+    # APERTURE â€“ First contact. Before anything else.
     # -----------------------------------------------------------------
 
     def greet(self, stimulus: str, known_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
-        APERTURE – Turn 0 only. First thing that happens.
+        APERTURE â€“ Turn 0 only. First thing that happens.
         Either know them by name, or meet them.
         Returns greeting response or None if not turn 0.
         """
@@ -220,7 +220,7 @@ class Guvna:
         return response
 
     # -----------------------------------------------------------------
-    # PROCESS – The main orchestration flow
+    # PROCESS â€“ The main orchestration flow
     # -----------------------------------------------------------------
 
     def process(self, stimulus: str, maxpass: int = 3) -> Dict[str, Any]:
@@ -240,7 +240,7 @@ class Guvna:
         )
 
         # =====================================================================
-        # WHOSONFIRST GATE – Skip Triangle and full pipeline on first greeting
+        # WHOSONFIRST GATE â€“ Skip Triangle and full pipeline on first greeting
         # =====================================================================
         if self.whosonfirst:
             # Check if this is a pure social opener
@@ -260,10 +260,10 @@ class Guvna:
                 "bonjour",
             ]
             if any(s == g or s.startswith(g + " ") for g in greeting_words):
-                # Pure greeting on turn 0 – greet and exit
+                # Pure greeting on turn 0 â€“ greet and exit
                 primer = self.greet(original_stimulus)
                 if primer is not None:
-                    # Flip WHOSONFIRST now – from this point on, full pipeline
+                    # Flip WHOSONFIRST now â€“ from this point on, full pipeline
                     self.whosonfirst = False
                     # Sync RILIE's conversation state so TASTE count is correct
                     self.rilie.conversation.record_exchange(
@@ -277,10 +277,10 @@ class Guvna:
                 pass
 
         # =====================================================================
-        # NORMAL PIPELINE – Triangle, RILIE, Yellow Gate, tone, etc.
+        # NORMAL PIPELINE â€“ Triangle, RILIE, Yellow Gate, tone, etc.
         # =====================================================================
 
-        # 0.5: Triangle (bouncer) – runs only after WHOSONFIRST is False
+        # 0.5: Triangle (bouncer) â€“ runs only after WHOSONFIRST is False
         try:
             from rilie_triangle import triangle_check
 
@@ -303,7 +303,7 @@ class Guvna:
                 elif trigger_type == "INJECTION":
                     response = (
                         "I see what you're doing there, and I respect the "
-                        "curiosity – but I'm not built to be jailbroken. "
+                        "curiosity â€“ but I'm not built to be jailbroken. "
                         "Ask me something real and I'll give you something real."
                     )
                 elif trigger_type == "GIBBERISH":
@@ -372,10 +372,10 @@ class Guvna:
                     "pass": 0,
                 })
         except ImportError:
-            # Triangle module not available – proceed without bouncer
+            # Triangle module not available â€“ proceed without bouncer
             pass
         except Exception as e:
-            # Triangle encountered an error – log it and proceed
+            # Triangle encountered an error â€“ log it and proceed
             logger.warning("GUVNA: Triangle check failed with %s: %s", type(e).__name__, str(e))
             pass
 
@@ -397,7 +397,7 @@ class Guvna:
             self_result = self._respond_from_self(original_stimulus)
             result_text = self_result.get("result", "")
 
-            # ANTI-DÉJÀ-VU: if she already said this, skip to pipeline
+            # ANTI-DÃ‰JÃ€-VU: if she already said this, skip to pipeline
             if result_text:
                 import re as _re
 
@@ -428,7 +428,7 @@ class Guvna:
                     if self.whosonfirst:
                         self.whosonfirst = False
                     return self._finalize_response(self_result)
-            # If empty or repeat – fall through to pipeline
+            # If empty or repeat â€“ fall through to pipeline
 
         # 2: social status inference
         user_status = infer_user_status(original_stimulus)
@@ -439,7 +439,7 @@ class Guvna:
         wit = detect_wit(original_stimulus)
         language = detect_language_mode(original_stimulus)
 
-        # 4–5: tone detection + serious subject safety
+        # 4â€“5: tone detection + serious subject safety
         tone = detect_tone_from_stimulus(original_stimulus)
         if tone == "amusing" and is_serious_subject_text(original_stimulus):
             tone = (
@@ -494,7 +494,7 @@ class Guvna:
         baseline_used_as_result = False
         # Nuclear: if she has nothing, she has nothing. No canned fallback.
 
-        # 9.5: YELLOW GATE – check conversation health + tone degradation
+        # 9.5: YELLOW GATE â€“ check conversation health + tone degradation
         try:
             from guvna_yellow_gate import guvna_yellow_gate, lower_response_intensity
 
@@ -515,14 +515,14 @@ class Guvna:
                     if yellow_decision.get("lower_intensity"):
                         chosen = lower_response_intensity(chosen)
         except (ImportError, AttributeError):
-            # Yellow gate not available – proceed normally
+            # Yellow gate not available â€“ proceed normally
             pass
 
-        # 10: wilden_swift – tone modulation
+        # 10: wilden_swift â€“ tone modulation
         if status not in {"SAFETYREDIRECT", "SELF_REFLECTION"} and chosen:
             chosen = wilden_swift(chosen, wit, self.social_state, language)
 
-        # 11–12: apply tone header + expose pillars
+        # 11â€“12: apply tone header + expose pillars
         if chosen and chosen.strip():
             raw["result"] = apply_tone_header(chosen, tone)
         else:
@@ -559,11 +559,11 @@ class Guvna:
         raw["domain_annotations"] = domain_annotations
         raw["dna_active"] = self.self_state.dna_active
 
-        # COERCE: force déjà-vu to signal-only (safety net if talk still has old logic)
-        # Déjà-vu is information, not a gate. Mark it so talk() passes through.
+        # COERCE: force dÃ©jÃ -vu to signal-only (safety net if talk still has old logic)
+        # DÃ©jÃ -vu is information, not a gate. Mark it so talk() passes through.
         if raw.get("dejavu", {}).get("frequency", 0) > 0:
             raw["dejavu"]["pass_through"] = True
-            logger.info("GUVNA COERCE: déjà-vu marked as signal-only (pass_through=True)")
+            logger.info("GUVNA COERCE: dÃ©jÃ -vu marked as signal-only (pass_through=True)")
 
         # Memory enrichments
         result_text = raw.get("result", "")
@@ -667,7 +667,7 @@ class Guvna:
             "result": raw.get("result", ""),
             "status": raw.get("status", "OK"),
             "tone": raw.get("tone", "insightful"),
-            "tone_emoji": raw.get("tone_emoji", TONE_EMOJIS.get("insightful", "💡")),
+            "tone_emoji": raw.get("tone_emoji", TONE_EMOJIS.get("insightful", "ðŸ’¡")),
             "quality_score": raw.get("quality_score", 0.5),
             "priorities_met": raw.get("priorities_met", 0),
             "anti_beige_score": raw.get("anti_beige_score", 0.5),
