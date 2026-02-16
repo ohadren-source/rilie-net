@@ -215,9 +215,23 @@ async def brave_web_search(query: str, num_results: int = 5) -> List[Dict[str, s
 
 
 def brave_search_sync(query: str, num_results: int = 5) -> List[Dict[str, str]]:
-    """Synchronous wrapper for Brave Search."""
-    import asyncio
-    return asyncio.run(brave_web_search(query, num_results))
+    """Synchronous Brave Search — safe to call from sync code inside async event loop."""
+    if not BRAVE_API_KEY:
+        raise RuntimeError("Brave Search API not configured (BRAVE_API_KEY).")
+    headers = {"Accept": "application/json", "X-Subscription-Token": BRAVE_API_KEY}
+    params = {"q": query, "count": max(1, min(num_results, 10))}
+    with httpx.Client(timeout=10) as client:
+        resp = client.get(BRAVE_SEARCH_URL, headers=headers, params=params)
+        resp.raise_for_status()
+    data = resp.json()
+    items: List[Dict[str, str]] = []
+    for item in data.get("web", {}).get("results", []):
+        items.append({
+            "title": item.get("title", ""),
+            "link": item.get("url", ""),
+            "snippet": item.get("description", ""),
+        })
+    return items
 
 
 HAS_BRAVE_SEARCH = bool(BRAVE_API_KEY)
@@ -630,7 +644,8 @@ async def run_rilie_upload(
 
     # Delegate to the same pipeline via a synthetic RilieRequest
     req = RilieRequest(stimulus=combined, max_pass=max_pass)
-    return run_rilie(req, request)
+    from starlette.concurrency import run_in_threadpool
+    return await run_in_threadpool(run_rilie, req, request)
 # ---------------------------------------------------------------------------
 
 @app.get("/v1/curiosity/status")
