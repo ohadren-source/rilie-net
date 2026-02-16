@@ -387,7 +387,6 @@ class Guvna:
         rilie_result = self.rilie.process(
             stimulus=stimulus,
             baseline_text=baseline_text,
-            conversation_memory=self.memory,
         )
 
         if not rilie_result:
