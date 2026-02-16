@@ -256,20 +256,32 @@ def extract_tangents(
 # MOJIBAKE CLEANUP — fix double-encoded UTF-8 artifacts
 # ============================================================================
 
-_MOJIBAKE_MAP = {
-    "â€"": "—", "â€"": "–", "â€™": "'", "â€˜": "'",
-    "â€œ": "\u201c", "â€\x9d": "\u201d", "â€¦": "…",
-    "â€¢": "•", "Ã©": "é", "Ã¨": "è", "Ã¼": "ü",
-    "Ã¶": "ö", "Ã¤": "ä", "Ã±": "ñ",
-}
+_MOJIBAKE_PAIRS = [
+    (b"\xc3\xa2\xc2\x80\xc2\x93", "\u2013"),   # en dash
+    (b"\xc3\xa2\xc2\x80\xc2\x94", "\u2014"),   # em dash
+    (b"\xc3\xa2\xc2\x80\xc2\x99", "\u2019"),   # right single quote
+    (b"\xc3\xa2\xc2\x80\xc2\x98", "\u2018"),   # left single quote
+    (b"\xc3\xa2\xc2\x80\xc2\x9c", "\u201c"),   # left double quote
+    (b"\xc3\xa2\xc2\x80\xc2\x9d", "\u201d"),   # right double quote
+    (b"\xc3\xa2\xc2\x80\xc2\xa6", "\u2026"),   # ellipsis
+    (b"\xc3\xa2\xc2\x80\xc2\xa2", "\u2022"),   # bullet
+]
 
 def _fix_mojibake(text: str) -> str:
     """Replace common UTF-8 double-encoding artifacts."""
     if not text:
         return text
-    for bad, good in _MOJIBAKE_MAP.items():
-        text = text.replace(bad, good)
-    return text
+    # Try the clean re-decode approach first
+    try:
+        fixed = text.encode("cp1252").decode("utf-8")
+        return fixed
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        pass
+    # Fallback: byte-level replacement for known patterns
+    raw = text.encode("utf-8")
+    for bad_bytes, good_char in _MOJIBAKE_PAIRS:
+        raw = raw.replace(bad_bytes, good_char.encode("utf-8"))
+    return raw.decode("utf-8", errors="replace")
 
 
 # ============================================================================
