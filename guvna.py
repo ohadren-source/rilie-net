@@ -325,13 +325,17 @@ class Guvna:
         return self._finalize_response(response)
 
     # -----------------------------------------------------------------
-    # MAIN TALK – Core response pipeline
+    # MAIN PROCESS – Core response pipeline
     # -----------------------------------------------------------------
 
-    def talk(self, stimulus: str) -> Dict[str, Any]:
+    def process(self, stimulus: str, maxpass: int = 1) -> Dict[str, Any]:
         """
         Main entry point for conversation.
         Orchestrates all 5 Acts: safety → disclosure → interpretation → response → governance.
+        
+        Args:
+            stimulus: User input text
+            maxpass: Maximum passes through interpretation (default 1, can extend for deeper analysis)
         
         Returns complete response dict with:
         - result: final answer text
@@ -659,7 +663,7 @@ if __name__ == "__main__":
     
     # Test talk
     test_stimulus = "What is the relationship between density and understanding?"
-    response = guvna.talk(test_stimulus)
+    response = guvna.process(test_stimulus)
     print(f"\nTalk Response:\nTone: {response['tone']} {response['tone_emoji']}")
     print(f"Domains Used: {response['soi_domains'][:5]}")
     print(f"Conversation Health: {response['conversation_health']}")
