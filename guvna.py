@@ -27,11 +27,16 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
-from conversation_memory import ConversationMemory
+try:
+    from conversationmemory import ConversationMemory
+except ImportError:
+    ConversationMemory = None
+
 from photogenic_db import PhotogenicDB
 from rilie import RILIE
 from soi_domain_map import build_domain_index, get_tracks_for_domains, get_human_wisdom
 from library import build_library_index, LibraryIndex  # central domain library
+
 
 from guvna_tools import (
     RilieSelfState,
