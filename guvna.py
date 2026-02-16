@@ -218,7 +218,7 @@ class Guvna:
     # PROCESS – The main orchestration flow
     # -----------------------------------------------------------------
 
-    def process(self, stimulus: str, maxpass: int = 3) -> Dict[str, Any]:
+    def process(self, stimulus: str, maxpass: int = 9) -> Dict[str, Any]:
         """
         Route stimulus through the full 5-act pipeline.
         WHOSONFIRST gate: if True and input is a social opener, greet and exit early.
@@ -615,28 +615,62 @@ class Guvna:
 
     def _get_baseline(self, stimulus: str) -> Dict[str, Any]:
         """
-        STEP 1: Google the answer key.
+        STEP 1: Do I know this? If not, learn from Google.
         
-        "What is the correct response to [P]?"
+        Check if this stimulus matches any known domains/tracks.
+        If NOT, force a web search to synthesize an answer.
+        If YES but baseline is still empty, Google anyway.
         
-        Whatever comes back is the gold standard. Everything the Kitchen
-        cooks gets measured against this. If nothing beats it, she says
-        a version of this in her own words.
+        The philosophy: She shouldn't pretend. If she doesn't know,
+        she learns (like you or any other ape).
         """
         baseline = {"text": "", "source": "", "raw_results": []}
+        
+        # Check: Does she have knowledge about this topic?
+        stimulus_lower = (stimulus or "").lower()
+        
+        # Quick heuristic: Is this a proper noun / entity question?
+        # (Morrissey, album names, specific facts)
+        # These need Google lookup
+        known_patterns = ["what is", "explain", "tell me about", "how does"]
+        is_entity_question = not any(p in stimulus_lower for p in known_patterns)
+        
+        # If it's an entity question or she genuinely doesn't have context,
+        # FORCE Google search instead of guessing
+        should_force_google = is_entity_question or len(stimulus) < 30
+        
         try:
             if self.search_fn:
-                # The hack that works: ask Google for the answer directly
-                baseline_query = f"what is the correct response to {stimulus}"
+                baseline_query = stimulus if should_force_google else f"what is the correct response to {stimulus}"
                 results = self.search_fn(baseline_query)
                 if results and isinstance(results, list):
                     # Store raw results for trite scoring
                     baseline["raw_results"] = results
-                    # Best snippet = highest quality baseline
+                    # Best snippet = highest quality baseline (but reject ESL garbage)
                     snippets = [r.get("snippet", "") for r in results if r.get("snippet")]
-                    if snippets:
-                        baseline["text"] = snippets[0]
+                    
+                    # Hard block ESL / lesson-style content
+                    bad_markers = [
+                        "in this lesson",
+                        "you'll learn the difference between",
+                        "you will learn the difference between",
+                        "visit englishclass101",
+                        "englishclass101.com",
+                        "learn english fast with real lessons",
+                        "sign up for your free lifetime account",
+                        "in this case i would say something like",
+                        "in this case i would say",
+                    ]
+                    
+                    for snippet in snippets:
+                        lower = snippet.lower()
+                        if any(m in lower for m in bad_markers):
+                            logger.info("GUVNA baseline rejected as ESL/tutorial garbage")
+                            continue  # Skip this one, try next
+                        # Good snippet found
+                        baseline["text"] = snippet
                         baseline["source"] = "google_baseline"
+                        break  # Use first non-ESL snippet
         except Exception as e:
             logger.debug("Baseline lookup error: %s", e)
         return baseline

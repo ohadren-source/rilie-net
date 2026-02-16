@@ -1,5 +1,5 @@
 """
-rilie_core.py — THE KITCHEN
+rilie_core.py â€” THE KITCHEN
 ===========================
 Constants, scoring, interpretations, pass pipeline.
 This is RILIE's internal brain for a single stimulus:
@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Dict, Optional
 
-# Chompky — grammar brain for constructing responses from thought
+# Chompky â€” grammar brain for constructing responses from thought
 # Graceful fallback if spaCy model not available
 try:
     from ChompkyAtTheBit import parse_question, extract_holy_trinity_for_roux, infer_time_bucket
@@ -210,7 +210,7 @@ DOMAIN_KEYWORDS: Dict[str, List[str]] = {
 
 
 # ============================================================================
-# CURIOSITY CONTEXT — her own discoveries injected into scoring
+# CURIOSITY CONTEXT â€” her own discoveries injected into scoring
 # ============================================================================
 
 def extract_curiosity_context(stimulus: str) -> Optional[str]:
@@ -268,7 +268,7 @@ def detect_question_type(stimulus: str) -> QuestionType:
 def compute_trite_score(baseline_results: Optional[List[Dict[str, str]]] = None) -> float:
     """
     Measure how saturated / repetitive the web is on this topic.
-    Returns 0.0 (novel — web has little) to 1.0 (trite — web is saturated).
+    Returns 0.0 (novel â€” web has little) to 1.0 (trite â€” web is saturated).
 
     Factors:
     - Number of results returned (more = more saturated)
@@ -279,7 +279,7 @@ def compute_trite_score(baseline_results: Optional[List[Dict[str, str]]] = None)
 
     count = len(baseline_results)
 
-    # Count factor: 0–2 results = low, 5+ = high
+    # Count factor: 0â€“2 results = low, 5+ = high
     count_factor = min(1.0, count / 5.0)
 
     # Overlap factor: check how similar the snippets are to each other
@@ -325,7 +325,7 @@ def set_trite_score(score: float) -> None:
 
 
 def set_curiosity_bonus(bonus: float) -> None:
-    """Called when curiosity context is present — boosts internal freshness."""
+    """Called when curiosity context is present â€” boosts internal freshness."""
     global _current_curiosity_bonus
     _current_curiosity_bonus = min(0.3, max(0.0, bonus))
 
@@ -335,9 +335,9 @@ def anti_beige_check(text: str) -> float:
     Returns [0.0, 1.0] measuring freshness / authenticity of HER candidate text.
 
     This is a COMPOSITE score:
-      internal_freshness (0.0–1.0): keyword signals for originality, authenticity, depth
-      external_trite (0.0–1.0): how saturated the web is (set via set_trite_score)
-      curiosity_bonus (0.0–0.3): boost when her own discoveries inform the answer
+      internal_freshness (0.0â€“1.0): keyword signals for originality, authenticity, depth
+      external_trite (0.0â€“1.0): how saturated the web is (set via set_trite_score)
+      curiosity_bonus (0.0â€“0.3): boost when her own discoveries inform the answer
 
     Final score = (internal_freshness * 0.5) + ((1.0 - external_trite) * 0.5) + curiosity_bonus
 
@@ -350,7 +350,7 @@ def anti_beige_check(text: str) -> float:
     """
     text_lower = (text or "").lower()
 
-    # Hard reject patterns — these are the only binary kills.
+    # Hard reject patterns â€” these are the only binary kills.
     hard_reject = [
         "copy of a copy",
         "every day is exactly the same",
@@ -366,7 +366,7 @@ def anti_beige_check(text: str) -> float:
     effort_signals = ["earnest", "work", "struggle", "build", "foundation"]
     reflection_signals = ["reflect", "mirror", "light", "show", "demonstrate"]
 
-    # Domain-relevance signals — her own knowledge statements should get credit
+    # Domain-relevance signals â€” her own knowledge statements should get credit
     domain_signals = [
         "reframed", "exposed", "mobilize", "blueprint", "journalism",
         "trickster", "trojan", "architecture", "archaeology", "collage",
@@ -405,7 +405,7 @@ def anti_beige_check(text: str) -> float:
 
     final = (internal_freshness * 0.5) + (external_novelty * 0.5) + _current_curiosity_bonus
 
-    # Floor at 0.15 — nothing is truly zero unless hard-rejected above.
+    # Floor at 0.15 â€” nothing is truly zero unless hard-rejected above.
     # This ensures candidates always survive to be scored, just penalized.
     return max(0.15, min(1.0, final))
 
@@ -543,7 +543,7 @@ class Interpretation:
 
 
 # ============================================================================
-# RESPONSE CONSTRUCTION — Chompky gives her a voice
+# RESPONSE CONSTRUCTION â€” Chompky gives her a voice
 # ============================================================================
 # A human doesn't memorize the Library of Congress then say hello.
 # She thinks about the question, finds what she knows, and CONSTRUCTS
@@ -553,7 +553,7 @@ def construct_response(stimulus: str, snippet: str) -> str:
     """
     Construct a response from a domain snippet + stimulus.
     
-    The snippet is a SEED — could be a word, a phrase, or a sentence.
+    The snippet is a SEED â€” could be a word, a phrase, or a sentence.
     She must BUILD a response that connects the seed to the question.
     
     If the seed is a single word or short phrase (< 5 words):
@@ -583,7 +583,7 @@ def construct_response(stimulus: str, snippet: str) -> str:
                 if subject and focus:
                     return (
                         f"When you look at {subject} through the lens of {focus}, "
-                        f"it comes back to {seed} — that's where the real weight is. "
+                        f"it comes back to {seed} â€” that's where the real weight is. "
                         f"Everything else is decoration."
                     )
                 if subject:
@@ -601,8 +601,8 @@ def construct_response(stimulus: str, snippet: str) -> str:
                 # SENTENCE MODE: Restructure through stimulus
                 core = snippet_clean
                 if subject:
-                    return f"What makes {subject} work — {core[0].lower()}{core[1:]}"
-                return f"Here's the thing — {core[0].lower()}{core[1:]}"
+                    return f"What makes {subject} work â€” {core[0].lower()}{core[1:]}"
+                return f"Here's the thing â€” {core[0].lower()}{core[1:]}"
 
         except Exception:
             pass
@@ -620,18 +620,18 @@ def construct_response(stimulus: str, snippet: str) -> str:
 
         return (
             f"With {topic}, the thing that matters most is {seed}. "
-            f"Not the surface — the {seed} underneath it. "
+            f"Not the surface â€” the {seed} underneath it. "
             f"That's where the real conversation is."
         )
 
     # SENTENCE MODE without Chompky
     core = snippet_clean
-    return f"Here's what it comes down to — {core[0].lower()}{core[1:]}"
+    return f"Here's what it comes down to â€” {core[0].lower()}{core[1:]}"
 
 
 def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
     """
-    Construct a cross-domain blend — two ideas connected through the question.
+    Construct a cross-domain blend â€” two ideas connected through the question.
     Handles both word-level seeds and full sentences.
     """
     s1 = snippet1.strip()
@@ -650,25 +650,25 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
             subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
 
             if s1_is_word and s2_is_word:
-                # Both are concept seeds — connect them
+                # Both are concept seeds â€” connect them
                 if subject:
                     return (
-                        f"With {subject}, there are two forces at work — "
+                        f"With {subject}, there are two forces at work â€” "
                         f"{s1.lower()} and {s2.lower()}. "
                         f"They look separate but they're the same principle "
                         f"wearing different clothes. Pull one thread and the other moves."
                     )
                 return (
                     f"Two things that seem unrelated: {s1.lower()} and {s2.lower()}. "
-                    f"But look closer — they're connected. "
+                    f"But look closer â€” they're connected. "
                     f"One doesn't work without the other."
                 )
             elif s1_is_word or s2_is_word:
-                # One word, one sentence — anchor through the word
+                # One word, one sentence â€” anchor through the word
                 word = s1 if s1_is_word else s2
                 sentence = s2 if s1_is_word else s1
                 return (
-                    f"Start with {word.lower()} — "
+                    f"Start with {word.lower()} â€” "
                     f"{sentence[0].lower()}{sentence[1:]} "
                     f"That connection is where it gets interesting."
                 )
@@ -681,8 +681,8 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
                         f"{s2[0].lower()}{s2[1:]}"
                     )
                 return (
-                    f"On one hand — {s1[0].lower()}{s1[1:]}. "
-                    f"But then — {s2[0].lower()}{s2[1:]}"
+                    f"On one hand â€” {s1[0].lower()}{s1[1:]}. "
+                    f"But then â€” {s2[0].lower()}{s2[1:]}"
                 )
         except Exception:
             pass
@@ -693,7 +693,7 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
             f"There's a connection between {s1.lower()} and {s2.lower()} "
             f"that most people miss. One feeds the other."
         )
-    return f"Two sides — {s1[0].lower()}{s1[1:]}, and {s2[0].lower()}{s2[1:]}"
+    return f"Two sides â€” {s1[0].lower()}{s1[1:]}, and {s2[0].lower()}{s2[1:]}"
 
 
 # ============================================================================
@@ -763,12 +763,12 @@ def excavate_domains(stimulus: str, domains: List[str]) -> Dict[str, List[str]]:
 
     # --- WORD ENRICHMENT: dictionary + synonyms for word-level ingredients ---
     # If the ingredient is a word (< 5 tokens), expand it so she has
-    # more to cook with. "density" → "density (closeness, concentration, richness)"
+    # more to cook with. "density" â†’ "density (closeness, concentration, richness)"
     for domain, items in excavated.items():
         enriched = []
         for item in items:
             if len(item.split()) < 5:
-                # It's a word seed — enrich it
+                # It's a word seed â€” enrich it
                 word = item.strip().lower()
                 definition = _WORD_DEFINITIONS.get(word, "")
                 synonyms = _WORD_SYNONYMS.get(word, [])
@@ -780,7 +780,7 @@ def excavate_domains(stimulus: str, domains: List[str]) -> Dict[str, List[str]]:
                     parts.append("also: " + ", ".join(synonyms[:4]))
                 if homonyms:
                     parts.append("other meanings: " + "; ".join(homonyms[:3]))
-                enriched.append(" — ".join(parts))
+                enriched.append(" â€” ".join(parts))
             else:
                 enriched.append(item)
         excavated[domain] = enriched
@@ -789,7 +789,7 @@ def excavate_domains(stimulus: str, domains: List[str]) -> Dict[str, List[str]]:
 
 
 # --- Built-in word definitions and synonyms ---
-# She carries a pocket dictionary. Not Wikipedia — just enough to cook with.
+# She carries a pocket dictionary. Not Wikipedia â€” just enough to cook with.
 _WORD_DEFINITIONS: Dict[str, str] = {
     # Music
     "density": "maximum information packed into minimum space",
@@ -875,7 +875,7 @@ _WORD_DEFINITIONS: Dict[str, str] = {
     "propagate": "spreading through connected nodes",
     "negentropy": "order created by pumping energy into a system",
     # Cosmology
-    "boolean": "the simplest possible distinction — yes or no",
+    "boolean": "the simplest possible distinction â€” yes or no",
     "tick": "the smallest unit of change",
     "fractal": "the same pattern at every scale",
     "scale": "the level at which you observe",
@@ -988,8 +988,8 @@ def generate_9_interpretations(
     interpretations: List[Interpretation] = []
     idx = 0
 
-    # Single-domain items — CONSTRUCTED, not shelf-served.
-    # KNOWN CANNED FRAGMENTS — if these appear, it's a script not generation
+    # Single-domain items â€” CONSTRUCTED, not shelf-served.
+    # KNOWN CANNED FRAGMENTS â€” if these appear, it's a script not generation
     _CANNED_MARKERS = [
         "the way i understand it",
         "the way i see it",
@@ -1052,7 +1052,7 @@ def generate_9_interpretations(
         domain_overlap = len(response_domains & stimulus_domains)
 
         if domain_overlap == 0 and stimulus_domains:
-            domain_score = 0.1  # Almost nothing — wrong topic
+            domain_score = 0.1  # Almost nothing â€” wrong topic
         elif domain_overlap == 1:
             domain_score = 0.6
         elif domain_overlap >= 2:
@@ -1069,12 +1069,12 @@ def generate_9_interpretations(
         return (domain_score * 0.7) + (tone_score * 0.3)
 
     # ------------------------------------------------------------------
-    # RESONANCE: Flow = Skill × Challenge
+    # RESONANCE: Flow = Skill Ã— Challenge
     # Response depth must match question depth
     # ------------------------------------------------------------------
     def _resonance_score(text: str) -> float:
         """
-        Flow = Skill × Challenge.
+        Flow = Skill Ã— Challenge.
         Simple question + simple answer = flow.
         Complex question + complex answer = flow.
         Mismatch = penalty.
@@ -1086,7 +1086,7 @@ def generate_9_interpretations(
 
         # Estimate response complexity (skill)
         resp_words = len(text.split())
-        resp_has_structure = 1.0 if any(c in text for c in ["—", ":", ";"]) else 0.0
+        resp_has_structure = 1.0 if any(c in text for c in ["â€”", ":", ";"]) else 0.0
         skill = min(1.0, (resp_words / 40) + (resp_has_structure * 0.1))
 
         # Flow = closeness of skill to challenge
@@ -1095,7 +1095,7 @@ def generate_9_interpretations(
         return max(0.1, 1.0 - gap)
 
     # ------------------------------------------------------------------
-    # COMBINED SCORE: originality × relevance × resonance
+    # COMBINED SCORE: originality Ã— relevance Ã— resonance
     # ------------------------------------------------------------------
     def _final_score(raw_overall: float, text: str, domain: str) -> float:
         orig = _originality_multiplier(text, domain)
@@ -1165,7 +1165,7 @@ def generate_9_interpretations(
 
 
 # ============================================================================
-# PASS PIPELINE — the actual cooking
+# PASS PIPELINE â€” the actual cooking
 # ============================================================================
 
 def run_pass_pipeline(
@@ -1182,10 +1182,10 @@ def run_pass_pipeline(
     LEAN 3-STEP PIPELINE:
       1. Google baseline arrives via baseline_text (from Guvna)
       2. Internal domain match + SOi comparison runs here
-      3. Best score wins — baseline or Kitchen candidate
+      3. Best score wins â€” baseline or Kitchen candidate
 
-    ANTI-DÉJÀ-VU GATE:
-    She is forbidden to produce déjà vu in others.
+    ANTI-DÃ‰JÃ€-VU GATE:
+    She is forbidden to produce dÃ©jÃ  vu in others.
     Any candidate too similar to her own recent responses is rejected.
     """
     # Check for curiosity context and extract it
@@ -1205,7 +1205,7 @@ def run_pass_pipeline(
     question_type = detect_question_type(clean_stimulus)
     domains = detect_domains(clean_stimulus)
 
-    # --- Anti-déjà-vu: build word sets from her recent responses ---
+    # --- Anti-dÃ©jÃ -vu: build word sets from her recent responses ---
     _prior_word_sets: List[set] = []
     if prior_responses:
         for pr in prior_responses[-5:]:  # Last 5 responses
@@ -1264,7 +1264,7 @@ def run_pass_pipeline(
                 else:
                     excavated["catch44"] = wisdom
     except ImportError:
-        pass  # SOi domain map not available — proceed with old domains
+        pass  # SOi domain map not available â€” proceed with old domains
 
     hard_cap = 3  # Dayenu. That is enough.
     max_pass = max(1, min(max_pass, hard_cap))
@@ -1305,16 +1305,16 @@ def run_pass_pipeline(
             if dejavu:
                 _debug_dejavu_killed.append(entry)
 
-        # Thresholds — she doesn't need to be Oscar Wilde. Just not trite.
+        # Thresholds â€” she doesn't need to be Oscar Wilde. Just not trite.
         filtered = [
             i
             for i in nine
             if (i.overall_score > (0.06 if current_pass == 1 else 0.09)
                 or i.count_met >= 1)
-            and not _is_dejavu(i.text)  # ANTI-DÉJÀ-VU GATE
+            and not _is_dejavu(i.text)  # ANTI-DÃ‰JÃ€-VU GATE
         ]
 
-        # If anti-déjà-vu rejected everything, take the LEAST similar one.
+        # If anti-dÃ©jÃ -vu rejected everything, take the LEAST similar one.
         # She must respond. Silence is a moment, not a destination.
         if not filtered and nine:
             def _dejavu_score(text: str) -> float:
@@ -1334,7 +1334,7 @@ def run_pass_pipeline(
                         best_overlap = max(best_overlap, len(overlap) / smaller)
                 return best_overlap
 
-            # Sort by least déjà vu, pick the freshest
+            # Sort by least dÃ©jÃ  vu, pick the freshest
             ranked = sorted(nine, key=lambda x: _dejavu_score(x.text))
             filtered = [ranked[0]]
 
@@ -1383,7 +1383,7 @@ def run_pass_pipeline(
             }
 
     # ==================================================================
-    # FINAL TALLY — baseline is the bar to beat
+    # FINAL TALLY â€” baseline is the bar to beat
     # ==================================================================
 
     def _clean_baseline(bl: str) -> str:
@@ -1408,7 +1408,7 @@ def run_pass_pipeline(
         if clean_bl:
             bl_scores = {k: fn(clean_bl) for k, fn in SCORERS.items()}
             bl_overall = sum(bl_scores[k] * WEIGHTS[k] for k in bl_scores) / 4.5
-            bl_overall *= 1.2  # Baseline advantage — she has to EARN beating it
+            bl_overall *= 1.2  # Baseline advantage â€” she has to EARN beating it
 
             if bl_overall > best_score:
                 baseline_wins = True
@@ -1433,7 +1433,7 @@ def run_pass_pipeline(
                     "debug_audit": debug_audit,
                 }
 
-        # Kitchen beat the baseline (or no baseline) — serve Kitchen's best
+        # Kitchen beat the baseline (or no baseline) â€” serve Kitchen's best
         debug_audit = _build_debug_audit(
             clean_stimulus, domains, best_global, _debug_all_candidates,
             _debug_dejavu_killed, _debug_passes, "GUESS"
@@ -1550,7 +1550,7 @@ def _build_debug_audit(
         if winner.domain:
             reasons.append(f"Domain: {winner.domain}")
         if not reasons:
-            reasons.append("Last resort — all others worse or blocked")
+            reasons.append("Last resort â€” all others worse or blocked")
         audit["defense"] = reasons
     else:
         audit["winner"] = None
