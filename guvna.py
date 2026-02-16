@@ -435,13 +435,22 @@ class Guvna:
         # ==============================================================
         # STEP 6: MEMORY & CONVERSATION HEALTH (YELLOW GATE)
         # ==============================================================
-        memory_result = self.memory.evaluate(stimulus, raw.get("result", ""))
-        memory_callback = memory_result.get("callback", "")
-        memory_thread = memory_result.get("thread", "")
-        memory_polaroid = memory_result.get("polaroid", None)
+        memory_result = self.memory.process_turn(
+            stimulus=stimulus,
+            domains_hit=soi_domain_names,
+            quality=raw.get("quality_score", 0.5),
+            tone=raw.get("tone", "neutral"),
+            rilie_response=raw.get("result", ""),
+        )
+        # Extract from annotations list: [("callback", text), ("thread_pull", text), ...]
+        _annotations = {k: v for k, v in memory_result.get("annotations", [])}
+        memory_callback = _annotations.get("callback", "")
+        memory_thread = _annotations.get("thread_pull", "")
+        memory_polaroid = memory_result.get("polaroid_text", None)
 
-        # Conversation health (0-100)
-        conversation_health = memory_result.get("conversation_health", 100)
+        # Conversation health — derive from energy guidance (0-100)
+        _energy = memory_result.get("energy_guidance") or {}
+        conversation_health = max(0, min(100, _energy.get("energy", 1.0) * 100))
         raw["conversation_health"] = conversation_health
 
         # ==============================================================

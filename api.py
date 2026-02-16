@@ -25,7 +25,7 @@ import urllib.parse
 import urllib.request
 
 import httpx  # Brave HTTP client
-from fastapi import FastAPI, HTTPException, Request, File, UploadFile
+from fastapi import FastAPI, HTTPException, Request, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -582,7 +582,55 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Curiosity endpoints
+# /v1/rilie (MULTIPART — file uploads with optional OCR)
+# ---------------------------------------------------------------------------
+
+@app.post("/v1/rilie-upload")
+async def run_rilie_upload(
+    request: Request,
+    stimulus: str = Form(...),
+    max_pass: int = Form(3),
+    files: List[UploadFile] = File(default=[]),
+) -> Dict[str, Any]:
+    """
+    Multipart version of /v1/rilie.
+    Accepts files, OCRs images via Google Vision, prepends extracted text
+    to the stimulus, then delegates to the same Guvna pipeline.
+    """
+    file_context_parts = []
+    for f in files:
+        raw_bytes = await f.read()
+        if not raw_bytes:
+            continue
+        content_type = (f.content_type or "").lower()
+        if content_type.startswith("image/"):
+            # OCR via Google Vision
+            try:
+                ocr_text = google_ocr(raw_bytes)
+                if ocr_text:
+                    file_context_parts.append(f"[Image: {f.filename}]\n{ocr_text}")
+            except Exception as e:
+                file_context_parts.append(f"[Image: {f.filename} — OCR failed: {e}]")
+        elif content_type.startswith("text/") or f.filename.endswith((".txt", ".md", ".csv", ".json", ".py", ".js", ".html")):
+            # Plain text files — read directly
+            try:
+                text = raw_bytes.decode("utf-8", errors="replace")
+                file_context_parts.append(f"[File: {f.filename}]\n{text}")
+            except Exception:
+                file_context_parts.append(f"[File: {f.filename} — could not decode]")
+        else:
+            file_context_parts.append(f"[File: {f.filename} — unsupported type: {content_type}]")
+
+    # Prepend file context to stimulus
+    if file_context_parts:
+        file_block = "\n\n".join(file_context_parts)
+        combined = f"{file_block}\n\n---\n\n{stimulus}"
+    else:
+        combined = stimulus
+
+    # Delegate to the same pipeline via a synthetic RilieRequest
+    req = RilieRequest(stimulus=combined, max_pass=max_pass)
+    return run_rilie(req, request)
 # ---------------------------------------------------------------------------
 
 @app.get("/v1/curiosity/status")
