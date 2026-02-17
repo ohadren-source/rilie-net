@@ -162,8 +162,8 @@ def gate_resonance(plate: Dict[str, Any], stimulus: str) -> tuple:
     stim_len = len(stimulus.split())
     resp_len = len(text.split())
 
-    # Simple greeting/question (< 8 words) shouldn't get a lecture (> 50 words)
-    if stim_len < 8 and resp_len > 60:
+    # Simple greeting/question (< 8 words) shouldn't get a lecture (> 100 words)
+    if stim_len < 8 and resp_len > 100:
         return False, "OVERCOOKED"
 
     # Complex question (> 20 words) shouldn't get a stub (< 5 words)

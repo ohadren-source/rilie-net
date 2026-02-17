@@ -896,7 +896,7 @@ class RILIE:
             if not rejected and active_search:
                 try:
                     yardstick_result = _google_yardstick(shaped, active_search)
-                    if yardstick_result < 9:
+                    if yardstick_result < 3:
                         logger.warning(
                             "YARDSTICK REJECT (%d results): '%s'",
                             yardstick_result, shaped[:80]
