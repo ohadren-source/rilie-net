@@ -930,9 +930,11 @@ class ConversationMemory:
                 if len(after.split()) >= 4:
                     excerpt = self._excerpt(after, 40)
                     pulls = [
-                        f'Wait — go back to \"{excerpt}.\" Say more about that.',
-                        f'Hold on. \"{excerpt}\" — that\'s the thread. Pull it.',
-                        f'You just dropped \"{excerpt}\" like it\'s nothing. It\'s not nothing.',
+                        f'huh... \"{excerpt}\" — that\'s intriguing. you mind going a bit deeper on that? :)',
+                        f'oh wow... \"{excerpt}\" — that was unexpected! in a good way... :)',
+                        f'wait... \"{excerpt}\" — something about that. i\'m curious... what made you think of it?',
+                        f'hmm... \"{excerpt}\" — i feel like there\'s more there. want to unpack that a little? :)',
+                        f'no way... \"{excerpt}\" — that really landed with me! say a little more perhaps? :)',
                     ]
                     return random.choice(pulls)
         return None
