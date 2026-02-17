@@ -680,6 +680,19 @@ async def run_rilie_upload(
                 file_context_parts.append(f"[File: {f.filename}]\n{text}")
             except Exception:
                 file_context_parts.append(f"[File: {f.filename} — could not decode]")
+        elif f.filename.endswith(".docx"):
+            # Word documents — extract text via python-docx
+            try:
+                import io
+                from docx import Document
+                doc = Document(io.BytesIO(raw_bytes))
+                text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+                if text:
+                    file_context_parts.append(f"[Document: {f.filename}]\n{text}")
+                else:
+                    file_context_parts.append(f"[Document: {f.filename} — no text found]")
+            except Exception as e:
+                file_context_parts.append(f"[Document: {f.filename} — parse failed: {e}]")
         else:
             file_context_parts.append(f"[File: {f.filename} — unsupported type: {content_type}]")
 
