@@ -718,7 +718,9 @@
       <!-- OUTPUT ON TOP -->
       <div class="rilie-output-label">Discourse</div>
       <div class="rilie-output-wrap">
-        <div id="rilie-output" class="rilie-output"></div>
+        <div id="rilie-output" class="rilie-output">
+          <div style="margin-bottom:16px"><p><strong>RILIE:</strong> Hi there! What's your name? You can call me RILIE if you so please... :)</p></div>
+        </div>
         <div id="rilie-output-actions" class="rilie-output-actions">
           <!-- Share -->
           <button class="rilie-action-btn" id="rilie-share" title="Share">
@@ -748,6 +750,10 @@
             <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </label>
           <input id="rilie-files" type="file" multiple style="display: none;" />
+          <div style="position:absolute;bottom:12px;left:44px;z-index:10;display:flex;align-items:center;gap:6px;max-width:calc(100% - 200px);overflow:hidden;">
+            <span id="rilie-file-names" class="rilie-file-names"></span>
+            <button id="rilie-file-clear" class="rilie-file-clear">✕</button>
+          </div>
           <button class="rilie-button rilie-textarea-button" id="rilie-submit">Learn from Go</button>
         </div>
       </div>
@@ -769,6 +775,12 @@
     const inputEl = document.getElementById("rilie-input");
     const outputEl = document.getElementById("rilie-output");
     
+    // --- HELLO BROOKLYN ---
+    // userName starts null. First submit goes to /v1/hello to parse the name.
+    // After that, every call includes user_name in the payload.
+    let userName = null;
+    let greeted = false;
+    
     console.log("submitBtn:", submitBtn);
     console.log("inputEl:", inputEl);
     console.log("outputEl:", outputEl);
@@ -782,6 +794,7 @@
     const rewriteBtn = document.getElementById("rilie-rewrite");
     const fileInput = document.getElementById("rilie-files");
     const fileNames = document.getElementById("rilie-file-names");
+    const fileClear = document.getElementById("rilie-file-clear");
     let lastStimulus = "";
 
     /* ── File Upload Display ── */
@@ -796,6 +809,12 @@
         fileClear.classList.remove("visible");
       }
     });
+
+    fileClear.onclick = () => {
+      fileInput.value = "";
+      fileNames.textContent = "";
+      fileClear.classList.remove("visible");
+    };
 
     function updateMeta(data) {
       metaPanel.classList.add("visible");
@@ -887,6 +906,48 @@
       lastStimulus = stimulus;
       inputEl.value = "";
 
+      // --- GREETING INTERCEPT ---
+      // First submit: send to /v1/hello to parse name. No Kitchen.
+      if (!greeted) {
+        greeted = true;
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Going...";
+
+        // Show what they typed
+        const userDiv = document.createElement("div");
+        userDiv.style.marginBottom = "16px";
+        userDiv.innerHTML = "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
+        outputEl.appendChild(userDiv);
+
+        try {
+          const res = await fetch("/v1/hello", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: stimulus })
+          });
+          const data = await res.json();
+          userName = data.name || "mate";
+
+          const rilieDiv = document.createElement("div");
+          rilieDiv.style.marginBottom = "16px";
+          rilieDiv.innerHTML = "<p><strong>RILIE:</strong> Nice to meet you, " + escapeHtml(userName) + "! What's on your mind? \u{1F373}</p>";
+          outputEl.appendChild(rilieDiv);
+          outputEl.scrollTop = outputEl.scrollHeight;
+        } catch (err) {
+          // If /v1/hello fails, just use mate and move on
+          userName = "mate";
+          const rilieDiv = document.createElement("div");
+          rilieDiv.style.marginBottom = "16px";
+          rilieDiv.innerHTML = "<p><strong>RILIE:</strong> Nice to meet you, mate! What's on your mind? \u{1F373}</p>";
+          outputEl.appendChild(rilieDiv);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Learn from Go";
+        }
+        return;
+      }
+      // --- END GREETING INTERCEPT ---
+
       submitBtn.disabled = true;
       submitBtn.textContent = "Going...";
       outputActions.classList.remove("visible");
@@ -909,13 +970,13 @@
           for (let i = 0; i < files.length; i++) {
             formData.append("files", files[i]);
           }
-          res = await fetch("/v1/rilie", { method: "POST", body: formData });
+          res = await fetch("/v1/rilie-upload", { method: "POST", body: formData });
         } else {
           // Send as JSON (no files)
           res = await fetch("/v1/rilie", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ stimulus, max_pass: 3 })
+            body: JSON.stringify({ stimulus, max_pass: 3, user_name: userName || "mate" })
           });
         }
 
