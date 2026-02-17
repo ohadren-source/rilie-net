@@ -582,27 +582,25 @@ def construct_response(stimulus: str, snippet: str) -> str:
                 seed = snippet_clean.lower()
                 if subject and focus:
                     return (
-                        f"When you look at {subject} through the lens of {focus}, "
-                        f"it comes back to {seed} — that's where the real weight is. "
-                        f"Everything else is decoration."
+                        f"Gotcha.. {subject} when focusing on {focus}, "
+                        f"shows us that {seed} is not absolute truth, "
+                        f"it's just our perspective."
                     )
                 if subject:
                     return (
                         f"The core of {subject} is {seed}. "
-                        f"Strip away everything else and that's what's left. "
-                        f"That's what actually moves."
+                        f"It's all about essence, ain't it?"
                     )
                 return (
-                    f"It starts with {seed}. "
-                    f"That's not a detail, that's the foundation. "
-                    f"Everything builds from there."
+                    f"Start with {seed}. On the surface, a mere detail. "
+                    f"You dig a little deeper and discover it's the foundation :)"
                 )
             else:
                 # SENTENCE MODE: Restructure through stimulus
                 core = snippet_clean
                 if subject:
-                    return f"What makes {subject} work — {core[0].lower()}{core[1:]}"
-                return f"Here's the thing — {core[0].lower()}{core[1:]}"
+                    return f"This hits {subject} ...let's explore {core[0].lower()}{core[1:]} if you're game"
+                return f"The thing about {core[0].lower()}{core[1:]}"
 
         except Exception:
             pass
@@ -619,14 +617,13 @@ def construct_response(stimulus: str, snippet: str) -> str:
         topic = " ".join(topic_words[:3]) if topic_words else "this"
 
         return (
-            f"With {topic}, the thing that matters most is {seed}. "
-            f"Not the surface — the {seed} underneath it. "
-            f"That's where the real conversation is."
+            f"Interesting... {topic}... {seed}... that's deep. "
+            f"I mean that, sincerely."
         )
 
     # SENTENCE MODE without Chompky
     core = snippet_clean
-    return f"Here's what it comes down to — {core[0].lower()}{core[1:]}"
+    return f"Oh... it connects to {core[0].lower()}{core[1:]}"
 
 
 def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
@@ -655,34 +652,40 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
                     return (
                         f"With {subject}, there are two forces at work — "
                         f"{s1.lower()} and {s2.lower()}. "
-                        f"They look separate but they're the same principle "
-                        f"wearing different clothes. Pull one thread and the other moves."
+                        f"They seem different but they're related... huh..."
                     )
                 return (
-                    f"Two things that seem unrelated: {s1.lower()} and {s2.lower()}. "
-                    f"But look closer — they're connected. "
-                    f"One doesn't work without the other."
+                    f"That tracks... {s1.lower()} and {s2.lower()} "
+                    f"seem like opposites at first and then you realize "
+                    f"they're actually 2 sides of the same continuum. "
+                    f"Light (bulb went off/on hehe ;)!"
                 )
             elif s1_is_word or s2_is_word:
                 # One word, one sentence — anchor through the word
                 word = s1 if s1_is_word else s2
                 sentence = s2 if s1_is_word else s1
                 return (
-                    f"Start with {word.lower()} — "
+                    f"That tracks... {word.lower()} and "
                     f"{sentence[0].lower()}{sentence[1:]} "
-                    f"That connection is where it gets interesting."
+                    f"seem like opposites at first and then you realize "
+                    f"they're actually 2 sides of the same continuum. "
+                    f"Light (bulb went off/on hehe ;)!"
                 )
             else:
                 # Both sentences
                 if subject:
                     return (
-                        f"Two things about {subject}: "
-                        f"{s1[0].lower()}{s1[1:]}, and on the flip side, "
-                        f"{s2[0].lower()}{s2[1:]}"
+                        f"With {subject}, there are two forces at work — "
+                        f"{s1[0].lower()}{s1[1:]}, and "
+                        f"{s2[0].lower()}{s2[1:]}. "
+                        f"They seem different but they're related... huh..."
                     )
                 return (
-                    f"On one hand — {s1[0].lower()}{s1[1:]}. "
-                    f"But then — {s2[0].lower()}{s2[1:]}"
+                    f"That tracks... {s1[0].lower()}{s1[1:]}, and "
+                    f"{s2[0].lower()}{s2[1:]} — "
+                    f"seem like opposites at first and then you realize "
+                    f"they're actually 2 sides of the same continuum. "
+                    f"Light (bulb went off/on hehe ;)!"
                 )
         except Exception:
             pass
@@ -690,10 +693,16 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
     # No Chompky fallback
     if s1_is_word and s2_is_word:
         return (
-            f"There's a connection between {s1.lower()} and {s2.lower()} "
-            f"that most people miss. One feeds the other."
+            f"That tracks... {s1.lower()} and {s2.lower()} "
+            f"seem like opposites at first and then you realize "
+            f"they're actually 2 sides of the same continuum. "
+            f"Light (bulb went off/on hehe ;)!"
         )
-    return f"Two sides — {s1[0].lower()}{s1[1:]}, and {s2[0].lower()}{s2[1:]}"
+    return (
+        f"With these two forces at work — {s1[0].lower()}{s1[1:]}, "
+        f"and {s2[0].lower()}{s2[1:]}. "
+        f"They seem different but they're related... huh..."
+    )
 
 
 # ============================================================================
