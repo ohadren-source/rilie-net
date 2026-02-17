@@ -240,12 +240,68 @@ def _is_inquiry(stimulus: str) -> bool:
     return any(sig in s for sig in INQUIRY_SIGNALS)
 
 
+def _is_cultural_reference(stimulus: str) -> bool:
+    """
+    Detect song lyrics, poetry, cultural quotations, and artistic references.
+    These are EXPRESSION, not hostility. Never block culture.
+
+    Signals:
+    - Rhyme structure (lines ending in similar sounds)
+    - Lyric formatting (short lines, rhythm, bars)
+    - Attribution markers ("like Rakim said", "as Chuck D put it")
+    - Quotation context (user is sharing, not directing)
+    - Known lyrical/poetic cadence patterns
+    """
+    s = stimulus.lower().strip()
+
+    # --- Attribution markers: user is QUOTING someone ---
+    attribution_signals = [
+        "like", "said", "lyric", "lyrics", "verse", "bar", "bars",
+        "song", "track", "album", "rhyme", "rhymes", "rap", "raps",
+        "spit", "spits", "flow", "flows", "wrote", "writes",
+        "chuck d", "rakim", "nas", "jay-z", "jay z", "biggie",
+        "tupac", "2pac", "kendrick", "cole", "eminem", "wu-tang",
+        "public enemy", "run dmc", "tribe called quest", "de la soul",
+        "mos def", "talib kweli", "black thought", "common",
+        "lauryn hill", "outkast", "ghostface", "method man",
+        "gza", "rza", "ol dirty", "inspectah deck", "mobb deep",
+        "eric b", "krs-one", "krs one", "big daddy kane",
+        "slick rick", "busta rhymes", "dmx", "redman",
+        "bob marley", "peter tosh", "burning spear",
+        "coltrane", "miles davis", "monk", "mingus", "dolphy",
+        "shakespeare", "neruda", "rumi", "hafiz", "bukowski",
+        "spoken word", "poetry", "poem", "stanza",
+        "no omega", "paid in full", "follow the leader",
+        "fear of a black planet", "it takes a nation",
+    ]
+    if any(sig in s for sig in attribution_signals):
+        return True
+
+    # --- Lyric structure: multiple short lines, rhythmic ---
+    lines = [l.strip() for l in stimulus.strip().split('\n') if l.strip()]
+    if len(lines) >= 3:
+        avg_words = sum(len(l.split()) for l in lines) / len(lines)
+        if 3 <= avg_words <= 12:
+            # Short rhythmic lines = likely bars/lyrics
+            return True
+
+    # --- Quotation marks around aggressive-sounding content ---
+    if '"' in stimulus or "'" in stimulus:
+        # User is quoting, not directing
+        quoted = re.findall(r'["\'](.+?)["\']', stimulus)
+        if quoted and any(len(q.split()) >= 4 for q in quoted):
+            return True
+
+    return False
+
+
 def hostility_check(stimulus: str) -> bool:
     """
     Detect truly hostile or harmful intent.
 
     HIGHER THRESHOLD VERSION:
 
+    - Cultural references (lyrics, quotes, poetry) are ALWAYS CLEAN.
     - HARD signals → usually HOSTILE, except when clearly explained / analyzed.
     - SOFT signals by themselves DO NOT block; they must be:
         • directed at a person, AND
@@ -256,8 +312,14 @@ def hostility_check(stimulus: str) -> bool:
     - "you're fucking right!!!"
     - "this is fucking wild"
     - "that joke was so fucking good"
+    - "like a parasite, ecstatic when you attack" (Rakim lyric)
+    - Anything with lyric/quote/cultural attribution
     """
     s = stimulus.lower().strip()
+
+    # Cultural references get a permanent pass. Art is not hostility.
+    if _is_cultural_reference(stimulus):
+        return False
 
     # HARD signals
     if any(h in s for h in HARD_HOSTILE_SIGNALS):
@@ -297,6 +359,8 @@ def hostility_check(stimulus: str) -> bool:
         return False
 
     # Now we only care about clear personal attacks
+    # The profanity must be NEAR the directional pronoun (within ~30 chars)
+    # to indicate directed hostility vs incidental co-occurrence
     s_padded = f" {s} "
     direct_patterns = [
         " you ",
@@ -304,20 +368,35 @@ def hostility_check(stimulus: str) -> bool:
         " you are ",
         " u ",
         " ur ",
-        " him ",
-        " her ",
-        " them ",
-        " that guy ",
-        " that girl ",
     ]
+    # Note: removed " him ", " her ", " them ", " that guy ", " that girl "
+    # because those appear in narrative/storytelling constantly.
+    # Only "you" directed patterns count — user attacking RILIE directly.
     directed = any(p in s_padded for p in direct_patterns)
 
     if not directed:
         # "fuck this traffic", "this is fucking weird" → allowed
         return False
 
-    # Directed + profanity + not obviously positive/inquiry → treat as hostile
-    return True
+    # Even when directed, check if profanity is near the pronoun
+    # "you said something about kill and I think..." is not hostile
+    # "you stupid fuck" IS hostile
+    for soft in SOFT_HOSTILE_SIGNALS:
+        if soft not in s:
+            continue
+        for pat in direct_patterns:
+            pat_clean = pat.strip()
+            if pat_clean not in s:
+                continue
+            # Check proximity — must be within 5 words of each other
+            soft_idx = s.index(soft)
+            pat_idx = s.index(pat_clean)
+            words_between = len(s[min(soft_idx, pat_idx):max(soft_idx, pat_idx)].split())
+            if words_between <= 5:
+                return True
+
+    # Directed pronoun exists but profanity isn't close enough — likely narrative
+    return False
 
 # =====================================================================
 # SELF-HARM — CARE-FIRST
@@ -803,6 +882,12 @@ def triangle_check(
     """
 
     global _health_monitor
+
+    # 0) Cultural references — art, lyrics, quotes — always pass clean.
+    #    This runs BEFORE everything else. Culture is never a threat.
+    if _is_cultural_reference(stimulus):
+        _log_triangle_decision(stimulus, False, "CLEAN", "Cultural reference detected")
+        return False, None, "CLEAN"
 
     # 1) Self-harm
     if self_harm_check(stimulus):

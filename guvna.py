@@ -482,8 +482,12 @@ class Guvna:
         raw["baseline_used"] = bool(baseline_text)
 
         # Add tone header — her shorthand for how she read the stimulus
+        # BUT: never put a tone header on a Triangle block/redirect.
+        # A safety redirect with "Insight focus 💡" on top is tone-deaf.
         result_text = raw.get("result", "")
-        if result_text and not result_text.startswith(tone):
+        triangle_reason = raw.get("triangle_reason", "CLEAN")
+        is_blocked = triangle_reason not in ("CLEAN", None, "")
+        if result_text and not result_text.startswith(tone) and not is_blocked:
             raw["result"] = apply_tone_header(result_text, tone)
 
         # Memory enrichments
