@@ -906,8 +906,15 @@ class RILIE:
                 clean_bl = _html.unescape(baseline_text)
                 clean_bl = re.sub(r"<[^>]+>", "", clean_bl)
                 clean_bl = re.sub(r"\s+", " ", clean_bl).strip()
-                if len(clean_bl) > 200:
-                    clean_bl = clean_bl[:200].rsplit(" ", 1)[0]
+                if len(clean_bl) > 300:
+                    clean_bl = clean_bl[:300]
+                    for _sep in [". ", "! ", "? "]:
+                        _idx = clean_bl.rfind(_sep)
+                        if _idx > 100:
+                            clean_bl = clean_bl[:_idx + 1]
+                            break
+                    else:
+                        clean_bl = clean_bl.rsplit(" ", 1)[0]
 
                 # Use meaning fingerprint to shape HOW she serves the baseline
                 if clean_bl and fingerprint:
