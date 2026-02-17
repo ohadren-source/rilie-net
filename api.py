@@ -488,6 +488,54 @@ def build_plate(raw_envelope):
 
 
 # ---------------------------------------------------------------------------
+# /v1/hello — DOORMAN → HOSTESS (name extraction, one call ever)
+# ---------------------------------------------------------------------------
+
+class HelloRequest(BaseModel):
+    text: str = ""
+
+@app.post("/v1/hello")
+def hello(req: HelloRequest) -> Dict[str, str]:
+    """
+    Parse a name from whatever they typed. Return it.
+    If no name found, return 'mate'. That's it. Hanzo.
+    """
+    text = (req.text or "").strip()
+    if not text:
+        return {"name": "mate"}
+
+    # Common non-name responses
+    _skip = {"hi", "hello", "hey", "sup", "yo", "ok", "okay", "no",
+             "yes", "yeah", "nah", "nothing", "idk", "skip", "nope",
+             "what", "who", "why", "how", "huh", "lol", "haha",
+             "hi there", "hello there", "hey there"}
+
+    # If they just typed a name (1-3 words, no question marks)
+    clean = text.rstrip(".!?,;:)").strip()
+    if clean.lower() in _skip:
+        return {"name": "mate"}
+
+    # Try to extract name from common patterns
+    import re
+    # "My name is X" / "I'm X" / "call me X" / "it's X" / "I am X"
+    patterns = [
+        r"(?:my name is|i'm|im|i am|call me|it's|its|they call me|people call me|name's|names)\s+([A-Za-z][A-Za-z\-']{0,20})",
+    ]
+    for pat in patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            return {"name": m.group(1).strip().title()}
+
+    # If it's short and looks like just a name (1-2 words, no weird chars)
+    words = clean.split()
+    if 1 <= len(words) <= 2 and all(w.isalpha() and len(w) <= 20 for w in words):
+        return {"name": clean.title()}
+
+    # Couldn't parse — mate it is
+    return {"name": "mate"}
+
+
+# ---------------------------------------------------------------------------
 # /v1/rilie — MAIN ENDPOINT (SESSION-AWARE)
 # ---------------------------------------------------------------------------
 
@@ -517,41 +565,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # --- 1. Load session ---
     client_ip = get_client_ip(request)
     session = load_session(client_ip)
-
-    # --- HELLO WORLD --- 
-    # Not greeted? Print. Get name. Move on with our lives.
-    if not session.get("greeted"):
-        session["greeted"] = True
-        save_session(session)
-        return {
-            "stimulus": stimulus,
-            "result": "Hi there! What's your name? You can call me RILIE if you so please... :)",
-            "quality_score": 1.0, "priorities_met": 1,
-            "anti_beige_score": 1.0, "status": "PRIMER",
-            "depth": 0, "pass": 0, "conversation_health": 100,
-            "tone": "warm", "tone_emoji": "\U0001f373",
-        }
-
-    # --- GRAB NAME (once, second message only) ---
-    if not session.get("named"):
-        session["named"] = True
-        name = stimulus.strip().rstrip(".!?,;:")
-        _skip = {"hi", "hello", "hey", "sup", "yo", "ok", "okay", "no",
-                 "yes", "yeah", "nah", "nothing", "idk", "skip", "nope",
-                 "what", "who", "why", "how", "huh", "lol", "haha"}
-        if not name or len(name) > 30 or name.lower() in _skip:
-            session["user_name"] = "mate"
-        else:
-            session["user_name"] = name.title()
-        save_session(session)
-        return {
-            "stimulus": stimulus,
-            "result": f"Nice to meet you, {session['user_name']}! What's on your mind? \U0001f373",
-            "quality_score": 1.0, "priorities_met": 1,
-            "anti_beige_score": 1.0, "status": "PRIMER",
-            "depth": 0, "pass": 0, "conversation_health": 100,
-            "tone": "warm", "tone_emoji": "\U0001f373",
-        }
 
     # --- 2. Restore state ---
     restore_guvna_state(guvna, session)
