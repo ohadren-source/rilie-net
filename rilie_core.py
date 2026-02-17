@@ -36,10 +36,10 @@ from typing import List, Dict, Optional
 # Chompky â€” grammar brain for constructing responses from thought
 # Graceful fallback if spaCy model not available
 try:
-    from ChompkyAtTheBit import parse_question, extract_holy_trinity_for_roux, infer_time_bucket
-    CHOMPKY_AVAILABLE = True
+    from ChomskyAtTheBit import parse_question, extract_holy_trinity_for_roux, infer_time_bucket
+    CHOMSKY_AVAILABLE = True
 except Exception:
-    CHOMPKY_AVAILABLE = False
+    CHOMSKY_AVAILABLE = False
 
 
 # ============================================================================
@@ -570,7 +570,7 @@ def construct_response(stimulus: str, snippet: str) -> str:
     is_word_seed = len(snippet_words) < 5
 
     # --- Chompky-powered construction ---
-    if CHOMPKY_AVAILABLE:
+    if CHOMSKY_AVAILABLE:
         try:
             parsed = parse_question(stimulus)
             subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
@@ -644,7 +644,7 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
     s2_is_word = len(s2.split()) < 5
     stim_lower = stimulus.lower().strip()
 
-    if CHOMPKY_AVAILABLE:
+    if CHOMSKY_AVAILABLE:
         try:
             parsed = parse_question(stimulus)
             subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
@@ -708,7 +708,7 @@ def detect_domains(stimulus: str) -> List[str]:
     }
 
     # Chompky boost: use holy_trinity to find domains the keywords missed
-    if CHOMPKY_AVAILABLE:
+    if CHOMSKY_AVAILABLE:
         try:
             trinity = extract_holy_trinity_for_roux(stimulus)
             for word in trinity:
