@@ -897,8 +897,17 @@
       submitBtn.onclick = async () => {
         console.log("Button clicked!");
         const stimulus = inputEl.value.trim();
-      if (!stimulus) {
-        outputEl.textContent = "Drop something in. A question, a thought, a vibe. Then hit Go.";
+        const files = fileInput.files;
+        const hasFiles = files && files.length > 0;
+
+      if (!stimulus && !hasFiles) {
+        // Don't wipe conversation — just append a nudge
+        const nudge = document.createElement("div");
+        nudge.style.marginBottom = "16px";
+        nudge.style.opacity = "0.6";
+        nudge.innerHTML = "<em>Drop something in. A question, a thought, a vibe. Then hit Go.</em>";
+        outputEl.appendChild(nudge);
+        outputEl.scrollTop = outputEl.scrollHeight;
         return;
       }
 
@@ -959,16 +968,16 @@
         userDiv.innerHTML = "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
         outputEl.appendChild(userDiv);
 
-        const files = fileInput.files;
+        const files2 = fileInput.files;
         let res;
 
-        if (files && files.length > 0) {
+        if (files2 && files2.length > 0) {
           // Send as FormData with files
           const formData = new FormData();
-          formData.append("stimulus", stimulus);
+          formData.append("stimulus", stimulus || "Please review the attached file(s)");
           formData.append("max_pass", "3");
-          for (let i = 0; i < files.length; i++) {
-            formData.append("files", files[i]);
+          for (let i = 0; i < files2.length; i++) {
+            formData.append("files", files2[i]);
           }
           res = await fetch("/v1/rilie-upload", { method: "POST", body: formData });
         } else {
@@ -1047,6 +1056,10 @@
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = "Learn from Go";
+        // Clear file selection after submit
+        fileInput.value = "";
+        fileNames.textContent = "";
+        fileClear.classList.remove("visible");
       }
       };
     } else {
