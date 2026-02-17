@@ -27,40 +27,12 @@ def generate(
     disclosure_level: str = "full",
 ) -> str:
     """
-    Nuclear: generate or return empty.
-    No scripts. No "I'm thinking about that."
+    Nuclear: pass through Kitchen output. No prefix. No acknowledgment.
     She speaks or she's silent.
     """
-    
-    if not question or not question.strip():
-        return kitchen_meaning or ""
-    
     if not kitchen_meaning or not kitchen_meaning.strip():
-        if CHOMSKY_AVAILABLE:
-            try:
-                time_bucket = infer_time_bucket(question)
-                subject = extract_main_subject(question)
-                ack = build_acknowledgment([subject], time_bucket, question)
-                if ack:
-                    return ack
-            except Exception:
-                pass
         return ""
-    
-    try:
-        if CHOMSKY_AVAILABLE:
-            time_bucket = infer_time_bucket(question)
-            subject = extract_main_subject(question)
-            acknowledgment = build_acknowledgment([subject], time_bucket, question)
-            
-            if acknowledgment:
-                return f"{acknowledgment} {kitchen_meaning}"
-        
-        return kitchen_meaning
-        
-    except Exception as e:
-        logger.debug("Generation failed: %s", e)
-        return kitchen_meaning
+    return kitchen_meaning
 
 
 def extract_main_subject(question: str) -> str:

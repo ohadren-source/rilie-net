@@ -481,10 +481,8 @@ class Guvna:
         raw["baseline"] = baseline
         raw["baseline_used"] = bool(baseline_text)
 
-        # Add tone header if not already present
-        result_text = raw.get("result", "")
-        if result_text and not result_text.startswith(tone):
-            raw["result"] = apply_tone_header(result_text, tone)
+        # Tone header DISABLED — serve the plate raw, no garnish
+        # raw["result"] = apply_tone_header(result_text, tone)
 
         # Memory enrichments
         result_text = raw.get("result", "")
