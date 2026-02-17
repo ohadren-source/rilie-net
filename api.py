@@ -518,14 +518,10 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     client_ip = get_client_ip(request)
     session = load_session(client_ip)
 
-    # --- BASIC GREETING — Hello Brooklyn ---
-    # First contact: hardcoded print. No pipeline. No Kitchen.
-    # Grab name or call them mate. The end. Then Learn from Go.
-    turn_count = session.get("turn_count", 0)
-
-    if turn_count == 0:
-        # First ever message — ask for name
-        session["turn_count"] = 1
+    # --- HELLO WORLD --- 
+    # Not greeted? Print. Get name. Move on with our lives.
+    if not session.get("greeted"):
+        session["greeted"] = True
         save_session(session)
         return {
             "stimulus": stimulus,
@@ -536,25 +532,21 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             "tone": "warm", "tone_emoji": "\U0001f373",
         }
 
-    if turn_count == 1:
-        # Second message — they gave their name (or didn't)
-        session["turn_count"] = 2
-        # Try to grab a name from what they said
+    # --- GRAB NAME (once, second message only) ---
+    if not session.get("named"):
+        session["named"] = True
         name = stimulus.strip().rstrip(".!?,;:")
-        # Filter out non-name responses
-        _not_names = {"hi", "hello", "hey", "sup", "yo", "ok", "okay", "no",
-                      "yes", "yeah", "nah", "nothing", "idk", "skip", "nope",
-                      "what", "who", "why", "how", "huh", "lol", "haha"}
-        if not name or len(name) > 30 or name.lower() in _not_names or " " in name and len(name.split()) > 3:
+        _skip = {"hi", "hello", "hey", "sup", "yo", "ok", "okay", "no",
+                 "yes", "yeah", "nah", "nothing", "idk", "skip", "nope",
+                 "what", "who", "why", "how", "huh", "lol", "haha"}
+        if not name or len(name) > 30 or name.lower() in _skip:
             session["user_name"] = "mate"
         else:
-            # Capitalize first letter of each word
             session["user_name"] = name.title()
         save_session(session)
-        user_name = session["user_name"]
         return {
             "stimulus": stimulus,
-            "result": f"Nice to meet you, {user_name}! What's on your mind? \U0001f373",
+            "result": f"Nice to meet you, {session['user_name']}! What's on your mind? \U0001f373",
             "quality_score": 1.0, "priorities_met": 1,
             "anti_beige_score": 1.0, "status": "PRIMER",
             "depth": 0, "pass": 0, "conversation_health": 100,
