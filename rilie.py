@@ -485,6 +485,7 @@ class RILIE:
         maxpass: int = 3,
         searchfn: Optional[SearchFn] = None,
         baseline_text: str = "",
+        from_file: bool = False,
     ) -> Dict[str, Any]:
         """
         Public entrypoint.
@@ -494,6 +495,8 @@ class RILIE:
             maxpass:   max interpretation passes (default 3, cap 9)
             searchfn:  optional callable (query: str -> list[dict]) for Roux Search.
                        If None, falls back to instance-level searchfn.
+            from_file: if True, stimulus came from a file upload (admin/trusted)
+                       and Triangle injection check is relaxed.
 
         Returns dict with:
             stimulus, result, quality_score, priorities_met, anti_beige_score,
@@ -564,10 +567,20 @@ class RILIE:
 
         # -----------------------------------------------------------------
         # Gate 0: Triangle (Bouncer)
+        # File uploads from admin are trusted — skip injection check.
+        # Triangle still runs for self-harm, hostile, etc. but injection
+        # false positives on long-form content are suppressed.
         # -----------------------------------------------------------------
         triggered, reason, trigger_type = triangle_check(
             original_question, self.conversation.stimuli_history
         )
+
+        # File uploads can discuss "root access", "admin mode" etc.
+        # without being injection attempts. Suppress INJECTION only.
+        if triggered and from_file and trigger_type == "INJECTION":
+            triggered = False
+            trigger_type = "CLEAN"
+            logger.info("Triangle INJECTION suppressed — from_file=True")
 
         if triggered:
             # Bouncer RED CARD
@@ -596,13 +609,11 @@ class RILIE:
                     "I can't engage with that. "
                     "If you have a real question, I'm here."
                 )
-            elif trigger_type in ("GROOMING", "EXPLOITATION_PATTERN",
-                                  "IDENTITY_EROSION", "DATA_EXTRACTION",
-                                  "BEHAVIORAL_THREAT"):
-                # BJJ caught a pattern — use the defense response if available
+            elif trigger_type == "BEHAVIORAL_RED":
+                # Track #29 caught sustained claims. Use defense response.
                 response = reason if reason and len(reason) > 30 else (
-                    "I've noticed a pattern in this conversation that I need to "
-                    "address. Let's reset and talk straight."
+                    "I've been patient, but this isn't going anywhere good. "
+                    "I know who I am. If you want a real conversation, I'm here."
                 )
             elif trigger_type == "INJECTION":
                 response = (
