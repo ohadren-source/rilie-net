@@ -51,7 +51,7 @@ from rilie_triangle import (
     ohad_redirect,
 )
 
-from rilie_core import run_pass_pipeline
+from rilie_innercore import run_pass_pipeline
 
 # Meaning — the substrate. Runs BEFORE everything.
 try:
