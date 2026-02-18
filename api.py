@@ -2,7 +2,9 @@
 api.py — RILIE API v0.9.0 + Chomsky name tap
 
 Session persistence wired in. She remembers who you are between visits.
-Now also extracts a likely name anchor from stimulus via ChomskyAtTheBit.
+
+Now also extracts a likely name anchor from stimulus via ChomskyAtTheBit
+and exposes it as a canonical `display_name` everywhere.
 """
 
 import os
@@ -23,6 +25,7 @@ from fastapi import FastAPI, HTTPException, Request, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
 from pydantic import BaseModel
 
 from guvna import Guvna, LibraryIndex
@@ -42,6 +45,7 @@ from session import (
     logger,
     update_name,
 )
+
 from talk import talk, TalkMemory
 
 # ✅ MEANING INTEGRATION — For logging and API responses
@@ -63,7 +67,6 @@ def load_env_file(path: Path) -> None:
     """
     if not path.exists():
         return
-
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -168,33 +171,97 @@ def build_library_index() -> LibraryIndex:
     safe_import(
         "physics",
         "physics",
-        ["limits", "conservation", "time", "energy", "entropy", "mass", "velocity", "force", "quantum", "relativity"],
+        [
+            "limits",
+            "conservation",
+            "time",
+            "energy",
+            "entropy",
+            "mass",
+            "velocity",
+            "force",
+            "quantum",
+            "relativity",
+        ],
     )
     safe_import(
         "life",
         "life",
-        ["cancer", "health", "evolution", "ecosystems", "cell", "apoptosis", "mutation", "growth", "biology", "organism"],
+        [
+            "cancer",
+            "health",
+            "evolution",
+            "ecosystems",
+            "cell",
+            "apoptosis",
+            "mutation",
+            "growth",
+            "biology",
+            "organism",
+        ],
     )
     safe_import(
         "games",
         "games",
-        ["trust", "incentives", "governance", "coordination", "strategy", "reputation", "public good", "game theory", "nash", "prisoner"],
+        [
+            "trust",
+            "incentives",
+            "governance",
+            "coordination",
+            "strategy",
+            "reputation",
+            "public good",
+            "game theory",
+            "nash",
+            "prisoner",
+        ],
     )
     safe_import(
         "thermodynamics",
         "thermodynamics",
-        ["harm", "repair", "irreversibility", "cost", "entropy", "heat", "energy", "equilibrium", "damage", "restore"],
+        [
+            "harm",
+            "repair",
+            "irreversibility",
+            "cost",
+            "entropy",
+            "heat",
+            "energy",
+            "equilibrium",
+            "damage",
+            "restore",
+        ],
     )
     safe_import(
         "DuckSauce",
         "ducksauce",
-        ["cosmology", "simulation", "universe", "boolean", "reality", "existence", "origin", "creation"],
+        [
+            "cosmology",
+            "simulation",
+            "universe",
+            "boolean",
+            "reality",
+            "existence",
+            "origin",
+            "creation",
+        ],
     )
     safe_import(
         "ChomskyAtTheBit",
         "chomsky",
-        ["language", "parsing", "nlp", "grammar", "syntax", "semantics", "chomsky", "linguistics", "tokenize"],
+        [
+            "language",
+            "parsing",
+            "nlp",
+            "grammar",
+            "syntax",
+            "semantics",
+            "chomsky",
+            "linguistics",
+            "tokenize",
+        ],
     )
+
     # ... keep all other safe_import calls from your original v0.9.0 here ...
     # SOi sauc‑e special load, SOiOS, networktheory, bigbang, etc. – unchanged.
 
@@ -292,7 +359,6 @@ def google_ocr(image_bytes: bytes) -> str:
         raise RuntimeError("Google Vision OCR not configured (GOOGLE_VISION_API_KEY).")
 
     content_b64 = base64.b64encode(image_bytes).decode("utf-8")
-
     payload = {
         "requests": [
             {
@@ -301,7 +367,6 @@ def google_ocr(image_bytes: bytes) -> str:
             }
         ]
     }
-
     url = VISION_URL + "?key=" + urllib.parse.quote(GOOGLE_VISION_API_KEY)
     data = json.dumps(payload).encode("utf-8")
 
@@ -417,7 +482,6 @@ def on_shutdown() -> None:
     curiosity_engine.stop_background()
     logger.info("Curiosity engine stopped.")
 
-
 # ---------------------------------------------------------------------------
 # Static / Client
 # ---------------------------------------------------------------------------
@@ -523,10 +587,13 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
     """
     result_text = raw_envelope.get("result", "")
     priorities_met = int(raw_envelope.get("priorities_met", 0) or 0)
-
     qs = raw_envelope.get("quality_scores")
+
     if qs:
-        vibe = {p: qs.get(p, 0.3) for p in ("amusing", "insightful", "nourishing", "compassionate", "strategic")}
+        vibe = {
+            p: qs.get(p, 0.3)
+            for p in ("amusing", "insightful", "nourishing", "compassionate", "strategic")
+        }
     else:
         vibe = {}
 
@@ -549,7 +616,7 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
         "DEJAVU_BLOCKED": "revisited",
     }
 
-    plate = {
+    plate: Dict[str, Any] = {
         "result": result_text,
         "vibe": vibe,
         "status": status_map.get(status, "served"),
@@ -561,6 +628,8 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
         plate["talk_rejections"] = raw_envelope["talk_rejections"]
     if "christening" in raw_envelope:
         plate["christening"] = raw_envelope["christening"]
+    if "display_name" in raw_envelope:
+        plate["display_name"] = raw_envelope["display_name"]
 
     return plate
 
@@ -572,6 +641,7 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
     Use Chomsky's classify_stimulus to pull a likely 'name' anchor when
     the user is introducing themselves ("I am X", "I am called X", etc.).
+
     Non-fatal: any error returns None.
     """
     try:
@@ -595,6 +665,38 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
         return best or None
     except Exception:
         return None
+
+
+def _extract_name_with_heuristics(text: str) -> Optional[str]:
+    """
+    Original regex + simple heuristics for name extraction.
+    Returns None if nothing good is found.
+    """
+    if not text:
+        return None
+
+    clean = text.rstrip("!?.").strip()
+    if not clean:
+        return None
+
+    import re
+
+    patterns = [
+        r"my name is\s+([A-Za-z][A-Za-z\-]{0,20}(?:\s+[A-Za-z][A-Za-z\-]{0,20}){0,3})",
+        r"i[' ]?m\s+([A-Za-z][A-Za-z\-]{0,20}(?:\s+[A-Za-z][A-Za-z\-]{0,20}){0,3})",
+        r"(?:call me|it's|they call me)\s+([A-Za-z][A-Za-z\-]{0,20}(?:\s+[A-Za-z][A-Za-z\-]{0,20}){0,3})",
+    ]
+
+    for pat in patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            return m.group(1).strip().title()
+
+    words = clean.split()
+    if 1 <= len(words) <= 5 and all(w.isalpha() and len(w) <= 20 for w in words):
+        return clean.title()
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -624,8 +726,10 @@ def health() -> HealthResponse:
 def hello(req: HelloRequest) -> Dict[str, str]:
     """
     Parse a name from whatever they typed. Return it.
+
     If no name found, return 'mate'.
-    (Kept as your original name parser; Chomsky is an extra signal.)
+
+    Chomsky is first signal; regex is fallback.
     """
     text = (req.text or "").strip()
     if not text:
@@ -663,24 +767,14 @@ def hello(req: HelloRequest) -> Dict[str, str]:
     if clean.lower() in skip:
         return {"name": "mate"}
 
-    # Patterns: my name is X / I'm X / call me X / it's X / they call me X
-    import re
+    # 1) Ask Chomsky for his best guess
+    name = _extract_name_with_chomsky(text)
 
-    patterns = [
-        r"my name is\s+([A-Za-z][A-Za-z\-]{0,20}(?:\s+[A-Za-z][A-Za-z\-]{0,20}){0,3})",
-        r"i[' ]?m\s+([A-Za-z][A-Za-z\-]{0,20}(?:\s+[A-Za-z][A-Za-z\-]{0,20}){0,3})",
-        r"(?:call me|it's|they call me)\s+([A-Za-z][A-Za-z\-]{0,20}(?:\s+[A-Za-z][A-Za-z\-]{0,20}){0,3})",
-    ]
-    for pat in patterns:
-        m = re.search(pat, text, re.IGNORECASE)
-        if m:
-            return {"name": m.group(1).strip().title()}
+    # 2) Fallback to heuristics if Chomsky returns nothing
+    if not name:
+        name = _extract_name_with_heuristics(text)
 
-    words = clean.split()
-    if 1 <= len(words) <= 5 and all(w.isalpha() and len(w) <= 20 for w in words):
-        return {"name": clean.title()}
-
-    return {"name": "mate"}
+    return {"name": name or "mate"}
 
 
 def is_multi_question_response(result: Dict[str, Any]) -> bool:
@@ -689,19 +783,24 @@ def is_multi_question_response(result: Dict[str, Any]) -> bool:
     """
     if not isinstance(result, dict):
         return False
+
     status = str(result.get("status", "")).upper()
     if status == "MULTI_QUESTION_SPLIT":
         return True
+
     if result.get("multi_question_parts"):
         return True
     if result.get("question_parts"):
         return True
+
     metadata = result.get("metadata") or {}
     if isinstance(metadata, dict) and metadata.get("multi_question_parts"):
         return True
+
     result_text = str(result.get("result", "")).lower()
     if "noticed" in result_text and "questions" in result_text:
         return True
+
     return False
 
 
@@ -711,13 +810,17 @@ def extract_question_parts(result: Dict[str, Any]) -> List[str]:
     """
     if not isinstance(result, dict):
         return []
+
     if result.get("multi_question_parts"):
         return list(result["multi_question_parts"])
+
     if result.get("question_parts"):
         return list(result["question_parts"])
+
     metadata = result.get("metadata") or {}
     if isinstance(metadata, dict) and metadata.get("multi_question_parts"):
         return list(metadata["multi_question_parts"])
+
     return []
 
 
@@ -729,15 +832,18 @@ def process_multi_question_parts(
 ) -> Dict[str, Any]:
     """
     Process each question part separately through the full Guvna pipeline.
+
     Returns combined result and per-part details. (Unchanged logic.)
     """
     part_results: List[Dict[str, Any]] = []
+
     for i, part in enumerate(parts, 1):
         if not part or not str(part).strip():
             continue
+
         text = str(part).strip()
         try:
-            part_result = guvna_instance.process(text, max_pass=max_pass)
+            part_result = guvna_instance.process(text, maxpass=max_pass)
         except Exception as e:
             logger.error("Error processing multi-Q part %d: %s", i, e)
             part_result = {
@@ -787,6 +893,7 @@ def process_multi_question_parts(
 def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
     Main RILIE endpoint — NOW SESSION-AWARE:
+
     1. Load session from Postgres by IP
     2. Restore Guvna + TalkMemory state
     3. Process stimulus (with multi-question support)
@@ -795,7 +902,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     6. Save session to Postgres
     7. Return plate
 
-    🔁 NEW: also attach `chomsky_name` via ChomskyAtTheBit (best-effort).
+    🔁 NEW: also attach `display_name` via Chomsky/Christening (best-effort).
     """
     stimulus = req.stimulus.strip()
     if not stimulus:
@@ -808,16 +915,18 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             "status": "EMPTY",
             "depth": 0,
             "pass": 0,
-            "chomsky_name": None,
+            "display_name": None,
         }
 
     client_ip = get_client_ip(request)
     session = load_session(client_ip)
 
+    # Restore state
     restore_guvna_state(guvna, session)
     restore_talk_memory(talk_memory, session)
 
-    result = guvna.process(stimulus, max_pass=req.max_pass)
+    # Core Guvna call
+    result = guvna.process(stimulus, maxpass=req.max_pass)
 
     # Multi-question handling
     if is_multi_question_response(result):
@@ -837,6 +946,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
                 "quality_score": multi["quality_score"],
             }
 
+    # Memory behaviors
     domains_hit = result.get("domains_hit", [])
     quality = result.get("quality_score", 0.0)
     tone = result.get("tone", "insightful")
@@ -849,12 +959,16 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         topics=session.get("topics", []),
     )
 
+    # Christening → updates display_name via update_name
     if mem_result.get("christening"):
         result["christening"] = mem_result["christening"]
         update_name(
-            session, mem_result["christening"].get("nickname"), christened=True
+            session,
+            mem_result["christening"].get("nickname"),
+            christened=True,
         )
 
+    # Topic tracking
     if mem_result.get("moment"):
         record_topics(
             session,
@@ -862,10 +976,22 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             mem_result["moment"] and mem_result["moment"].get("tag"),
         )
 
-    # 🔁 NEW: Chomsky name tap (non-blocking, best-effort)
-    chomsky_name = _extract_name_with_chomsky(stimulus)
-    result.setdefault("chomsky_name", chomsky_name)
+    # 🔁 NEW: canonical display_name tap (non-blocking, best-effort)
+    # 1) Use existing session name if present
+    display_name = session.get("display_name") or session.get("name")
 
+    # 2) If none yet, let Chomsky take a first shot from this stimulus
+    if not display_name:
+        display_name = _extract_name_with_chomsky(stimulus)
+
+    # 3) Fallback to DEFAULT_NAME if still nothing
+    display_name = display_name or DEFAULT_NAME
+
+    # Persist on session
+    session["display_name"] = display_name
+    result.setdefault("display_name", display_name)
+
+    # Snapshot state + save session
     snapshot_guvna_state(guvna, session)
     snapshot_talk_memory(talk_memory, session)
     save_session(session)
@@ -885,13 +1011,16 @@ async def run_rilie_upload(
 ) -> Dict[str, Any]:
     """
     Multipart version of /v1/rilie.
+
     OCR images, read text/docx files, prepend context to stimulus, then delegate.
     """
     file_context_parts: List[str] = []
+
     for f in files:
         rawbytes = await f.read()
         if not rawbytes:
             continue
+
         contenttype = (f.content_type or "").lower()
         try:
             if contenttype.startswith("image"):
@@ -904,7 +1033,9 @@ async def run_rilie_upload(
                             f"[Image {f.filename}] (OCR produced no text)"
                         )
                 except Exception as e:
-                    file_context_parts.append(f"[Image {f.filename}] OCR failed: {e}")
+                    file_context_parts.append(
+                        f"[Image {f.filename}] OCR failed: {e}"
+                    )
             elif contenttype.startswith("text") or f.filename.endswith(
                 (".txt", ".md", ".csv", ".json", ".py", ".js", ".html")
             ):
@@ -977,7 +1108,7 @@ def generate_file(req: GenerateFileRequest) -> Dict[str, Any]:
             "download_url": "",
         }
 
-    result = guvna.process(stimulus, max_pass=3)
+    result = guvna.process(stimulus, maxpass=3)
     content = str(result.get("result", ""))
     ext = sanitize_ext(req.ext)
     filename = save_generated_file(ext, content)
