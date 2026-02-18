@@ -20,6 +20,7 @@ from banks import store_curiosity, search_curiosity, get_curiosity_stats
 
 logger = logging.getLogger("curiosity")
 
+
 # ---------------------------------------------------------------------------
 # The Queue — tangents waiting to be explored
 # ---------------------------------------------------------------------------
@@ -28,12 +29,11 @@ class CuriosityQueue:
     """
     Thread-safe queue of tangents RILIE wants to explore.
     Each item is a dict with:
-        - tangent:    the interesting thought (str)
-        - seed_query: the user query that sparked it (str)
-        - relevance:  how relevant it was to the user response (float, 0-1)
-        - interest:   how interesting it is on its own (float, 0-1)
+      - tangent: the interesting thought (str)
+      - seed_query: the user query that sparked it (str)
+      - relevance: how relevant it was to the user response (float, 0-1)
+      - interest: how interesting it is on its own (float, 0-1)
     """
-
     def __init__(self, max_size: int = 50):
         self._queue: deque = deque(maxlen=max_size)
         self._lock = threading.Lock()
@@ -63,9 +63,8 @@ class CuriosityQueue:
                 if existing["tangent"].lower().strip() == tangent.lower().strip():
                     return False
             self._queue.append(item)
-
-        logger.info("Curiosity queued [interest=%.2f]: %s", interest, tangent[:80])
-        return True
+            logger.info("Curiosity queued [interest=%.2f]: %s", interest, tangent[:80])
+            return True
 
     def pop(self) -> Optional[Dict]:
         """Pop the next tangent to explore. Returns None if empty."""
@@ -92,7 +91,6 @@ class CuriosityQueue:
 class CuriosityEngine:
     """
     RILIE's background curiosity processor.
-
     Takes tangents from the queue, researches them via search,
     processes them through the Triangle, and stores worthy insights
     in banks_curiosity.
@@ -101,7 +99,6 @@ class CuriosityEngine:
       - Synchronous drain (process all queued items now)
       - Background thread (process on a timer / between conversations)
     """
-
     def __init__(
         self,
         search_fn: Optional[Callable] = None,
@@ -111,11 +108,11 @@ class CuriosityEngine:
     ):
         """
         Args:
-            search_fn:      callable(query, num_results) -> list[dict]
-                            Same signature as brave_search_sync.
-            triangle_fn:    callable(stimulus, context) -> dict with 'result' and 'quality_score'
-                            A lightweight Triangle pass for curiosity processing.
-            max_per_cycle:  max tangents to process per curiosity cycle.
+            search_fn: callable(query, num_results) -> list[dict]
+                Same signature as brave_search_sync.
+            triangle_fn: callable(stimulus, context) -> dict with 'result' and 'quality_score'
+                A lightweight Triangle pass for curiosity processing.
+            max_per_cycle: max tangents to process per curiosity cycle.
             cycle_interval: seconds between background cycles (if running threaded).
         """
         self.queue = CuriosityQueue()
@@ -127,7 +124,7 @@ class CuriosityEngine:
         self._thread: Optional[threading.Thread] = None
 
     def queue_tangent(self, tangent: str, seed_query: str,
-                      relevance: float, interest: float) -> bool:
+                     relevance: float, interest: float) -> bool:
         """Public interface to queue a tangent from RILIE's passes."""
         return self.queue.push(tangent, seed_query, relevance, interest)
 
@@ -137,12 +134,10 @@ class CuriosityEngine:
           1. Research it (Brave search)
           2. Think about it (Triangle)
           3. Store if worthy (Banks)
-
         Returns True if the insight was kept.
         """
         tangent = item["tangent"]
         seed_query = item["seed_query"]
-
         logger.info("Curiosity exploring: %s", tangent[:80])
 
         # Step 1: Research
@@ -161,7 +156,6 @@ class CuriosityEngine:
         # Step 2: Think (Triangle processing)
         insight = ""
         quality_score = 0.0
-
         if self.triangle_fn and research:
             try:
                 processed = self.triangle_fn(tangent, research)
@@ -205,7 +199,6 @@ class CuriosityEngine:
         """
         processed = 0
         kept = 0
-
         while processed < self.max_per_cycle:
             item = self.queue.pop()
             if item is None:
@@ -220,6 +213,53 @@ class CuriosityEngine:
         return {"processed": processed, "kept": kept}
 
     # -----------------------------------------------------------------------
+    # NEW: Resurface curiosities
+    # -----------------------------------------------------------------------
+    
+    def resurface_curiosities(self, current_stimulus: str, limit: int = 3) -> List[Dict[str, Any]]:
+        """
+        Resurface past curiosities that are relevant to the current conversation.
+        
+        This is RILIE's ability to remember "I was curious about X before" and
+        bring it back when X becomes relevant again. Part of the 360° loop:
+        conversation generates curiosity → curiosity stored → curiosity resurfaces
+        when context matches → deeper conversation emerges.
+        
+        Args:
+            current_stimulus: The current user input
+            limit: Max number of past curiosities to resurface (default 3)
+            
+        Returns:
+            List of relevant past curiosities with their context
+        """
+        try:
+            # Search Banks for past tangents related to current topic
+            results = search_curiosity(
+                query=current_stimulus,
+                limit=limit,
+                min_quality=0.6
+            )
+            
+            resurfaced = []
+            for result in results:
+                resurfaced.append({
+                    'tangent': result.get('tangent', ''),
+                    'original_context': result.get('seed_query', ''),
+                    'insight': result.get('insight', ''),
+                    'timestamp': result.get('timestamp'),
+                    'quality_score': result.get('quality_score', 0.0),
+                })
+                
+            if resurfaced:
+                logger.info(f"[CURIOSITY] Resurfaced {len(resurfaced)} past curiosities for: {current_stimulus[:60]}")
+                
+            return resurfaced
+            
+        except Exception as e:
+            logger.error(f"[CURIOSITY] Error resurfacing: {e}")
+            return []
+
+    # -----------------------------------------------------------------------
     # Background thread — she thinks when nobody's talking
     # -----------------------------------------------------------------------
 
@@ -227,7 +267,6 @@ class CuriosityEngine:
         """Start the background curiosity thread."""
         if self._running:
             return
-
         self._running = True
         self._thread = threading.Thread(
             target=self._background_loop,

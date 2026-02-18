@@ -9,6 +9,12 @@ When ready to restore TASTE, re-enable template selection in shape_for_disclosur
 
 The templates, ConversationState, and DisclosureLevel enum remain intact
 so nothing downstream breaks and TASTE can be reconnected cleanly.
+
+PERSON MODEL INTEGRATION (v4.1):
+  shape_for_disclosure() now accepts an optional person_model dict from
+  ConversationMemory.summarize_person_model(). When present, it can
+  season OPEN-level responses with energy/register/depth awareness.
+  When absent, behavior is identical to before — zero breakage.
 """
 
 import re
@@ -20,8 +26,8 @@ from enum import Enum
 
 class DisclosureLevel(Enum):
     TASTE = "taste"   # Turn 1-2: invitation only (currently bypassed)
-    OPEN  = "open"    # Turn 3+: real response
-    FULL  = "full"
+    OPEN = "open"     # Turn 3+: real response
+    FULL = "full"
 
 
 # ============================================================================
@@ -91,8 +97,12 @@ class ConversationState:
         self.response_history.append(response)
         self.exchange_count += 1
 
-    def record_dejavu_exchange(self, stimulus: str, response: str,
-                                envelope: Optional[Dict[str, Any]] = None) -> None:
+    def record_dejavu_exchange(
+        self,
+        stimulus: str,
+        response: str,
+        envelope: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """Record an exchange handled by the deja vu path."""
         self.stimuli_history.append(stimulus)
         self.response_history.append(response)
@@ -137,9 +147,12 @@ class ConversationState:
     def get_dejavu_self_diagnosis(self) -> str:
         """Examine her own previous envelopes to diagnose what she got wrong."""
         if not self.dejavu_last_envelopes:
-            return "I don't have enough context from my last attempts to diagnose what I missed."
+            return (
+                "I don't have enough context from my last attempts "
+                "to diagnose what I missed."
+            )
 
-        gaps = []
+        gaps: List[str] = []
         for env in self.dejavu_last_envelopes:
             status = str(env.get("status", "")).upper()
             baseline_as_result = env.get("baseline_used_as_result", False)
@@ -147,48 +160,129 @@ class ConversationState:
             priorities = int(env.get("priorities_met", 0) or 0)
 
             if status == "MISE_EN_PLACE":
-                gaps.append("I fell back to my safety net instead of actually thinking")
+                gaps.append(
+                    "I fell back to my safety net instead of actually thinking"
+                )
             if baseline_as_result:
-                gaps.append("I leaned on a web snippet instead of giving you my own take")
+                gaps.append(
+                    "I leaned on a web snippet instead of giving you my own take"
+                )
             if quality < 0.3:
                 gaps.append("My confidence in what I said was low")
             if priorities < 2:
-                gaps.append("I wasn't hitting enough of what makes a response worth giving")
+                gaps.append(
+                    "I wasn't hitting enough of what makes a response worth giving"
+                )
 
         unique_gaps = list(dict.fromkeys(gaps))
         if not unique_gaps:
-            return "Looking back, I'm not sure my previous answer landed the way I wanted it to."
+            return (
+                "Looking back, I'm not sure my previous answer "
+                "landed the way I wanted it to."
+            )
         if len(unique_gaps) == 1:
-            return f"Looking back at what I said before — {unique_gaps[0].lower()}. Let me try differently."
-        else:
-            joined = "; ".join(g.lower() for g in unique_gaps[:3])
-            return f"Looking back at what I said — {joined}. I want to do better here."
+            return (
+                f"Looking back at what I said before — "
+                f"{unique_gaps[0].lower()}. Let me try differently."
+            )
+        joined = "; ".join(g.lower() for g in unique_gaps[:3])
+        return (
+            f"Looking back at what I said — {joined}. "
+            f"I want to do better here."
+        )
 
 
 # ============================================================================
 # DEJA VU RESPONSE BUILDER
 # ============================================================================
 
-def build_dejavu_response(stimulus: str, conversation: ConversationState,
-                           dejavu_count: int) -> str:
+def build_dejavu_response(
+    stimulus: str,
+    conversation: ConversationState,
+    dejavu_count: int,
+) -> str:
     """
     Build the appropriate deja vu response based on count.
     STRIPPED: No templates. Just honest responses.
     """
     if dejavu_count == 1:
-        return "Sounds familiar — I think I can do better. What specifically are you hoping I can sharpen?"
-
+        return (
+            "Sounds familiar — I think I can do better. "
+            "What specifically are you hoping I can sharpen?"
+        )
     elif dejavu_count == 2:
         diagnosis = conversation.get_dejavu_self_diagnosis()
         return f"{diagnosis} What angle would help you most?"
-
     else:
-        return "I've tried a few angles here and I'm not landing it. I don't have enough depth on this yet to do it justice, but I want to. I'll be better next time."
+        return (
+            "I've tried a few angles here and I'm not landing it. "
+            "I don't have enough depth on this yet to do it justice, "
+            "but I want to. I'll be better next time."
+        )
 
 
 # ============================================================================
 # TASTE TEMPLATES — REMOVED (TASTE is bypassed, these aren't used)
 # ============================================================================
+
+
+# ============================================================================
+# PERSON MODEL SEASONING — optional flavor from ConversationMemory
+# ============================================================================
+
+def _season_with_person_model(
+    text: str,
+    person_model: Dict[str, Any],
+) -> str:
+    """
+    Lightly season a response based on the person model snapshot.
+
+    This is NOT rewriting. It's small adjustments:
+      - If energy is low and text is long, trim filler
+      - If they return_to_source, honor that pull (don't redirect)
+      - Register is handled by ConversationMemory's RegisterGate,
+        so we don't duplicate that here
+
+    Currently: pass-through with logging hooks.
+    The seasoning gets richer as we learn what works.
+    """
+    if not text or not person_model:
+        return text
+
+    energy = person_model.get("energy_level", "medium")
+    trend = person_model.get("energy_trend", "steady")
+    depth = person_model.get("depth_pattern")
+    returns = person_model.get("returns_to_source", False)
+
+    # -----------------------------------------------------------------
+    # LOW ENERGY + FALLING TREND → trim filler, be concise
+    # Don't add exclamation marks to a quiet room.
+    # -----------------------------------------------------------------
+    if energy == "low" and trend == "falling":
+        # Strip trailing filler phrases that add energy she didn't bring
+        filler_tails = [
+            "Let's go!", "Let's dive in!", "Ready?",
+            "What do you think?!", "Exciting, right?",
+        ]
+        for filler in filler_tails:
+            if text.rstrip().endswith(filler):
+                text = text.rstrip()[: -len(filler)].rstrip()
+
+    # -----------------------------------------------------------------
+    # HIGH ENERGY + RISING TREND → match it, don't dampen
+    # If they're on fire, don't hand them a pamphlet.
+    # -----------------------------------------------------------------
+    # (Currently no-op — Kitchen already responds to energy via
+    #  ConversationMemory's EnergyTracker. This is the hook for later.)
+
+    # -----------------------------------------------------------------
+    # RETURN TO SOURCE HABIT → don't redirect, honor the spiral
+    # If they keep pulling back, that IS the conversation.
+    # -----------------------------------------------------------------
+    # (Currently no-op — the callback behavior in conversation_memory.py
+    #  handles this. This is the hook for DDD-level shaping later.)
+
+    return text
 
 
 # ============================================================================
@@ -198,6 +292,7 @@ def build_dejavu_response(stimulus: str, conversation: ConversationState,
 def shape_for_disclosure(
     raw_result: str,
     conversation: ConversationState,
+    person_model: Optional[Dict[str, Any]] = None,
 ) -> str:
     """
     TASTE BYPASSED — Kitchen output passes through at ALL disclosure levels.
@@ -206,12 +301,25 @@ def shape_for_disclosure(
     it with Hostess templates. That interception is now disabled so the
     Kitchen's actual domain-generated responses reach the user from turn 1.
 
+    PERSON MODEL (v4.1):
+      If person_model dict is provided (from ConversationMemory.summarize_person_model()),
+      it seasons the output with energy/register/depth awareness.
+      If None, behavior is identical to before — zero breakage.
+
     When ready to restore TASTE behavior, uncomment the TASTE block below.
     """
     # ---------------------------------------------------------------
     # TASTE BYPASS — all turns pass through Kitchen output directly
     # ---------------------------------------------------------------
-    return raw_result
+    result = raw_result
+
+    # ---------------------------------------------------------------
+    # PERSON MODEL SEASONING — optional, additive, never destructive
+    # ---------------------------------------------------------------
+    if person_model:
+        result = _season_with_person_model(result, person_model)
+
+    return result
 
     # ---------------------------------------------------------------
     # ORIGINAL TASTE LOGIC — uncomment to re-enable
@@ -219,6 +327,9 @@ def shape_for_disclosure(
     # level = conversation.disclosure_level
     #
     # if level is not DisclosureLevel.TASTE:
+    #     # OPEN level — apply person model seasoning if available
+    #     if person_model:
+    #         raw_result = _season_with_person_model(raw_result, person_model)
     #     return raw_result
     #
     # taste_turn = conversation.taste_turn
@@ -236,6 +347,8 @@ def shape_for_disclosure(
     # elif taste_turn == 2:
     #     pool = SERIOUS_TASTE_TEMPLATES_2 if serious else TASTE_TEMPLATES_2
     # else:
+    #     if person_model:
+    #         raw_result = _season_with_person_model(raw_result, person_model)
     #     return raw_result
     #
     # if not pool:

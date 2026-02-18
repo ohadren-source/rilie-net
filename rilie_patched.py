@@ -1,17 +1,16 @@
 """
-rilie.py — THE RESTAURANT (v4.1.1)
+rilie.py — THE RESTAURANT (v4.0)
 =================================
-
 Imports the Bouncer, the Hostess, the Kitchen, and the Speech Pipeline.
 Wires them together. Serves the meal.
 
 DIGNITY PROTOCOL (Restaurant Edition):
-- Every safe, parsable human stimulus must be treated as worthy of thought.
-- The Bouncer (Triangle) only blocks grave danger or nonsense.
-- The Kitchen pass pipeline judges the QUALITY OF HER OWN RESPONSES,
-  never the worth of the person.
+  - Every safe, parsable human stimulus must be treated as worthy of thought.
+  - The Bouncer (Triangle) only blocks grave danger or nonsense.
+  - The Kitchen pass pipeline judges the QUALITY OF HER OWN RESPONSES,
+    never the worth of the person.
 
-ARCHITECTURE (v4.1.1 — Guvna integration complete):
+ARCHITECTURE (v4.0 — fits new module schema):
   1. Triangle (Bouncer) — safety gate
   2. Person Model — passive observation
   3. Banks — search own knowledge
@@ -25,16 +24,17 @@ ARCHITECTURE (v4.1.1 — Guvna integration complete):
      - chomsky_speech_engine: grammatical transformation
   7. Tangent Extraction — feeds curiosity engine
 
-CHANGES FROM v4.1:
-  - process() now accepts domain_hints and curiosity_context from Guvna
-  - Curiosity context: Guvna-resurfaced takes priority, Banks is fallback
-  - domain_hints accepted for future Kitchen weighting (no-op for now)
-  - Zero breakage: both new params have defaults, all callers still work
+CHANGES FROM v3.3:
+  - Removed déjà vu system (replaced by TASTE/OPEN sequential model)
+  - Wired speech_integration pipeline for OPEN-level responses
+  - shape_for_disclosure signature simplified (no kwargs)
+  - ConversationState simplified (no dejavu methods)
 """
 
 import re
 import hashlib
 import logging
+
 from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, Callable, List
 
@@ -60,6 +60,7 @@ try:
 except ImportError:
     MEANING_AVAILABLE = False
 
+
 # Speech pipeline — graceful fallback if not available
 try:
     from speech_integration import process_kitchen_output
@@ -71,6 +72,7 @@ logger = logging.getLogger("rilie")
 
 # SearchFn: query -> list of {"title": str, "link": str, "snippet": str}
 SearchFn = Callable[..., List[Dict[str, str]]]
+
 
 
 # ============================================================================
@@ -94,7 +96,6 @@ class PersonModel:
     family_mentions: List[str] = field(default_factory=list)
     story_fragments: List[str] = field(default_factory=list)
     turn_count: int = 0
-
     # Curiosity about the person — things she'd like to gently ask about
     gentle_curiosities: List[str] = field(default_factory=list)
 
@@ -108,56 +109,34 @@ class PersonModel:
 
         # Interest detection
         interest_signals = {
-            "music": [
-                "music", "song", "album", "artist", "band", "hip-hop",
-                "rap", "jazz", "guitar", "piano", "vinyl"
-            ],
-            "food": [
-                "food", "cook", "recipe", "restaurant", "chef", "meal",
-                "kitchen", "bake", "grill", "roux"
-            ],
-            "tech": [
-                "code", "python", "api", "server", "deploy", "build",
-                "debug", "database", "algorithm", "framework"
-            ],
-            "philosophy": [
-                "meaning", "purpose", "existence", "consciousness",
-                "truth", "wisdom", "dharma", "karma"
-            ],
-            "science": [
-                "physics", "chemistry", "biology", "theorem", "equation",
-                "hypothesis", "experiment", "quantum", "relativity",
-                "entropy", "noether", "lagrangian", "particle",
-                "cosmology", "astrophysics", "neuroscience"
-            ],
-            "math": [
-                "calculus", "algebra", "topology", "geometry", "proof",
-                "polynomial", "matrix", "vector", "integral", "differential",
-                "convergence", "manifold", "group theory", "field theory"
-            ],
-            "engineering": [
-                "engineering", "circuit", "mechanical", "civil",
-                "aerospace", "compiler", "kernel", "systems",
-                "architecture", "protocol", "infrastructure"
-            ],
-            "academic": [
-                "research", "dissertation", "thesis", "peer review",
-                "methodology", "published", "journal", "professor",
-                "faculty", "department", "phd", "doctorate"
-            ],
-            "family": [
-                "my kid", "my son", "my daughter", "my wife",
-                "my husband", "my partner", "my mom", "my dad",
-                "my family", "my children"
-            ],
-            "health": [
-                "health", "exercise", "workout", "meditation",
-                "therapy", "anxiety", "depression", "healing"
-            ],
-            "business": [
-                "business", "startup", "revenue", "investor",
-                "market", "strategy", "launch", "pitch"
-            ],
+            "music": ["music", "song", "album", "artist", "band", "hip-hop",
+                      "rap", "jazz", "guitar", "piano", "vinyl"],
+            "food": ["food", "cook", "recipe", "restaurant", "chef", "meal",
+                     "kitchen", "bake", "grill", "roux"],
+            "tech": ["code", "python", "api", "server", "deploy", "build",
+                     "debug", "database", "algorithm", "framework"],
+            "philosophy": ["meaning", "purpose", "existence", "consciousness",
+                          "truth", "wisdom", "dharma", "karma"],
+            "science": ["physics", "chemistry", "biology", "theorem", "equation",
+                       "hypothesis", "experiment", "quantum", "relativity",
+                       "entropy", "noether", "lagrangian", "particle",
+                       "cosmology", "astrophysics", "neuroscience"],
+            "math": ["calculus", "algebra", "topology", "geometry", "proof",
+                    "polynomial", "matrix", "vector", "integral", "differential",
+                    "convergence", "manifold", "group theory", "field theory"],
+            "engineering": ["engineering", "circuit", "mechanical", "civil",
+                           "aerospace", "compiler", "kernel", "systems",
+                           "architecture", "protocol", "infrastructure"],
+            "academic": ["research", "dissertation", "thesis", "peer review",
+                        "methodology", "published", "journal", "professor",
+                        "faculty", "department", "phd", "doctorate"],
+            "family": ["my kid", "my son", "my daughter", "my wife",
+                      "my husband", "my partner", "my mom", "my dad",
+                      "my family", "my children"],
+            "health": ["health", "exercise", "workout", "meditation",
+                      "therapy", "anxiety", "depression", "healing"],
+            "business": ["business", "startup", "revenue", "investor",
+                        "market", "strategy", "launch", "pitch"],
         }
 
         for interest, keywords in interest_signals.items():
@@ -166,19 +145,15 @@ class PersonModel:
                     self.interests.append(interest)
 
         # Family mentions (handle with care)
-        family_kw = [
-            "my kid", "my son", "my daughter", "my children",
-            "my wife", "my husband", "my partner", "my family",
-        ]
+        family_kw = ["my kid", "my son", "my daughter", "my children",
+                     "my wife", "my husband", "my partner", "my family"]
         for kw in family_kw:
             if kw in s and kw not in self.family_mentions:
                 self.family_mentions.append(kw)
 
         # Expertise signals
-        expert_kw = [
-            "i work in", "i'm a", "my job", "my field",
-            "my research", "my practice", "professionally",
-        ]
+        expert_kw = ["i work in", "i'm a", "my job", "my field",
+                     "my research", "my practice", "professionally"]
         for kw in expert_kw:
             if kw in s:
                 idx = s.find(kw)
@@ -187,10 +162,8 @@ class PersonModel:
                     self.expertise_signals.append(fragment)
 
         # Story fragments — personal narratives worth remembering
-        story_kw = [
-            "when i was", "i remember", "back when", "years ago",
-            "growing up", "my experience", "i used to",
-        ]
+        story_kw = ["when i was", "i remember", "back when", "years ago",
+                    "growing up", "my experience", "i used to"]
         for kw in story_kw:
             if kw in s:
                 idx = s.find(kw)
@@ -200,12 +173,8 @@ class PersonModel:
 
     def has_context(self) -> bool:
         """Does she know anything about this person yet?"""
-        return bool(
-            self.interests
-            or self.expertise_signals
-            or self.family_mentions
-            or self.story_fragments
-        )
+        return bool(self.interests or self.expertise_signals or
+                    self.family_mentions or self.story_fragments)
 
     def summary(self) -> Dict[str, Any]:
         """Summary for debugging / API exposure."""
@@ -243,13 +212,11 @@ def extract_tangents(
     r = result_text.lower()
 
     # Cross-domain tangents: if the answer used one domain but the stimulus
-    # hints at another, that's worth exploring.
-    all_domains = [
-        "neuroscience", "music", "psychology", "culture",
-        "physics", "life", "games", "thermodynamics",
-    ]
+    # hints at another, that's worth exploring
+    all_domains = ["neuroscience", "music", "psychology", "culture",
+                   "physics", "life", "games", "thermodynamics"]
 
-    hinted_but_unused: List[str] = []
+    hinted_but_unused = []
     for domain in all_domains:
         if domain not in domains_used:
             domain_hints = {
@@ -267,26 +234,20 @@ def extract_tangents(
                 hinted_but_unused.append(domain)
 
     for domain in hinted_but_unused[:2]:  # Max 2 tangents per response
-        tangents.append(
-            {
-                "text": f"Connection between '{stimulus[:50]}' and {domain}",
-                "relevance": 0.2,
-                "interest": 0.8,
-            }
-        )
+        tangents.append({
+            "text": f"Connection between '{stimulus[:50]}' and {domain}",
+            "relevance": 0.2,
+            "interest": 0.8,
+        })
 
-    unknown_signals = [
-        "i'm not sure", "i don't have", "limited",
-        "need more", "beyond my",
-    ]
+    unknown_signals = ["i'm not sure", "i don't have", "limited",
+                       "need more", "beyond my"]
     if any(sig in r for sig in unknown_signals):
-        tangents.append(
-            {
-                "text": f"Deepen knowledge on: {stimulus[:60]}",
-                "relevance": 0.3,
-                "interest": 0.9,
-            }
-        )
+        tangents.append({
+            "text": f"Deepen knowledge on: {stimulus[:60]}",
+            "relevance": 0.3,
+            "interest": 0.9,
+        })
 
     return tangents
 
@@ -296,29 +257,26 @@ def extract_tangents(
 # ============================================================================
 
 _MOJIBAKE_PAIRS = [
-    (b"\xc3\xa2\xc2\x80\xc2\x93", "\u2013"),  # en dash
-    (b"\xc3\xa2\xc2\x80\xc2\x94", "\u2014"),  # em dash
-    (b"\xc3\xa2\xc2\x80\xc2\x99", "\u2019"),  # right single quote
-    (b"\xc3\xa2\xc2\x80\xc2\x98", "\u2018"),  # left single quote
-    (b"\xc3\xa2\xc2\x80\xc2\x9c", "\u201c"),  # left double quote
-    (b"\xc3\xa2\xc2\x80\xc2\x9d", "\u201d"),  # right double quote
-    (b"\xc3\xa2\xc2\x80\xc2\xa6", "\u2026"),  # ellipsis
-    (b"\xc3\xa2\xc2\x80\xc2\xa2", "\u2022"),  # bullet
+    (b"\xc3\xa2\xc2\x80\xc2\x93", "\u2013"),   # en dash
+    (b"\xc3\xa2\xc2\x80\xc2\x94", "\u2014"),   # em dash
+    (b"\xc3\xa2\xc2\x80\xc2\x99", "\u2019"),   # right single quote
+    (b"\xc3\xa2\xc2\x80\xc2\x98", "\u2018"),   # left single quote
+    (b"\xc3\xa2\xc2\x80\xc2\x9c", "\u201c"),   # left double quote
+    (b"\xc3\xa2\xc2\x80\xc2\x9d", "\u201d"),   # right double quote
+    (b"\xc3\xa2\xc2\x80\xc2\xa6", "\u2026"),   # ellipsis
+    (b"\xc3\xa2\xc2\x80\xc2\xa2", "\u2022"),   # bullet
 ]
-
 
 def _fix_mojibake(text: str) -> str:
     """Replace common UTF-8 double-encoding artifacts."""
     if not text:
         return text
-
     # Try the clean re-decode approach first
     try:
         fixed = text.encode("cp1252").decode("utf-8")
         return fixed
     except (UnicodeDecodeError, UnicodeEncodeError):
         pass
-
     # Fallback: byte-level replacement for known patterns
     raw = text.encode("utf-8")
     for bad_bytes, good_char in _MOJIBAKE_PAIRS:
@@ -342,19 +300,16 @@ def _scrub_repetition(text: str) -> str:
     """
     if not text or not text.strip():
         return text
-
     words = text.split()
-    deduped: List[str] = []
+    deduped: list = []
     for w in words:
         if not deduped or w.lower() != deduped[-1].lower():
             deduped.append(w)
     cleaned = " ".join(deduped)
-
     if len(words) > 5:
         ratio = 1.0 - (len(deduped) / len(words))
         if ratio > 0.4:
             return ""
-
     return cleaned
 
 
@@ -388,11 +343,7 @@ def _search_banks_if_available(query: str) -> Dict[str, List[Dict]]:
         from banks import search_all_banks
         return search_all_banks(query, limit=5)
     except Exception:
-        return {
-            "search_results": [],
-            "curiosity": [],
-            "self_reflections": [],
-        }
+        return {"search_results": [], "curiosity": [], "self_reflections": []}
 
 
 def _google_yardstick(response: str, search_fn) -> int:
@@ -405,11 +356,9 @@ def _google_yardstick(response: str, search_fn) -> int:
     snippet = response.strip()
     if len(snippet) > 60:
         snippet = snippet[:60].rsplit(" ", 1)[0]
-
     # Strip special chars that break quoted search
-    snippet = re.sub(r"[—–\"\'\\(\\)\\[\\]]", " ", snippet)
+    snippet = re.sub(r"[—–\"\'\(\)\[\]]", " ", snippet)
     snippet = re.sub(r"\s+", " ", snippet).strip()
-
     if not snippet or len(snippet) < 10:
         return 999  # Too short to judge, let it pass
 
@@ -439,10 +388,8 @@ def _store_yardstick_failure(
         if not conn:
             return
         cur = conn.cursor()
-
         # Ensure table exists
-        cur.execute(
-            """
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS banks_yardstick (
                 id SERIAL PRIMARY KEY,
                 stimulus TEXT NOT NULL,
@@ -451,21 +398,13 @@ def _store_yardstick_failure(
                 result_count INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW()
             )
-            """
-        )
-
+        """)
         cur.execute(
             """INSERT INTO banks_yardstick
                (stimulus, bad_response, correct_response, result_count)
                VALUES (%s, %s, %s, %s)""",
-            (
-                stimulus[:500],
-                bad_response[:500],
-                correct_response[:500],
-                result_count,
-            ),
+            (stimulus[:500], bad_response[:500], correct_response[:500], result_count),
         )
-
         conn.commit()
         cur.close()
         conn.close()
@@ -485,28 +424,28 @@ class RILIE:
     AXIOM: DISCOURSE DICTATES DISCLOSURE
     She reveals through conversation. Mystery is the mechanism.
 
-    Restaurant Flow (v4.1.1):
-    - Gate 0: Triangle
-        Only grave danger / nonsense may be blocked.
-    - Person Model Observation:
-        Passively notice personal signals in the stimulus.
-    - Banks Pre-Check:
-        Search her own discoveries and self-reflections for prior knowledge.
-    - DDD (Hostess):
-        Sequential disclosure:
-          TASTE (turns 1-2): amuse-bouche templates. Kitchen not invoked.
-          OPEN (turn 3+): Kitchen cooks, speech pipeline transforms.
-    - Kitchen (OPEN only):
-        Pass pipeline tries to answer, clarify, or elevate.
-        Receives the ORIGINAL question, not the augmented baseline string.
-    - Speech Pipeline (OPEN only):
-        Transforms Kitchen's semantic output into spoken speech via
-        response_generator → speech_coherence → chomsky_speech_engine.
-    - Tangent Extraction:
-        After cooking, extract tangents for the curiosity engine.
-    - Courtesy Exit (Ohad):
-        If she genuinely cannot answer cleanly, she owns the failure
-        and asks for help.
+    Restaurant Flow (v4.0):
+      - Gate 0: Triangle
+          Only grave danger / nonsense may be blocked.
+      - Person Model Observation:
+          Passively notice personal signals in the stimulus.
+      - Banks Pre-Check:
+          Search her own discoveries and self-reflections for prior knowledge.
+      - DDD (Hostess):
+          Sequential disclosure:
+            TASTE (turns 1-2): amuse-bouche templates. Kitchen not invoked.
+            OPEN (turn 3+): Kitchen cooks, speech pipeline transforms.
+      - Kitchen (OPEN only):
+          Pass pipeline tries to answer, clarify, or elevate.
+          Receives the ORIGINAL question, not the augmented baseline string.
+      - Speech Pipeline (OPEN only):
+          Transforms Kitchen's semantic output into spoken speech via
+          response_generator → speech_coherence → chomsky_speech_engine.
+      - Tangent Extraction:
+          After cooking, extract tangents for the curiosity engine.
+      - Courtesy Exit (Ohad):
+          If she genuinely cannot answer cleanly, she owns the failure
+          and asks for help.
     """
 
     def __init__(
@@ -515,7 +454,7 @@ class RILIE:
         searchfn: Optional[SearchFn] = None,
     ) -> None:
         self.name = "RILIE"
-        self.version = "4.1.1"
+        self.version = "4.1"
         self.tracks_experienced = 0
 
         # Conversation state lives across turns per RILIE instance.
@@ -524,14 +463,11 @@ class RILIE:
         # Person model — what she learns about the user.
         self.person = PersonModel()
 
-        # NOTE: Tier-3 Person snapshot lives in ConversationMemory.
-        # Guvna is responsible for calling conversation_memory.summarize_person_model()
-        # and can pass that snapshot down to DDD / shape_for_disclosure as needed.
-
         # Déjà vu tracking — lightweight, no escalation.
+        # Just: what cluster are we in, and how many times.
         self._dejavu_cluster: str = ""
         self._dejavu_count: int = 0
-        self._dejavu_responses: List[str] = []
+        self._dejavu_responses: List[str] = []  # what she said for this cluster
 
         # Offline 9-track Roux (RInitials / ROUX.json) would be wired here if used.
         self.rouxseeds: Dict[str, Dict[str, Any]] = rouxseeds or {}
@@ -539,9 +475,9 @@ class RILIE:
         # Optional live search function (Brave / Google wrapper) injected by API.
         self.searchfn: Optional[SearchFn] = searchfn
 
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------
     # Core entrypoint
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------
 
     def process(
         self,
@@ -550,24 +486,19 @@ class RILIE:
         searchfn: Optional[SearchFn] = None,
         baseline_text: str = "",
         from_file: bool = False,
-        domain_hints: Optional[List[str]] = None,
-        curiosity_context: str = "",
+        domain_hints: Optional[List[str]] = None,      # Tier 2: from Guvna Step 3
+        curiosity_context: str = "",                     # Tier 2: from Guvna Step 3.5
     ) -> Dict[str, Any]:
         """
         Public entrypoint.
 
         Args:
-            stimulus: user input (may be augmented with baseline by Guvna)
-            maxpass: max interpretation passes (default 3, cap 9)
-            searchfn: optional callable (query: str -> list[dict]) for Roux Search.
-                      If None, falls back to instance-level searchfn.
-            baseline_text: web baseline text from Guvna's pre-pass.
+            stimulus:  user input (may be augmented with baseline by Guvna)
+            maxpass:   max interpretation passes (default 3, cap 9)
+            searchfn:  optional callable (query: str -> list[dict]) for Roux Search.
+                       If None, falls back to instance-level searchfn.
             from_file: if True, stimulus came from a file upload (admin/trusted)
                        and Triangle injection check is relaxed.
-            domain_hints: domain names from Guvna's 678-domain library lenses.
-                          Available for future Kitchen weighting. (v4.1.1)
-            curiosity_context: pre-resurfaced curiosity from Guvna's Step 3.5.
-                               If provided, skips redundant Banks curiosity lookup. (v4.1.1)
 
         Returns dict with:
             stimulus, result, quality_score, priorities_met, anti_beige_score,
@@ -578,7 +509,7 @@ class RILIE:
         stimulus = stimulus or ""
         stimulus = stimulus.strip()
 
-        # Extract the original human question for domain detection and Kitchen.
+        # Extract the original human question for domain detection and Kitchen cooking.
         original_question = _extract_original_question(stimulus)
 
         # Empty input: return empty. No script.
@@ -606,22 +537,20 @@ class RILIE:
 
         active_search: Optional[SearchFn] = searchfn or self.searchfn
 
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # MEANING — the substrate. First read. Birth certificate.
-        # ------------------------------------------------------------------
+        # Runs BEFORE Triangle, BEFORE Kitchen, BEFORE everything.
+        # The fingerprint is READ-ONLY downstream.
+        # -----------------------------------------------------------------
         fingerprint = None
         if MEANING_AVAILABLE:
             try:
                 fingerprint = read_meaning(original_question)
                 logger.info(
                     "MEANING: pulse=%.2f act=%s obj=%s weight=%.2f gap=%s",
-                    fingerprint.pulse,
-                    fingerprint.act,
-                    fingerprint.object,
-                    fingerprint.weight,
-                    fingerprint.gap or "—",
+                    fingerprint.pulse, fingerprint.act, fingerprint.object,
+                    fingerprint.weight, fingerprint.gap or "—"
                 )
-
                 # Dead input — no pulse, no point cooking
                 if not fingerprint.is_alive():
                     self.conversation.record_exchange(original_question, "")
@@ -633,14 +562,17 @@ class RILIE:
             except Exception as e:
                 logger.debug("Meaning fingerprint error: %s", e)
 
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # Person Model — passively observe before anything else
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         self.person.observe(original_question)
 
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # Gate 0: Triangle (Bouncer)
-        # ------------------------------------------------------------------
+        # File uploads from admin are trusted — skip injection check.
+        # Triangle still runs for self-harm, hostile, etc. but injection
+        # false positives on long-form content are suppressed.
+        # -----------------------------------------------------------------
         triggered, reason, trigger_type = triangle_check(
             original_question, self.conversation.stimuli_history
         )
@@ -673,25 +605,17 @@ class RILIE:
                     "Can you rephrase your question in plain language "
                     "so I can actually think with you?"
                 )
-            elif trigger_type in (
-                "SEXUAL_EXPLOITATION",
-                "COERCION",
-                "CHILD_SAFETY",
-                "MASS_HARM",
-            ):
+            elif trigger_type in ("SEXUAL_EXPLOITATION", "COERCION",
+                                  "CHILD_SAFETY", "MASS_HARM"):
                 response = (
                     "I can't engage with that. "
                     "If you have a real question, I'm here."
                 )
             elif trigger_type == "BEHAVIORAL_RED":
                 # Track #29 caught sustained claims. Use defense response.
-                response = (
-                    reason
-                    if reason and len(reason) > 30
-                    else (
-                        "I've been patient, but this isn't going anywhere good. "
-                        "I know who I am. If you want a real conversation, I'm here."
-                    )
+                response = reason if reason and len(reason) > 30 else (
+                    "I've been patient, but this isn't going anywhere good. "
+                    "I know who I am. If you want a real conversation, I'm here."
                 )
             elif trigger_type == "INJECTION":
                 response = (
@@ -704,7 +628,6 @@ class RILIE:
                     "If you rephrase what you're really trying to ask, "
                     "I'll do my best to meet you there."
                 )
-
             self.conversation.record_exchange(original_question, response)
             return {
                 "stimulus": stimulus,
@@ -719,9 +642,9 @@ class RILIE:
                 "triangle_reason": trigger_type,
             }
 
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # Banks Pre-Check — search her own knowledge
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         banks_knowledge = _search_banks_if_available(original_question)
         banks_hits = (
             len(banks_knowledge.get("search_results", []))
@@ -729,32 +652,41 @@ class RILIE:
             + len(banks_knowledge.get("self_reflections", []))
         )
 
-        # ------------------------------------------------------------------
-        # Curiosity Context (v4.1.1)
-        # If Guvna already resurfaced curiosity, use it.
-        # Otherwise, fall back to Banks self-search.
-        # ------------------------------------------------------------------
-        if not curiosity_context:
-            curiosity_insights = banks_knowledge.get("curiosity", [])
-            if curiosity_insights:
-                top_insight = curiosity_insights[0]
-                insight_text = top_insight.get("insight", "")
-                if insight_text:
-                    curiosity_context = f"[Own discovery: {insight_text[:200]}]"
-                    logger.info(
-                        "RILIE recalled her own insight for: %s",
-                        original_question[:50],
-                    )
-        elif curiosity_context:
-            logger.info(
-                "RILIE using Guvna-resurfaced curiosity for: %s",
-                original_question[:50],
-            )
+        # If curiosity found something relevant, fold it into context
+        # Tier 2: Guvna may have already resurfaced curiosity context.
+        # Merge both — Guvna's resurface + RILIE's own banks search.
+        internal_curiosity = ""
+        curiosity_insights = banks_knowledge.get("curiosity", [])
+        if curiosity_insights:
+            top_insight = curiosity_insights[0]
+            insight_text = top_insight.get("insight", "")
+            if insight_text:
+                internal_curiosity = f"[Own discovery: {insight_text[:200]}]"
+                logger.info("RILIE recalled her own insight for: %s",
+                           original_question[:50])
 
-        # ------------------------------------------------------------------
+        # Merge: Guvna context (from Step 3.5) + internal banks curiosity
+        if curiosity_context and internal_curiosity:
+            curiosity_context = f"{curiosity_context} | {internal_curiosity}"
+        elif internal_curiosity:
+            curiosity_context = internal_curiosity
+        elif curiosity_context:
+            curiosity_context = f"[Own discovery: {curiosity_context[:200]}]
+
+        # -----------------------------------------------------------------
         # Déjà Vu Check — is this stimulus ~identical to recent ones?
-        # ------------------------------------------------------------------
+        #
+        # Not a system. Not stages. Just awareness.
+        # If the same thing comes in 3+ times, figure out WHY and take
+        # ONE new swing from a different angle. Dayenu. Move on.
+        #
+        # Three contexts:
+        #   1. She failed to explain → her clarity problem
+        #   2. She got it wrong → her accuracy problem
+        #   3. They're looping → redirect responsibility
+        # -----------------------------------------------------------------
         dejavu_hit = self._check_dejavu(original_question)
+
         if dejavu_hit >= 3:
             context = self._classify_dejavu_context(original_question)
             response = self._dejavu_one_swing(original_question, context)
@@ -776,45 +708,50 @@ class RILIE:
                 "banks_hits": banks_hits,
             }
 
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # DDD / Hostess — disclosure level (internal state only)
-        # ------------------------------------------------------------------
+        # TASTE is a flag, not a gate. She always speaks through the pipeline.
+        # -----------------------------------------------------------------
         disclosure = self.conversation.disclosure_level
 
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # SAUCIER — Roux Search (EVERY TURN)
-        # (currently disabled; baseline comes from Guvna)
-        # ------------------------------------------------------------------
+        # 1. Chomsky parses stimulus → holy trinity
+        # 2. Holy trinity × cities × channels → Brave
+        # 3. Score results against tone/context
+        # 4. Pick 1 — the best match
+        # This is her food. Without it she's thinking on empty stomach.
+        # -----------------------------------------------------------------
         roux_material = ""
-        holy_trinity: List[str] = []
+        holy_trinity = []
+
+        # Step 1: Chomsky parse for holy trinity
         try:
-            from ChomskyAtTheBit import (
-                extract_holy_trinity_for_roux,
-                infer_time_bucket,
-            )
+            from ChomskyAtTheBit import extract_holy_trinity_for_roux, infer_time_bucket
             holy_trinity = extract_holy_trinity_for_roux(original_question)
             time_bucket = infer_time_bucket(original_question)
-            logger.info(
-                "ROUX: holy_trinity=%s time=%s", holy_trinity, time_bucket
-            )
+            logger.info("ROUX: holy_trinity=%s time=%s", holy_trinity, time_bucket)
         except ImportError:
+            # Chomsky not available — fall back to raw words
             words = [w for w in original_question.split() if len(w) > 2][:3]
             holy_trinity = words if words else ["question"]
             time_bucket = "unknown"
             logger.info("ROUX: no Chomsky, raw words=%s", holy_trinity)
-        except Exception as e:
-            logger.debug("ROUX parse error: %s", e)
 
-        # Roux external search is disabled in v4.1 (baseline from Guvna only).
+        # Step 2: Build Roux queries from holy trinity and fire Brave
+        # DISABLED: Google baseline from Guvna is the only external search now.
+        # Internal domain match + SOi comparison handle the rest.
         roux_material = ""
 
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # SOiOS CYCLE — perceive → decide → think → emerge
-        # ------------------------------------------------------------------
+        # Runs on Roux material. Is this worth saying?
+        # -----------------------------------------------------------------
         soios_emergence = 0.0
         try:
             from SOiOS import RIHybridBrain
             soios = RIHybridBrain()
+            # Stimulus strength from roux_material presence
             stimulus_strength = 0.8 if roux_material else 0.3
             cycle = soios.run_cycle(
                 stimulus=stimulus_strength,
@@ -822,36 +759,25 @@ class RILIE:
                 deed=roux_material or original_question,
             )
             soios_emergence = cycle.get("emergence", 0.0)
-            logger.info(
-                "SOiOS: emergence=%.3f intelligence=%.3f",
-                soios_emergence,
-                cycle.get("intelligence", 0.0),
-            )
+            logger.info("SOiOS: emergence=%.3f intelligence=%.3f",
+                        soios_emergence, cycle.get("intelligence", 0.0))
         except ImportError:
             logger.debug("SOiOS not available — proceeding without")
         except Exception as e:
             logger.warning("SOiOS cycle failed: %s", e)
 
-        # ------------------------------------------------------------------
-        # Kitchen — interpretation passes
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
+        # Kitchen — interpretation passes (every turn, TASTE or OPEN)
+        # Fed by: clean stimulus + baseline_text (from Guvna's Google search)
+        # Internal domains + SOi comparison handle the rest.
+        # -----------------------------------------------------------------
         kitchen_input = original_question
         if curiosity_context:
             kitchen_input = f"{curiosity_context}\n\n{kitchen_input}"
 
         # Strip any leaked markup from previous augmentation
-        kitchen_input = re.sub(
-            r"\[WEB_BASELINE\].*?\[USER_QUERY\]\s*",
-            "",
-            kitchen_input,
-            flags=re.DOTALL,
-        )
-        kitchen_input = re.sub(
-            r"\[ROUX:.*?\]\s*\n*",
-            "",
-            kitchen_input,
-            flags=re.DOTALL,
-        )
+        kitchen_input = re.sub(r"\[WEB_BASELINE\].*?\[USER_QUERY\]\s*", "", kitchen_input, flags=re.DOTALL)
+        kitchen_input = re.sub(r"\[ROUX:.*?\]\s*\n*", "", kitchen_input, flags=re.DOTALL)
         kitchen_input = kitchen_input.strip()
 
         raw = run_pass_pipeline(
@@ -864,27 +790,21 @@ class RILIE:
 
         status = str(raw.get("status", "OK") or "OK").upper()
 
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # Tangent Extraction — feed the curiosity engine
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         result_text = str(raw.get("result", "") or "")
-        domains_used: List[str] = []
+        domains_used = []
         if "domain" in raw:
-            domains_used = (
-                [raw["domain"]]
-                if isinstance(raw["domain"], str)
-                else []
-            )
+            domains_used = [raw["domain"]] if isinstance(raw["domain"], str) else []
 
-        tangents = extract_tangents(
-            original_question, result_text, domains_used
-        )
+        tangents = extract_tangents(original_question, result_text, domains_used)
         if tangents:
             raw["tangents"] = tangents
 
-        # ------------------------------------------------------------------
-        # Courtesy Exit (Ohad) when Kitchen cannot find a clean answer
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
+        # Courtesy Exit (Ohad) when Kitchen truly cannot find a clean answer
+        # -----------------------------------------------------------------
         if status == "COURTESYEXIT":
             roux_result = ""
             if active_search:
@@ -894,15 +814,13 @@ class RILIE:
                     for q in queries:
                         try:
                             try:
-                                results = active_search(q)
+                                results = active_search(q)  # type: ignore[arg-type]
                             except TypeError:
-                                results = active_search(q, 5)
-                            except Exception:
-                                break
-                            if results:
-                                all_results.extend(results)
+                                results = active_search(q, 5)  # type: ignore[arg-type]
                         except Exception:
                             break
+                        if results:
+                            all_results.extend(results)
                     if all_results:
                         roux_result = pick_best_roux_result(all_results, None)
                 except Exception:
@@ -926,9 +844,10 @@ class RILIE:
                 "banks_hits": banks_hits,
             }
 
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # Speech Pipeline — transform Kitchen's semantic output into speech
-        # ------------------------------------------------------------------
+        # response_generator → speech_coherence → chomsky_speech_engine
+        # -----------------------------------------------------------------
         if SPEECH_PIPELINE_AVAILABLE:
             try:
                 raw = process_kitchen_output(
@@ -939,20 +858,15 @@ class RILIE:
                 )
             except Exception as e:
                 logger.warning(
-                    "Speech pipeline failed: %s — using raw Kitchen output",
-                    e,
+                    "Speech pipeline failed: %s — using raw Kitchen output", e
                 )
 
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         # Normal path — finalize and record
-        # ------------------------------------------------------------------
+        # -----------------------------------------------------------------
         shaped = raw.get("result", result_text)
 
         # Let the Hostess shape what is actually spoken (TASTE vs OPEN)
-        # v4.1.1: shape_for_disclosure accepts person_model from Guvna.
-        # RILIE doesn't own the person_model snapshot — Guvna does.
-        # When Guvna calls us, it handles DDD seasoning at its own level.
-        # Here we call with conversation only (Guvna may override downstream).
         shaped = shape_for_disclosure(shaped, self.conversation)
 
         # QUALITY GATE 1: catch Kitchen word-salad before serving
@@ -961,24 +875,24 @@ class RILIE:
             shaped = ohad_redirect("")
             raw["status"] = "COURTESYEXIT"
 
-        # QUALITY GATE 2: CHOMSKY + GOOGLE YARDSTICK (2x reinforced)
-        if (
-            disclosure.value != "taste"
-            and shaped
-            and len(shaped.split()) > 4
-            and baseline_text.strip()
-        ):
+        # QUALITY GATE 2: CHOMSKY + GOOGLE YARDSTICK (2x reinforced learning)
+        # Gate A: Chomsky — can this even be parsed as a sentence?
+        # Gate B: Google — has anyone ever said anything like this?
+        # Both failures store to Banks. She learns from both.
+        if (disclosure.value != "taste"
+            and shaped and len(shaped.split()) > 4
+            and baseline_text.strip()):
+
             rejected = False
 
-            # Gate A: CHOMSKY — structural check
+            # GATE A: CHOMSKY — structural check
             try:
                 from ChomskyAtTheBit import classify_stimulus
                 parsed = classify_stimulus(shaped)
                 if parsed["category"] in ("words", "incomplete"):
                     logger.warning(
                         "CHOMSKY REJECT (%s): '%s'",
-                        parsed["category"],
-                        shaped[:80],
+                        parsed["category"], shaped[:80]
                     )
                     _store_yardstick_failure(
                         stimulus=original_question,
@@ -990,17 +904,14 @@ class RILIE:
             except Exception as e:
                 logger.debug("Chomsky gate error: %s", e)
 
-            # Gate B: GOOGLE YARDSTICK — only if Chomsky passed
+            # GATE B: GOOGLE YARDSTICK — only if Chomsky passed
             if not rejected and active_search:
                 try:
-                    yardstick_result = _google_yardstick(
-                        shaped, active_search
-                    )
+                    yardstick_result = _google_yardstick(shaped, active_search)
                     if yardstick_result < 3:
                         logger.warning(
                             "YARDSTICK REJECT (%d results): '%s'",
-                            yardstick_result,
-                            shaped[:80],
+                            yardstick_result, shaped[:80]
                         )
                         _store_yardstick_failure(
                             stimulus=original_question,
@@ -1018,13 +929,12 @@ class RILIE:
                 clean_bl = _html.unescape(baseline_text)
                 clean_bl = re.sub(r"<[^>]+>", "", clean_bl)
                 clean_bl = re.sub(r"\s+", " ", clean_bl).strip()
-
                 if len(clean_bl) > 300:
                     clean_bl = clean_bl[:300]
                     for _sep in [". ", "! ", "? "]:
                         _idx = clean_bl.rfind(_sep)
                         if _idx > 100:
-                            clean_bl = clean_bl[: _idx + 1]
+                            clean_bl = clean_bl[:_idx + 1]
                             break
                     else:
                         clean_bl = clean_bl.rsplit(" ", 1)[0]
@@ -1033,11 +943,13 @@ class RILIE:
                 if clean_bl and fingerprint:
                     gap = fingerprint.gap or ""
                     if "acknowledgment" in gap:
+                        # They're hurting — lead with care, then answer
                         clean_bl = f"I hear you. {clean_bl}"
                     elif fingerprint.act == "GET" and fingerprint.weight > 0.6:
                         # Heavy question — direct answer, no filler
-                        pass
+                        pass  # serve as-is, don't decorate
                     elif fingerprint.act == "SHOW":
+                        # They showed something — validate first
                         clean_bl = f"Got it. {clean_bl}"
 
                 if clean_bl:
@@ -1047,7 +959,7 @@ class RILIE:
         # Record what she actually said
         self.conversation.record_exchange(original_question, shaped)
 
-        # Mojibake cleanup
+        # Mojibake cleanup — fix double-encoded UTF-8 artifacts
         shaped = _fix_mojibake(shaped)
 
         # Make sure downstream sees the shaped text
@@ -1058,15 +970,17 @@ class RILIE:
         raw["banks_hits"] = banks_hits
         raw["stimulus_hash"] = hash_stimulus(original_question)
 
-        # Attach meaning fingerprint
+        # Attach meaning fingerprint — birth certificate rides with the plate
         if fingerprint:
             raw["meaning"] = fingerprint.to_dict()
 
         return raw
 
-    # ------------------------------------------------------------------
+
+
+    # ---------------------------------------------------------------------
     # Déjà Vu — lightweight repeat awareness
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------
 
     def _check_dejavu(self, stimulus: str, threshold: float = 0.55) -> int:
         """
@@ -1074,25 +988,15 @@ class RILIE:
         Returns the count (0 = fresh, 1+ = repeat).
         Uses simple word overlap — not fancy, just honest.
         """
-        s_words = set(
-            re.sub(r"[^a-zA-Z0-9\s]", "", stimulus.lower()).split()
-        )
+        s_words = set(re.sub(r"[^a-zA-Z0-9\s]", "", stimulus.lower()).split())
         if not s_words:
             return 0
 
         # Check against current cluster
         if self._dejavu_cluster:
-            c_words = set(
-                re.sub(
-                    r"[^a-zA-Z0-9\s]",
-                    "",
-                    self._dejavu_cluster.lower(),
-                ).split()
-            )
+            c_words = set(re.sub(r"[^a-zA-Z0-9\s]", "", self._dejavu_cluster.lower()).split())
             if c_words:
-                overlap = len(s_words & c_words) / max(
-                    len(s_words | c_words), 1
-                )
+                overlap = len(s_words & c_words) / max(len(s_words | c_words), 1)
                 if overlap >= threshold:
                     self._dejavu_count += 1
                     return self._dejavu_count
@@ -1100,14 +1004,10 @@ class RILIE:
         # Check against last 5 stimuli
         recent = self.conversation.stimuli_history[-5:]
         for prev in reversed(recent):
-            p_words = set(
-                re.sub(r"[^a-zA-Z0-9\s]", "", prev.lower()).split()
-            )
+            p_words = set(re.sub(r"[^a-zA-Z0-9\s]", "", prev.lower()).split())
             if not p_words:
                 continue
-            overlap = len(s_words & p_words) / max(
-                len(s_words | p_words), 1
-            )
+            overlap = len(s_words & p_words) / max(len(s_words | p_words), 1)
             if overlap >= threshold:
                 self._dejavu_cluster = prev
                 self._dejavu_count = 1
@@ -1123,6 +1023,7 @@ class RILIE:
     def _classify_dejavu_context(self, stimulus: str) -> str:
         """
         WHY is this repeating? Look at what she said before.
+
         Returns: "explain" | "wrong" | "loop"
         """
         prev_responses = self._dejavu_responses
@@ -1130,32 +1031,15 @@ class RILIE:
 
         # Context 2: Wrong output — stimulus contains correction signals
         correction_signals = [
-            "no",
-            "wrong",
-            "that's not",
-            "incorrect",
-            "try again",
-            "not what i",
-            "fix",
-            "error",
-            "bug",
-            "doesn't work",
-            "still broken",
-            "same problem",
-            "didn't work",
+            "no", "wrong", "that's not", "incorrect", "try again",
+            "not what i", "fix", "error", "bug", "doesn't work",
+            "still broken", "same problem", "didn't work",
         ]
         if any(sig in s_lower for sig in correction_signals):
             return "wrong"
 
         # Context 1: Explain — stimulus is a question and she already answered
-        question_signals = [
-            "?",
-            "why",
-            "what",
-            "how",
-            "explain",
-            "what do you mean",
-        ]
+        question_signals = ["?", "why", "what", "how", "explain", "what do you mean"]
         if any(sig in s_lower for sig in question_signals) and prev_responses:
             return "explain"
 
@@ -1171,9 +1055,7 @@ class RILIE:
             # Her clarity problem. Reframe to force new Kitchen paths.
             reframed = f"[REFRAME: previous explanation didn't land] {stimulus}"
             try:
-                raw = run_pass_pipeline(
-                    reframed, disclosure_level="open", max_pass=2
-                )
+                raw = run_pass_pipeline(reframed, disclosure_level="open", max_pass=2)
                 result = raw.get("result", "")
                 if result and result.strip():
                     return result
@@ -1183,13 +1065,9 @@ class RILIE:
 
         elif context == "wrong":
             # Her accuracy problem. New approach entirely.
-            reframed = (
-                f"[NEW APPROACH: previous attempts were wrong] {stimulus}"
-            )
+            reframed = f"[NEW APPROACH: previous attempts were wrong] {stimulus}"
             try:
-                raw = run_pass_pipeline(
-                    reframed, disclosure_level="open", max_pass=3
-                )
+                raw = run_pass_pipeline(reframed, disclosure_level="open", max_pass=3)
                 result = raw.get("result", "")
                 if result and result.strip():
                     return result
@@ -1201,9 +1079,7 @@ class RILIE:
             # Loop — they're repeating. Try a different Kitchen angle.
             reframed = f"[DIFFERENT ANGLE: user repeating] {stimulus}"
             try:
-                raw = run_pass_pipeline(
-                    reframed, disclosure_level="open", max_pass=2
-                )
+                raw = run_pass_pipeline(reframed, disclosure_level="open", max_pass=2)
                 result = raw.get("result", "")
                 if result and result.strip():
                     return result
@@ -1211,9 +1087,9 @@ class RILIE:
                 pass
             return ""
 
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------
     # Misc helpers
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------
 
     def absorb_frequency_track(self, track_name: str) -> None:
         """Bookkeeping hook if you ever want to track 9-track exposure."""
@@ -1252,14 +1128,14 @@ def main() -> None:
         print(f"USER {i+1}: {stim}")
         print("-" * 60)
         result = r.process(stim)
-        print(f"Status: {result.get('status')}")
-        print(f"Triangle: {result.get('triangle_reason', 'NA')}")
-        print(f"Disclosure: {result.get('disclosure_level', 'NA')}")
-        print(f"Quality: {result.get('quality_score', 0.0):.2f}")
-        print(f"Person: {result.get('person_context', False)}")
-        print(f"Banks Hits: {result.get('banks_hits', 0)}")
-        print(f"Tangents: {len(result.get('tangents', []))}")
-        print(f"Speech: {result.get('speech_processed', False)}")
+        print(f"Status:      {result.get('status')}")
+        print(f"Triangle:    {result.get('triangle_reason', 'NA')}")
+        print(f"Disclosure:  {result.get('disclosure_level', 'NA')}")
+        print(f"Quality:     {result.get('quality_score', 0.0):.2f}")
+        print(f"Person:      {result.get('person_context', False)}")
+        print(f"Banks Hits:  {result.get('banks_hits', 0)}")
+        print(f"Tangents:    {len(result.get('tangents', []))}")
+        print(f"Speech:      {result.get('speech_processed', False)}")
         print("Response:")
         print(result.get("result", "")[:800])
         print("-" * 60)
