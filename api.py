@@ -45,7 +45,7 @@ from session import (
 from talk import talk, TalkMemory
 
 # ✅ MEANING INTEGRATION — For logging and API responses
-#from guvna.meaning import MeaningFingerprint
+# from guvna.meaning import MeaningFingerprint
 
 # 👇 NEW: Chomsky integration for name extraction
 from ChomskyAtTheBit import classify_stimulus
@@ -136,7 +136,8 @@ def build_library_index() -> LibraryIndex:
     if library_dir not in sys.path:
         sys.path.insert(0, library_dir)
 
-    index: LibraryIndex = LibraryIndex()
+    # FIX: LibraryIndex is a typing alias, so we create a plain dict
+    index: LibraryIndex = {}
 
     def safe_import(module_name: str, index_key: str, tags: list) -> None:
         try:
@@ -150,7 +151,11 @@ def build_library_index() -> LibraryIndex:
                 },
                 "tags": tags,
             }
-            logger.info("Library index %s loaded (%d functions)", index_key, len(index[index_key]["functions"]))
+            logger.info(
+                "Library index %s loaded (%d functions)",
+                index_key,
+                len(index[index_key]["functions"]),
+            )
         except Exception as e:
             logger.info(
                 "Library index %s not available (%s: %s)",
@@ -160,16 +165,38 @@ def build_library_index() -> LibraryIndex:
             )
 
     # Domain engines (sample; keep as in your v0.9.0)
-    safe_import("physics", "physics", ["limits", "conservation", "time", "energy", "entropy", "mass", "velocity", "force", "quantum", "relativity"])
-    safe_import("life", "life", ["cancer", "health", "evolution", "ecosystems", "cell", "apoptosis", "mutation", "growth", "biology", "organism"])
-    safe_import("games", "games", ["trust", "incentives", "governance", "coordination", "strategy", "reputation", "public good", "game theory", "nash", "prisoner"])
-    safe_import("thermodynamics", "thermodynamics", ["harm", "repair", "irreversibility", "cost", "entropy", "heat", "energy", "equilibrium", "damage", "restore"])
-    safe_import("DuckSauce", "ducksauce", ["cosmology", "simulation", "universe", "boolean", "reality", "existence", "origin", "creation"])
-    safe_import("ChomskyAtTheBit", "chomsky", ["language", "parsing", "nlp", "grammar", "syntax", "semantics", "chomsky", "linguistics", "tokenize"])
+    safe_import(
+        "physics",
+        "physics",
+        ["limits", "conservation", "time", "energy", "entropy", "mass", "velocity", "force", "quantum", "relativity"],
+    )
+    safe_import(
+        "life",
+        "life",
+        ["cancer", "health", "evolution", "ecosystems", "cell", "apoptosis", "mutation", "growth", "biology", "organism"],
+    )
+    safe_import(
+        "games",
+        "games",
+        ["trust", "incentives", "governance", "coordination", "strategy", "reputation", "public good", "game theory", "nash", "prisoner"],
+    )
+    safe_import(
+        "thermodynamics",
+        "thermodynamics",
+        ["harm", "repair", "irreversibility", "cost", "entropy", "heat", "energy", "equilibrium", "damage", "restore"],
+    )
+    safe_import(
+        "DuckSauce",
+        "ducksauce",
+        ["cosmology", "simulation", "universe", "boolean", "reality", "existence", "origin", "creation"],
+    )
+    safe_import(
+        "ChomskyAtTheBit",
+        "chomsky",
+        ["language", "parsing", "nlp", "grammar", "syntax", "semantics", "chomsky", "linguistics", "tokenize"],
+    )
     # ... keep all other safe_import calls from your original v0.9.0 here ...
-
     # SOi sauc‑e special load, SOiOS, networktheory, bigbang, etc. – unchanged.
-    # (Omitted here only for brevity; copy from your existing file.)
 
     logger.info("Library index complete (%d domain engines loaded)", len(index))
     return index
@@ -493,7 +520,6 @@ def save_generated_file(ext: str, content: str) -> str:
 def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
     """
     Format the Guvna's output into a clean plate for the client.
-    (Keep exactly as in your v0.9.0; omitted details for brevity.)
     """
     result_text = raw_envelope.get("result", "")
     priorities_met = int(raw_envelope.get("priorities_met", 0) or 0)
@@ -540,6 +566,7 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # 👇 NEW: Chomsky name helper (non‑fatal)
+
 
 def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
@@ -740,7 +767,11 @@ def process_multi_question_parts(
         for p in part_results
     )
 
-    qs = [p.get("quality_score", 0.0) for p in part_results if isinstance(p.get("quality_score"), (int, float))]
+    qs = [
+        p.get("quality_score", 0.0)
+        for p in part_results
+        if isinstance(p.get("quality_score"), (int, float))
+    ]
     combined_q = sum(qs) / len(qs) if qs else 0.0
 
     return {
@@ -793,7 +824,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         logger.info("MULTIQUESTION detected: %s...", stimulus[:120])
         parts = extract_question_parts(result)
         if parts:
-            multi = process_multi_question_parts(parts, guvna_instance=guvna, max_pass=req.max_pass, session=session)
+            multi = process_multi_question_parts(
+                parts, guvna_instance=guvna, max_pass=req.max_pass, session=session
+            )
             result = {
                 "result": multi["combined_result"],
                 "status": "MULTI_QUESTION_PROCESSED",
@@ -818,7 +851,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     if mem_result.get("christening"):
         result["christening"] = mem_result["christening"]
-        update_name(session, mem_result["christening"].get("nickname"), christened=True)
+        update_name(
+            session, mem_result["christening"].get("nickname"), christened=True
+        )
 
     if mem_result.get("moment"):
         record_topics(
@@ -865,30 +900,46 @@ async def run_rilie_upload(
                     if ocrtext:
                         file_context_parts.append(f"[Image {f.filename}] {ocrtext}")
                     else:
-                        file_context_parts.append(f"[Image {f.filename}] (OCR produced no text)")
+                        file_context_parts.append(
+                            f"[Image {f.filename}] (OCR produced no text)"
+                        )
                 except Exception as e:
                     file_context_parts.append(f"[Image {f.filename}] OCR failed: {e}")
-            elif contenttype.startswith("text") or f.filename.endswith((".txt", ".md", ".csv", ".json", ".py", ".js", ".html")):
+            elif contenttype.startswith("text") or f.filename.endswith(
+                (".txt", ".md", ".csv", ".json", ".py", ".js", ".html")
+            ):
                 try:
                     text = rawbytes.decode("utf-8", errors="replace")
                     file_context_parts.append(f"[File {f.filename}] {text}")
                 except Exception:
-                    file_context_parts.append(f"[File {f.filename}] (could not decode as UTF-8)")
+                    file_context_parts.append(
+                        f"[File {f.filename}] (could not decode as UTF-8)"
+                    )
             elif f.filename.endswith(".docx"):
                 try:
                     import io
                     from docx import Document
 
                     doc = Document(io.BytesIO(rawbytes))
-                    text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+                    text = "\n".join(
+                        p.text for p in doc.paragraphs if p.text.strip()
+                    )
                     if text:
-                        file_context_parts.append(f"[Document {f.filename}] {text}")
+                        file_context_parts.append(
+                            f"[Document {f.filename}] {text}"
+                        )
                     else:
-                        file_context_parts.append(f"[Document {f.filename}] (no text found)")
+                        file_context_parts.append(
+                            f"[Document {f.filename}] (no text found)"
+                        )
                 except Exception as e:
-                    file_context_parts.append(f"[Document {f.filename}] parse failed: {e}")
+                    file_context_parts.append(
+                        f"[Document {f.filename}] parse failed: {e}"
+                    )
             else:
-                file_context_parts.append(f"[File {f.filename}] unsupported type: {contenttype}")
+                file_context_parts.append(
+                    f"[File {f.filename}] unsupported type: {contenttype}"
+                )
         except Exception as e:
             file_context_parts.append(f"[File {f.filename}] error: {e}")
 
