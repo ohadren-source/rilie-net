@@ -774,13 +774,9 @@
     const selfBtn = document.getElementById("rilie-self");
     const inputEl = document.getElementById("rilie-input");
     const outputEl = document.getElementById("rilie-output");
-    
-    // --- HELLO BROOKLYN ---
-    // userName starts null. First submit goes to /v1/hello to parse the name.
-    // After that, every call includes user_name in the payload.
-    let userName = null;
-    let greeted = false;
-    
+
+    const GREETING_HTML = '<div style="margin-bottom:16px"><p><strong>RILIE:</strong> Hi there! What\'s your name? You can call me RILIE if you so please... :)</p></div>';
+
     console.log("submitBtn:", submitBtn);
     console.log("inputEl:", inputEl);
     console.log("outputEl:", outputEl);
@@ -818,11 +814,11 @@
 
     function updateMeta(data) {
       metaPanel.classList.add("visible");
-      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "—"; };
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "\u2014"; };
       set("meta-status", data.status);
-      set("meta-quality", data.quality_score != null ? data.quality_score.toFixed(2) : "—");
+      set("meta-quality", data.quality_score != null ? data.quality_score.toFixed(2) : "\u2014");
       set("meta-priorities", data.priorities_met);
-      set("meta-beige", data.anti_beige_score != null ? data.anti_beige_score.toFixed(2) : "—");
+      set("meta-beige", data.anti_beige_score != null ? data.anti_beige_score.toFixed(2) : "\u2014");
       set("meta-depth", (data.depth || 0) + " / " + (data.pass || 0));
       set("meta-tone", (data.tone_emoji || "") + " " + (data.tone || ""));
       set("meta-domains", (data.domains_used || []).join(", "));
@@ -834,8 +830,8 @@
       const langActive = Object.entries(lang).filter(([k, v]) => v).map(([k]) => k);
       set("meta-language", langActive.length ? langActive.join(", ") : "literal");
       const social = data.social || {};
-      set("meta-social", social.user_status != null ? "user=" + social.user_status.toFixed(2) + " self=" + social.self_status.toFixed(2) : "—");
-      set("meta-curiosity", data.curiosity_informed ? "own discovery used" : "—");
+      set("meta-social", social.user_status != null ? "user=" + social.user_status.toFixed(2) + " self=" + social.self_status.toFixed(2) : "\u2014");
+      set("meta-curiosity", data.curiosity_informed ? "own discovery used" : "\u2014");
       const health = data.conversation_health || 100;
       healthFill.style.width = health + "%";
       healthPct.textContent = Math.round(health);
@@ -892,16 +888,17 @@
       });
     }
 
-    /* ── Submit with file upload ── */
+    /* ── Submit ── */
+    /* Every message goes to /v1/rilie. Raw string. No transformation. */
+    /* The API decides if this is a name or a conversation. */
     if (submitBtn) {
       submitBtn.onclick = async () => {
         console.log("Button clicked!");
-        const stimulus = inputEl.value.trim();
+        const stimulus = inputEl.value;
         const files = fileInput.files;
         const hasFiles = files && files.length > 0;
 
       if (!stimulus && !hasFiles) {
-        // Don't wipe conversation — just append a nudge
         const nudge = document.createElement("div");
         nudge.style.marginBottom = "16px";
         nudge.style.opacity = "0.6";
@@ -911,51 +908,8 @@
         return;
       }
 
-      // Remember and clear input so the box is ready for the next move
       lastStimulus = stimulus;
       inputEl.value = "";
-
-      // --- GREETING INTERCEPT ---
-      // First submit: send to /v1/hello to parse name. No Kitchen.
-      if (!greeted) {
-        greeted = true;
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Going...";
-
-        // Show what they typed
-        const userDiv = document.createElement("div");
-        userDiv.style.marginBottom = "16px";
-        userDiv.innerHTML = "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
-        outputEl.appendChild(userDiv);
-
-        try {
-          const res = await fetch("/v1/hello", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: stimulus })
-          });
-          const data = await res.json();
-          userName = data.name || "mate";
-
-          const rilieDiv = document.createElement("div");
-          rilieDiv.style.marginBottom = "16px";
-          rilieDiv.innerHTML = "<p><strong>RILIE:</strong> Nice to meet you, " + escapeHtml(userName) + "! What's on your mind? \u{1F373}</p>";
-          outputEl.appendChild(rilieDiv);
-          outputEl.scrollTop = outputEl.scrollHeight;
-        } catch (err) {
-          // If /v1/hello fails, just use mate and move on
-          userName = "mate";
-          const rilieDiv = document.createElement("div");
-          rilieDiv.style.marginBottom = "16px";
-          rilieDiv.innerHTML = "<p><strong>RILIE:</strong> Nice to meet you, mate! What's on your mind? \u{1F373}</p>";
-          outputEl.appendChild(rilieDiv);
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Learn from Go";
-        }
-        return;
-      }
-      // --- END GREETING INTERCEPT ---
 
       submitBtn.disabled = true;
       submitBtn.textContent = "Going...";
@@ -972,7 +926,6 @@
         let res;
 
         if (files2 && files2.length > 0) {
-          // Send as FormData with files
           const formData = new FormData();
           formData.append("stimulus", stimulus || "Please review the attached file(s)");
           formData.append("max_pass", "3");
@@ -981,11 +934,10 @@
           }
           res = await fetch("/v1/rilie-upload", { method: "POST", body: formData });
         } else {
-          // Send as JSON (no files)
           res = await fetch("/v1/rilie", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ stimulus, max_pass: 3, user_name: userName || "mate" })
+            body: JSON.stringify({ stimulus: stimulus })
           });
         }
 
@@ -1000,11 +952,9 @@
         const data = await res.json();
         const rilieLine = data.result || "No result returned.";
 
-        // Create RILIE response container
         const rilieDiv = document.createElement("div");
         rilieDiv.style.marginBottom = "16px";
-        
-        // Parse and render with code blocks
+
         const parts = rilieLine.split("```");
         let html = "";
         for (let i = 0; i < parts.length; i++) {
@@ -1031,7 +981,6 @@
         rilieDiv.innerHTML = html;
         outputEl.appendChild(rilieDiv);
 
-        // Attach copy button handlers
         rilieDiv.querySelectorAll(".rilie-code-copy").forEach((btn) => {
           btn.onclick = async () => {
             const code = btn.parentElement.querySelector("pre").innerText;
@@ -1043,7 +992,6 @@
           };
         });
 
-        // Scroll to bottom
         outputEl.scrollTop = outputEl.scrollHeight;
 
         updateMeta(data);
@@ -1056,7 +1004,6 @@
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = "Learn from Go";
-        // Clear file selection after submit
         fileInput.value = "";
         fileNames.textContent = "";
         fileClear.classList.remove("visible");
@@ -1069,7 +1016,6 @@
     selfBtn.onclick = async () => { inputEl.value = "Who are you?"; submitBtn.click(); };
 
     /* ── Output Actions ── */
-    // Share — copy URL + response snippet
     shareBtn.onclick = async () => {
       const text = outputEl.textContent;
       const shareData = { title: "RILIE (3,6,9)", text: text.substring(0, 200) + (text.length > 200 ? "..." : ""), url: window.location.href };
@@ -1081,7 +1027,6 @@
       }
     };
 
-    // Download — save response as .txt
     downloadBtn.onclick = () => {
       const text = outputEl.textContent;
       if (!text) return;
@@ -1096,7 +1041,6 @@
       URL.revokeObjectURL(url);
     };
 
-    // Copy
     copyBtn.onclick = async () => {
       const text = outputEl.textContent;
       if (text) {
@@ -1117,16 +1061,14 @@
       }
     };
 
-    // Rewrite — re-submit last stimulus
     rewriteBtn.onclick = () => { if (lastStimulus) { inputEl.value = lastStimulus; submitBtn.click(); } };
 
-    // Enter to submit
     inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitBtn.click(); } });
 
     /* ── Sidebar Actions ── */
     document.getElementById("sidebar-new").onclick = () => {
       inputEl.value = "";
-      outputEl.textContent = "";
+      outputEl.innerHTML = GREETING_HTML;
       metaPanel.classList.remove("visible");
       outputActions.classList.remove("visible");
       healthFill.style.width = "100%";
@@ -1139,7 +1081,7 @@
     };
 
     document.getElementById("sidebar-history").onclick = () => {
-      outputEl.textContent = "History — coming soon. Every conversation remembered.";
+      outputEl.textContent = "History \u2014 coming soon. Every conversation remembered.";
       outputActions.classList.remove("visible");
     };
 
@@ -1148,12 +1090,12 @@
     };
 
     document.getElementById("sidebar-spaces").onclick = () => {
-      outputEl.textContent = "Spaces — coming soon. Collaborative rooms with shared context.";
+      outputEl.textContent = "Spaces \u2014 coming soon. Collaborative rooms with shared context.";
       outputActions.classList.remove("visible");
     };
 
     document.getElementById("sidebar-finance").onclick = () => {
-      outputEl.textContent = "Finance — coming soon. Real intelligence meets real numbers.";
+      outputEl.textContent = "Finance \u2014 coming soon. Real intelligence meets real numbers.";
       outputActions.classList.remove("visible");
     };
     }); // Close DOMContentLoaded
