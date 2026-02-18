@@ -1,5 +1,5 @@
 """
-api.py — RILIE API v0.9.0
+api.py — RILIE API v0.9.1
 ==========================
 Session persistence wired in.
 She remembers who you are between visits.
@@ -287,7 +287,7 @@ BANKS_URL = os.getenv("BANKS_URL", "http://127.0.0.1:8001")
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="RILIE API", version="0.9.0")
+app = FastAPI(title="RILIE API", version="0.9.1")
 
 app.add_middleware(
     CORSMiddleware,
@@ -375,7 +375,7 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR)), name="static")
 # ---------------------------------------------------------------------------
 
 logger.info(
-    "RILIE API v0.9.0 booted | Roux: %d tracks | Library: %d engines | "
+    "RILIE API v0.9.1 booted | Roux: %d tracks | Library: %d engines | "
     "Brave: %s | Vision: %s | Manifesto: %s | Sessions: ON",
     len(roux_seeds), len(library_index),
     "ON" if HAS_BRAVE_SEARCH else "OFF",
@@ -488,51 +488,231 @@ def build_plate(raw_envelope):
 
 
 # ---------------------------------------------------------------------------
-# /v1/hello — DOORMAN → HOSTESS (name extraction, one call ever)
+# HOSTESS HAT — Name extraction (Chomsky's job)
+# Every method known to man. Approaching 99%.
 # ---------------------------------------------------------------------------
 
-class HelloRequest(BaseModel):
-    text: str = ""
+import re as _re
 
-@app.post("/v1/hello")
-def hello(req: HelloRequest) -> Dict[str, str]:
+# Skip list: things that are definitely not names
+_NAME_SKIP = frozenset({
+    "hi", "hello", "hey", "sup", "yo", "ok", "okay", "no", "nope",
+    "yes", "yeah", "yep", "yea", "nah", "nothing", "idk", "skip",
+    "what", "who", "why", "how", "huh", "lol", "haha", "lmao",
+    "hi there", "hello there", "hey there", "what's up", "whats up",
+    "good morning", "good evening", "good afternoon", "good night",
+    "nm", "n/a", "na", "none", "pass", "no thanks", "nty",
+    "test", "testing", "asdf", "qwerty", "aaa", "zzz",
+    "help", "help me", "what is this", "who are you",
+    "thanks", "thank you", "thx", "ty",
+})
+
+# Common words that aren't names even when capitalized
+_NOT_NAMES = frozenset({
+    "the", "this", "that", "what", "when", "where", "how", "who",
+    "nice", "good", "great", "sure", "just", "well", "hey", "hello",
+    "hi", "and", "but", "for", "not", "you", "your", "very", "really",
+    "please", "thanks", "thank", "sorry", "like", "love", "hate",
+    "yeah", "yes", "okay", "oh", "wow", "cool", "awesome", "amazing",
+    "here", "there", "meet", "know", "see", "want", "need", "think",
+})
+
+# Lowercase particles in multi-word names
+_LOWER_PARTS = frozenset({
+    "de", "la", "del", "van", "von", "der", "den", "di", "da", "le", "el", "al",
+})
+
+# Explicit patterns — most confident first.
+# Each returns the name portion as group(1).
+_NAME_PATTERNS = [
+    # "my name is X" / "my name's X"
+    _re.compile(
+        r"(?:my\s+name(?:'s|\u2019s|\s+is))\s+"
+        r"(.+?)"
+        r"(?:\s*[.!?,;:]|\s+(?:and|but|nice|how|what|lol|haha)\b|$)",
+        _re.IGNORECASE,
+    ),
+    # "call me X" / "they call me X" / "you can call me X" / "just call me X"
+    _re.compile(
+        r"(?:(?:you\s+can\s+|they\s+|people\s+|just\s+)?call\s+me)\s+"
+        r"(.+?)"
+        r"(?:\s*[.!?,;:]|\s+(?:and|but|if|nice|how|what|though)\b|$)",
+        _re.IGNORECASE,
+    ),
+    # "it's X" / "its X" / "name's X"
+    _re.compile(
+        r"(?:it'?s|it\u2019s|name'?s|name\u2019s)\s+"
+        r"(.+?)"
+        r"(?:\s*[.!?,;:]|\s+(?:and|but|nice|how|what)\b|$)",
+        _re.IGNORECASE,
+    ),
+    # "I'm X" / "I am X" / "im X" — handles straight AND curly apostrophe
+    _re.compile(
+        r"(?:i'?m|i\u2019m|i\s+am)\s+"
+        r"(.+?)"
+        r"(?:\s*[.!?,;:]|\s+(?:and|but|nice|how|what|to|from|lol)\b|$)",
+        _re.IGNORECASE,
+    ),
+    # "this is X" (less common)
+    _re.compile(
+        r"(?:this\s+is)\s+"
+        r"(.+?)"
+        r"(?:\s*[.!?,;:]|\s+(?:and|but|speaking|here)\b|$)",
+        _re.IGNORECASE,
+    ),
+    # "X here" pattern ("James here", "Sarah here")
+    _re.compile(
+        r"^([A-Z][a-zA-Z\u00C0-\u024F\-']+(?:\s+[A-Z][a-zA-Z\u00C0-\u024F\-']+)*)\s+here\s*[.!?,;:]?\s*$",
+        _re.IGNORECASE,
+    ),
+    # greeting + name pattern: "oh hey I'm X" / "hi, call me X" / "hello, it's X"
+    _re.compile(
+        r"(?:oh\s+|ah\s+|uh\s+)?"
+        r"(?:hey|hi|hello|yo|sup|howdy)[,!]?\s+"
+        r"(?:i'?m|i\u2019m|i\s+am|it'?s|it\u2019s|name'?s|name\u2019s|call\s+me)\s+"
+        r"(.+?)"
+        r"(?:\s*[.!?,;:]|\s+(?:nice|and|but|how|what|to|from|lol)\b|$)",
+        _re.IGNORECASE,
+    ),
+]
+
+# Correction patterns — mid-conversation name updates
+_CORRECTION_PATTERNS = [
+    _re.compile(
+        r"(?:actually|no|nah|wait)[,]?\s+"
+        r"(?:my\s+name(?:'s|\u2019s|\s+is)|i'?m|i\u2019m|call\s+me|it'?s|it\u2019s)\s+"
+        r"(.+?)"
+        r"(?:\s*[.!?,;:]|\s+(?:and|but|nice|how|what|though|sorry|instead|actually|please|thanks)\b|$)",
+        _re.IGNORECASE,
+    ),
+    _re.compile(
+        r"(?:call\s+me|name(?:'s|\u2019s|\s+is))\s+"
+        r"(.+?)"
+        r"(?:\s+(?:instead|actually|please|thanks|though|from\s+now)\b|\s*[.!?,;:]|$)",
+        _re.IGNORECASE,
+    ),
+]
+
+
+def _is_alpha_name(word: str) -> bool:
+    """Check if a word looks like a valid name part (letters, hyphens, apostrophes, accents)."""
+    cleaned = word.replace("-", "").replace("'", "").replace("\u2019", "")
+    return bool(cleaned) and all(c.isalpha() for c in cleaned) and len(word) <= 25
+
+
+def _name_case(name: str) -> str:
     """
-    Parse a name from whatever they typed. Return it.
-    If no name found, return 'mate'. That's it. Hanzo.
+    Smart title case for names.
+    O'Brien, McDonald, Jean-Pierre, de la Cruz, van der Berg.
     """
-    text = (req.text or "").strip()
-    if not text:
-        return {"name": "mate"}
+    parts = name.split()
+    result = []
+    for i, part in enumerate(parts):
+        if part.lower() in _LOWER_PARTS and i > 0:
+            result.append(part.lower())
+        elif "-" in part:
+            result.append("-".join(
+                seg.capitalize() if seg else seg for seg in part.split("-")
+            ))
+        elif "'" in part or "\u2019" in part:
+            sep = "'" if "'" in part else "\u2019"
+            idx = part.index(sep)
+            if idx <= 2:  # O'Brien, D'Angelo
+                result.append(part[:idx + 1] + part[idx + 1:].capitalize())
+            else:
+                result.append(part.capitalize())
+        else:
+            low = part.lower()
+            if low.startswith("mc") and len(low) > 2:
+                result.append("Mc" + low[2:].capitalize())
+            elif low.startswith("mac") and len(low) > 3 and low != "mace":
+                result.append("Mac" + low[3:].capitalize())
+            else:
+                result.append(part.capitalize())
+    return " ".join(result)
 
-    # Common non-name responses
-    _skip = {"hi", "hello", "hey", "sup", "yo", "ok", "okay", "no",
-             "yes", "yeah", "nah", "nothing", "idk", "skip", "nope",
-             "what", "who", "why", "how", "huh", "lol", "haha",
-             "hi there", "hello there", "hey there"}
 
-    # If they just typed a name (1-3 words, no question marks)
-    clean = text.rstrip(".!?,;:)").strip()
-    if clean.lower() in _skip:
-        return {"name": "mate"}
+def _validate_candidate(candidate: str) -> str:
+    """Validate and clean a name candidate. Returns cleaned name or ''."""
+    candidate = candidate.strip().rstrip(".!?,;:)>]}")
+    words = candidate.split()
+    # Strip leading filler words that aren't names
+    _filler = {"actually", "just", "really", "basically", "literally", "well", "so", "like", "um", "uh"}
+    while words and words[0].lower() in _filler:
+        words = words[1:]
+    # Strip trailing filler
+    _trail = {"instead", "actually", "please", "thanks", "though", "too", "tho", "lol", "haha"}
+    while words and words[-1].lower() in _trail:
+        words = words[:-1]
+    if not (1 <= len(words) <= 5):
+        return ""
+    if not all(_is_alpha_name(w) for w in words):
+        return ""
+    return _name_case(" ".join(words))
 
-    # Try to extract name from common patterns
-    import re
-    # "My name is X" / "I'm X" / "call me X" / "it's X" / "I am X"
-    patterns = [
-        r"(?:my name is|i'm|im|i am|call me|it's|its|they call me|people call me|name's|names)\s+([A-Za-z][A-Za-z\-']{0,20})",
-    ]
-    for pat in patterns:
-        m = re.search(pat, text, re.IGNORECASE)
+
+def _hostess_extract_name(raw: str) -> str:
+    """
+    Chomsky's one job: extract a name from whatever they typed.
+    Raw string in. Name out. If he can't make heads or tails, return "".
+
+    Methods (most confident first):
+    1. Explicit phrase patterns ("my name is X", "I'm X", "call me X", etc.)
+    2. Short clean string heuristic (1-5 words, all alpha → probably a name)
+    3. Capitalized proper noun detection in longer text
+    """
+    if not raw or not raw.strip():
+        return ""
+
+    text = raw.strip()
+    clean = text.rstrip(".!?,;:)>]}")
+
+    # --- Bail on known non-names ---
+    if clean.lower().strip() in _NAME_SKIP:
+        return ""
+
+    # --- Method 1: Explicit patterns (highest confidence) ---
+    for pat in _NAME_PATTERNS:
+        m = pat.search(text)
         if m:
-            return {"name": m.group(1).strip().title()}
+            result = _validate_candidate(m.group(1))
+            if result:
+                return result
 
-    # If it's short and looks like just a name (1-2 words, no weird chars)
+    # --- Method 2: Short clean string — if it looks like a name, it is ---
     words = clean.split()
-    if 1 <= len(words) <= 5 and all(w.isalpha() and len(w) <= 20 for w in words):
-        return {"name": clean.title()}
+    if 1 <= len(words) <= 5 and all(_is_alpha_name(w.rstrip(".!?,;:")) for w in words):
+        cleaned = " ".join(w.rstrip(".!?,;:") for w in words)
+        if cleaned.lower() not in _NAME_SKIP:
+            return _name_case(cleaned)
 
-    # Couldn't parse — mate it is
-    return {"name": "mate"}
+    # --- Method 3: Capitalized proper nouns in longer text ---
+    caps = _re.findall(r"\b([A-Z][a-z\u00C0-\u024F][a-zA-Z\u00C0-\u024F\-']{0,20})\b", text)
+    name_caps = [c for c in caps if c.lower() not in _NOT_NAMES]
+    if name_caps:
+        # Skip the first word of the sentence (often capitalized but not a name)
+        first_word = text.split()[0] if text.split() else ""
+        candidates = [c for c in name_caps if c != first_word] or name_caps
+        if candidates:
+            return candidates[0]
+
+    # --- Nothing found ---
+    return ""
+
+
+def _hostess_check_name_correction(stimulus: str) -> str:
+    """
+    Check if someone is correcting their name mid-conversation.
+    "actually my name is X" / "call me X instead" / "no, it's X"
+    Returns extracted name or "" if not a correction.
+    """
+    for pat in _CORRECTION_PATTERNS:
+        m = pat.search(stimulus)
+        if m:
+            result = _validate_candidate(m.group(1))
+            if result:
+                return result
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -680,17 +860,14 @@ def _process_multi_question_parts(
 @app.post("/v1/rilie")
 def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
-    Main RILIE endpoint — routes through the Guvna (Act 5).
-    NOW SESSION-AWARE:
-      1. Load session from Postgres by IP
-      2. Restore Guvna + TalkMemory state from session
-      3. Process the stimulus (with multi-question support)
-      4. Run conversation memory behaviors (including Christening)
-      5. Snapshot state back to session
-      6. Save session to Postgres
-      7. Return the plate
+    Main RILIE endpoint — three hats, one door.
+
+    HOSTESS (first message): Chomsky extracts name. If he can't, "mate".
+    SERVER (every message after): Kitchen via Guvna, talk, plate.
+    MIXOLOGIST (always on): catches mid-conversation name corrections.
     """
-    stimulus = req.stimulus.strip()
+    raw_stimulus = req.stimulus          # Untouched. Hostess gets this for name extraction.
+    stimulus = req.stimulus.strip()      # For empty check and conversation.
     if not stimulus:
         return {
             "stimulus": "",
@@ -708,7 +885,43 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     restore_guvna_state(guvna, session)
     restore_talk_memory(talk_memory, session)
 
-    # --- 3. Process through Guvna ---
+    # --- 2b. HOSTESS HAT — First message = name extraction ---
+    session_name = session.get("name", DEFAULT_NAME)
+    if session_name == DEFAULT_NAME:
+        # First message. This IS the name. Chomsky, do your thing.
+        extracted = _hostess_extract_name(raw_stimulus)
+        name = extracted if extracted else "mate"
+        logger.info("HOSTESS: '%s' -> name='%s'", raw_stimulus[:80], name)
+
+        # Set name in session
+        from session import update_name
+        session = update_name(session, name, "hostess")
+
+        # Save immediately
+        session = snapshot_guvna_state(guvna, session)
+        session = snapshot_talk_memory(talk_memory, session)
+        save_session(session)
+
+        # Return greeting. Never hits the Kitchen.
+        return build_plate({
+            "result": f"Nice to meet you, {name}! What can I do for you?",
+            "status": "GREETING",
+            "quality_score": 1.0,
+            "priorities_met": 5,
+            "anti_beige_score": 1.0,
+            "depth": 0,
+            "pass": 0,
+            "conversation_health": 100,
+        })
+
+    # --- 2c. MIXOLOGIST — Check for mid-conversation name correction ---
+    correction = _hostess_check_name_correction(stimulus)
+    if correction:
+        logger.info("HOSTESS: name correction '%s' -> '%s'", session_name, correction)
+        from session import update_name
+        session = update_name(session, correction, "correction")
+
+    # --- 3. SERVER HAT — Process through Guvna (the Kitchen) ---
     result = guvna.process(stimulus, maxpass=req.max_pass)
 
     # --- 3b. Multi-question handling (NEW) ---
