@@ -549,17 +549,85 @@ class Interpretation:
 # She thinks about the question, finds what she knows, and CONSTRUCTS
 # a response that connects her knowledge to what was asked.
 
+
+# ============================================================================
+# KEYWORD-LIST DETECTION + ANCHOR EXTRACTION
+# ============================================================================
+# Domain snippets from DOMAIN_KNOWLEDGE are comma-separated keyword lists
+# (e.g. "conserve, transform, nothing lost, symmetry, noether").
+# These helpers detect them and extract usable concept anchors so the
+# Kitchen builds real sentences instead of dumping raw keyword lists.
+# ============================================================================
+
+def _is_keyword_list(text: str) -> bool:
+    """Detect if text is a comma-separated keyword dump vs a real sentence."""
+    if not text:
+        return False
+    commas = text.count(",")
+    words = text.split()
+    # Keyword lists: high comma density, no sentence-ending punctuation
+    if commas >= 2 and len(words) < 20:
+        return True
+    # Also catch short comma-lists even with fewer commas
+    if commas >= 1 and not any(text.rstrip().endswith(p) for p in ".!?"):
+        avg_segment = len(text) / (commas + 1)
+        if avg_segment < 25:  # average segment under 25 chars = keyword list
+            return True
+    return False
+
+
+def _pick_anchor(snippet: str) -> str:
+    """From a keyword list, pick the most interesting anchor phrase."""
+    parts = [p.strip() for p in snippet.split(",") if p.strip()]
+    if not parts:
+        return snippet.strip()
+    # Prefer multi-word phrases over single words (richer concepts)
+    multi = [p for p in parts if len(p.split()) >= 2]
+    if multi:
+        return random.choice(multi[:3])
+    return parts[0]
+
+
+def _pick_two_anchors(snippet: str) -> tuple:
+    """Pick two distinct anchors from a keyword list for richer responses."""
+    parts = [p.strip() for p in snippet.split(",") if p.strip()]
+    if len(parts) < 2:
+        anchor = parts[0] if parts else snippet.strip()
+        return anchor, None
+    # Shuffle to avoid always picking the same pair
+    candidates = parts[:6]
+    random.shuffle(candidates)
+    return candidates[0], candidates[1]
+
+
+# ============================================================================
+# RESPONSE CONSTRUCTION — Chompky gives her a voice
+# ============================================================================
+# A human doesn't memorize the Library of Congress then say hello.
+# She thinks about the question, finds what she knows, and CONSTRUCTS
+# a response that connects her knowledge to what was asked.
+#
+# PATCHED: Keyword-list snippets from DOMAIN_KNOWLEDGE are now detected
+# and converted to concept anchors BEFORE being templated into sentences.
+# This eliminates the word-salad bug where raw keyword dumps like
+# "conserve, transform, nothing lost, symmetry, noether" were jammed
+# into sentence templates producing "This hits you This let's explore
+# conserve, transform, nothing lost..." instead of real speech.
+# ============================================================================
+
 def construct_response(stimulus: str, snippet: str) -> str:
     """
     Construct a response from a domain snippet + stimulus.
-    
-    The snippet is a SEED — could be a word, a phrase, or a sentence.
+
+    The snippet is a SEED — could be a word, a keyword list, or a sentence.
     She must BUILD a response that connects the seed to the question.
-    
+
     If the seed is a single word or short phrase (< 5 words):
-      She uses it as a concept anchor and constructs around it.
+        She uses it as a concept anchor and constructs around it.
+    If the seed is a keyword list (comma-separated domain keywords):
+        She extracts the best anchor concept(s) and builds from those.
     If the seed is a full sentence:
-      She restructures it through the stimulus lens.
+        She restructures it through the stimulus lens.
     """
     if not snippet or not stimulus:
         return snippet or ""
@@ -568,8 +636,64 @@ def construct_response(stimulus: str, snippet: str) -> str:
     snippet_clean = snippet.strip()
     snippet_words = snippet_clean.split()
     is_word_seed = len(snippet_words) < 5
+    is_kw_list = _is_keyword_list(snippet_clean)
 
-    # --- Chompky-powered construction ---
+    # --- KEYWORD LIST PATH: extract anchors, build real sentences ---
+    if is_kw_list:
+        anchor1, anchor2 = _pick_two_anchors(snippet_clean)
+        if CHOMSKY_AVAILABLE:
+            try:
+                parsed = parse_question(stimulus)
+                subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
+                focus = " ".join(parsed.focus_tokens) if parsed.focus_tokens else ""
+
+                if subject and focus and anchor2:
+                    return (
+                        f"When you look at {subject} through the lens of {focus}, "
+                        f"{anchor1} is the thread — and {anchor2} is where it leads."
+                    )
+                elif subject and anchor2:
+                    return (
+                        f"The core of {subject} is {anchor1}. "
+                        f"But flip it over and you find {anchor2} underneath."
+                    )
+                elif subject:
+                    return (
+                        f"With {subject}, it comes down to {anchor1}. "
+                        f"That's the part most people skip past."
+                    )
+                elif anchor2:
+                    return (
+                        f"Start with {anchor1}. Follow it far enough "
+                        f"and you hit {anchor2} — that's where it gets real."
+                    )
+                else:
+                    return (
+                        f"The thing about {anchor1} — it's not what it looks like "
+                        f"on the surface. Dig in and the whole picture shifts."
+                    )
+            except Exception:
+                pass
+
+        # No Chomsky fallback for keyword lists
+        topic_words = [w for w in stim_lower.split()
+                       if w not in {"what", "why", "how", "who", "when", "where",
+                                    "is", "are", "the", "a", "an", "do", "does",
+                                    "can", "could", "would", "should", "about",
+                                    "tell", "me", "you", "your", "my", "i"}]
+        topic = " ".join(topic_words[:3]) if topic_words else "this"
+        if anchor2:
+            return (
+                f"With {topic}, think about {anchor1} — "
+                f"then notice how {anchor2} changes the whole equation."
+            )
+        return (
+            f"The heart of {topic} is {anchor1}. "
+            f"Everything else orbits around that."
+        )
+
+    # === ORIGINAL LOGIC for word-seeds and real sentences ===
+
     if CHOMSKY_AVAILABLE:
         try:
             parsed = parse_question(stimulus)
@@ -599,9 +723,11 @@ def construct_response(stimulus: str, snippet: str) -> str:
                 # SENTENCE MODE: Restructure through stimulus
                 core = snippet_clean
                 if subject:
-                    return f"This hits {subject} ...let's explore {core[0].lower()}{core[1:]} if you're game"
+                    return (
+                        f"This hits {subject}... let's explore "
+                        f"{core[0].lower()}{core[1:]} if you're game"
+                    )
                 return f"The thing about {core[0].lower()}{core[1:]}"
-
         except Exception:
             pass
 
@@ -615,7 +741,6 @@ def construct_response(stimulus: str, snippet: str) -> str:
                                     "can", "could", "would", "should", "about",
                                     "tell", "me", "you", "your", "my", "i"}]
         topic = " ".join(topic_words[:3]) if topic_words else "this"
-
         return (
             f"Interesting... {topic}... {seed}... that's deep. "
             f"I mean that, sincerely."
@@ -629,13 +754,21 @@ def construct_response(stimulus: str, snippet: str) -> str:
 def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
     """
     Construct a cross-domain blend — two ideas connected through the question.
-    Handles both word-level seeds and full sentences.
+    Handles word-level seeds, keyword lists, and full sentences.
+
+    PATCHED: Keyword-list snippets are detected and converted to single
+    anchor concepts BEFORE blending, preventing word-salad collisions.
     """
     s1 = snippet1.strip()
     s2 = snippet2.strip()
-
     if not s1 or not s2:
         return s1 or s2 or ""
+
+    # Convert keyword lists to single anchors BEFORE blending
+    if _is_keyword_list(s1):
+        s1 = _pick_anchor(s1)
+    if _is_keyword_list(s2):
+        s2 = _pick_anchor(s2)
 
     s1_is_word = len(s1.split()) < 5
     s2_is_word = len(s2.split()) < 5
@@ -658,7 +791,7 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
                     f"That tracks... {s1.lower()} and {s2.lower()} "
                     f"seem like opposites at first and then you realize "
                     f"they're actually 2 sides of the same continuum. "
-                    f"Light (bulb went off/on hehe ;)!"
+                    f"Light bulb went off/on hehe 💡!"
                 )
             elif s1_is_word or s2_is_word:
                 # One word, one sentence — anchor through the word
@@ -669,40 +802,44 @@ def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
                     f"{sentence[0].lower()}{sentence[1:]} "
                     f"seem like opposites at first and then you realize "
                     f"they're actually 2 sides of the same continuum. "
-                    f"Light (bulb went off/on hehe ;)!"
+                    f"Light bulb went off/on hehe 💡!"
                 )
             else:
-                # Both sentences
+                # Both sentences — weave them
                 if subject:
                     return (
-                        f"With {subject}, there are two forces at work — "
-                        f"{s1[0].lower()}{s1[1:]}, and "
+                        f"With {subject}, notice how "
+                        f"{s1[0].lower()}{s1[1:]} connects to "
                         f"{s2[0].lower()}{s2[1:]}. "
-                        f"They seem different but they're related... huh..."
+                        f"Not a coincidence."
                     )
                 return (
-                    f"That tracks... {s1[0].lower()}{s1[1:]}, and "
+                    f"Here's what's wild: {s1[0].lower()}{s1[1:]} and "
                     f"{s2[0].lower()}{s2[1:]} — "
-                    f"seem like opposites at first and then you realize "
-                    f"they're actually 2 sides of the same continuum. "
-                    f"Light (bulb went off/on hehe ;)!"
+                    f"they're actually the same insight wearing different clothes."
                 )
         except Exception:
             pass
 
-    # No Chompky fallback
+    # --- No Chomsky fallback ---
     if s1_is_word and s2_is_word:
         return (
-            f"That tracks... {s1.lower()} and {s2.lower()} "
-            f"seem like opposites at first and then you realize "
-            f"they're actually 2 sides of the same continuum. "
-            f"Light (bulb went off/on hehe ;)!"
+            f"Two threads here: {s1.lower()} and {s2.lower()}. "
+            f"Pull either one and the whole thing unravels into something new."
         )
-    return (
-        f"With these two forces at work — {s1[0].lower()}{s1[1:]}, "
-        f"and {s2[0].lower()}{s2[1:]}. "
-        f"They seem different but they're related... huh..."
-    )
+    elif s1_is_word or s2_is_word:
+        word = s1 if s1_is_word else s2
+        sentence = s2 if s1_is_word else s1
+        return (
+            f"{word.capitalize()} — that's the key. And "
+            f"{sentence[0].lower()}{sentence[1:]} is where it takes you."
+        )
+    else:
+        return (
+            f"Connect these: {s1[0].lower()}{s1[1:]} and "
+            f"{s2[0].lower()}{s2[1:]}. "
+            f"Same root, different branches."
+        )
 
 
 # ============================================================================
