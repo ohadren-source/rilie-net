@@ -38,8 +38,11 @@ from typing import List, Dict, Optional
 try:
     from ChomskyAtTheBit import parse_question, extract_holy_trinity_for_roux, infer_time_bucket
     CHOMSKY_AVAILABLE = True
-except Exception:
+except Exception as e:
     CHOMSKY_AVAILABLE = False
+    import sys
+    print(f"CHOMSKY FAILED TO LOAD: {e}", file=sys.stderr)
+
 
 
 # ============================================================================
