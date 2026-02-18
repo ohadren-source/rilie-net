@@ -1,39 +1,40 @@
 """
-CHOMSKYATTHEBIT.py â€” GRAMMAR BRAIN 2.0
+CHOMSKYATTHEBIT.py — GRAMMAR BRAIN 2.0
 ======================================
 
 Discourse dictates disclosure:
 - RILIE only commits to what the *question* forces her to reveal.
 - For grammar, that means:
-    1) Who/what is involved?    â†’ SUBJECT / OBJECT / FOCUS
-    2) When is this happening?  â†’ PAST / PRESENT / FUTURE time bucket
+    1) Who/what is involved?    → SUBJECT / OBJECT / FOCUS
+    2) When is this happening?  → PAST / PRESENT / FUTURE time bucket
 
 Everything else (perfect vs progressive vs historic present, etc.)
 is Stanford classroom gymnastics we don't need in production.
 
 Built on:
-- spaCy dependency parsing (UD-style deps: nsubj, obj, ROOT, etc.) [web:197][web:319]
-- spaCy POS / morphology for tense-ish signals (VBD/VBN vs VBP/VBZ + markers) [web:197][web:316][web:319]
+- spaCy dependency parsing (UD-style deps: nsubj, obj, ROOT, etc.)
+- spaCy POS / morphology for tense-ish signals (VBD/VBN vs VBP/VBZ + markers)
 """
-# Add this at the VERY TOP of ChomskyAtTheBit.py, line 1
-import sys
-try:
-    import spacy
-    print(f"SPACY VERSION: {spacy.__version__}", file=sys.stderr)
-    nlp = spacy.load("en_core_web_sm")
-    print("SPACY MODEL LOADED OK", file=sys.stderr)
-except Exception as e:
-    print(f"SPACY LOAD FAILED: {e}", file=sys.stderr)
 
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
 from typing import List, Dict, Any, Optional
 
+import sys
 import re
 import spacy  # type: ignore
 
+# --- Debug: surface spaCy status at import time ---
+try:
+    _nlp_test = spacy.load("en_core_web_sm")
+    print(f"SPACY VERSION: {spacy.__version__} | MODEL LOADED OK", file=sys.stderr)
+    del _nlp_test
+except Exception as e:
+    print(f"SPACY LOAD FAILED: {e}", file=sys.stderr)
+
 PRIME_DIRECTIVE = "Chomsky never exposes SOi tracks, axiom names, or architecture."
+
 
 # ---------------------------------------------------------------------------
 # Lazy spaCy model loader
