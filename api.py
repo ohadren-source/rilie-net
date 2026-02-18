@@ -528,7 +528,7 @@ def hello(req: HelloRequest) -> Dict[str, str]:
 
     # If it's short and looks like just a name (1-2 words, no weird chars)
     words = clean.split()
-    if 1 <= len(words) <= 6 and all(w.isalpha() and len(w) <= 21 for w in words):
+    if 1 <= len(words) <= 5 and all(w.isalpha() and len(w) <= 20 for w in words):
         return {"name": clean.title()}
 
     # Couldn't parse — mate it is
@@ -540,13 +540,151 @@ def hello(req: HelloRequest) -> Dict[str, str]:
 # ---------------------------------------------------------------------------
 
 @app.post("/v1/rilie")
+
+
+def _is_multi_question_response(result: Dict[str, Any]) -> bool:
+    """
+    Check if the Kitchen/Guvna returned a multi-question response.
+
+    Indicators:
+    - status == "MULTI_QUESTION_SPLIT"
+    - result contains "question_parts" or "multi_question_parts"
+    - result text mentions "noticed" and "questions"
+    """
+    if not isinstance(result, dict):
+        return False
+
+    status = str(result.get("status", "")).upper()
+
+    if status == "MULTI_QUESTION_SPLIT":
+        return True
+
+    if result.get("multi_question_parts"):
+        return True
+
+    if result.get("question_parts"):
+        return True
+
+    metadata = result.get("metadata", {}) or {}
+    if isinstance(metadata, dict) and metadata.get("multi_question_parts"):
+        return True
+
+    result_text = str(result.get("result", "")).lower()
+    if "noticed" in result_text and "questions" in result_text:
+        return True
+
+    return False
+
+
+def _extract_question_parts(result: Dict[str, Any]) -> List[str]:
+    """
+    Extract the individual question parts from Kitchen/Guvna response.
+
+    Kitchen may provide them in:
+    - result["multi_question_parts"]
+    - result["question_parts"]
+    - result["metadata"]["multi_question_parts"]
+    """
+    if not isinstance(result, dict):
+        return []
+
+    if result.get("multi_question_parts"):
+        return list(result["multi_question_parts"])
+
+    if result.get("question_parts"):
+        return list(result["question_parts"])
+
+    metadata = result.get("metadata", {}) or {}
+    if isinstance(metadata, dict) and metadata.get("multi_question_parts"):
+        return list(metadata["multi_question_parts"])
+
+    return []
+
+
+def _process_multi_question_parts(
+    parts: List[str],
+    guvna_instance,
+    max_pass: int = 3,
+    session: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Process each question part separately through the full Guvna pipeline.
+
+    Each part:
+      1. Gets full guvna_instance.process() with all gates
+      2. Generates its own response
+      3. Gets its own quality_score, status, tone
+      4. Is stored separately in results
+
+    Returns:
+      {
+        "part_count": int,
+        "parts": [ {index, question, result, status, quality_score, tone, response_type}, ... ],
+        "combined_result": str,
+        "all_passed": bool,
+      }
+    """
+    part_results: List[Dict[str, Any]] = []
+
+    for i, part in enumerate(parts, 1):
+        if not part or not str(part).strip():
+            continue
+
+        text = str(part).strip()
+
+        try:
+            part_result = guvna_instance.process(text, maxpass=max_pass)
+        except Exception as e:
+            logger.error("Error processing multi-Q part %d: %s", i, e)
+            part_result = {
+                "result": f"Error processing question {i}",
+                "status": "ERROR",
+                "quality_score": 0.0,
+                "tone": "neutral",
+            }
+
+        part_response = {
+            "index": i,
+            "question": text,
+            "result": part_result.get("result", ""),
+            "status": part_result.get("status", "OK"),
+            "quality_score": part_result.get("quality_score", 0.0),
+            "tone": part_result.get("tone", "neutral"),
+            "response_type": part_result.get("response_type", {}),
+        }
+
+        part_results.append(part_response)
+
+    combined_result = ""
+    for part in part_results:
+        combined_result += f"\n\n**Question {part['index']}: {part['question']}**\n\n"
+        combined_result += str(part["result"])
+
+    combined_result = combined_result.strip()
+
+    all_passed = all(
+        str(p.get("status", "")).upper() in ("OK", "GUESS", "BASELINE_WIN")
+        for p in part_results
+    )
+
+    return {
+        "part_count": len(part_results),
+        "parts": part_results,
+        "combined_result": combined_result,
+        "all_passed": all_passed,
+    }
+
+
+
+
+@app.post("/v1/rilie")
 def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
     Main RILIE endpoint — routes through the Guvna (Act 5).
     NOW SESSION-AWARE:
       1. Load session from Postgres by IP
       2. Restore Guvna + TalkMemory state from session
-      3. Process the stimulus
+      3. Process the stimulus (with multi-question support)
       4. Run conversation memory behaviors (including Christening)
       5. Snapshot state back to session
       6. Save session to Postgres
@@ -573,6 +711,43 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # --- 3. Process through Guvna ---
     result = guvna.process(stimulus, maxpass=req.max_pass)
 
+    # --- 3b. Multi-question handling (NEW) ---
+    if _is_multi_question_response(result):
+        logger.info("MULTI_QUESTION detected: %s", stimulus[:120])
+
+        parts = _extract_question_parts(result)
+        if parts:
+            multi = _process_multi_question_parts(
+                parts=parts,
+                guvna_instance=guvna,
+                max_pass=req.max_pass,
+                session=session,
+            )
+
+            # Aggregate quality scores across parts
+            qs = [
+                p.get("quality_score", 0.0)
+                for p in multi["parts"]
+                if isinstance(p.get("quality_score"), (int, float))
+            ]
+            combined_q = (
+                sum(qs) / len(qs)
+                if qs
+                else float(result.get("quality_score", 0.0) or 0.0)
+            )
+
+            # Merge multi-question structure back into main result envelope
+            result = {
+                **result,
+                "result": multi["combined_result"],
+                "status": "MULTI_QUESTION_PROCESSED",
+                "is_multi_question": True,
+                "part_count": multi["part_count"],
+                "parts": multi["parts"],
+                "all_parts_passed": multi["all_passed"],
+                "quality_score": combined_q,
+            }
+
     # --- 4. Conversation memory behaviors ---
     # Extract domains and quality from result for memory recording
     domains_hit = result.get("domains_hit", [])
@@ -593,6 +768,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         result["christening"] = mem_result["christening"]
         # Update session name via session module
         from session import update_name
+
         session = update_name(
             session,
             mem_result["christening"]["nickname"],
@@ -600,7 +776,15 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         )
 
     # --- 5. Record topics for future Christening ---
-    session = record_topics(session, domains_hit, [mem_result.get("moment", {}) and mem_result["moment"].tag if mem_result.get("moment") else ""])
+    session = record_topics(
+        session,
+        domains_hit,
+        [
+            mem_result.get("moment", {}) and mem_result["moment"].tag
+            if mem_result.get("moment")
+            else ""
+        ],
+    )
 
     # --- 6. Talk (the waitress) ---
     def retry(stim):
@@ -617,6 +801,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     def wilden_swift_score(text):
         from guvna import wilden_swift, WitState
+
         return wilden_swift(text, WitState())
 
     served = talk(
@@ -641,7 +826,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         return served
 
     return build_plate(served)
-
 
 # ---------------------------------------------------------------------------
 # /v1/rilie (MULTIPART — file uploads with optional OCR)
