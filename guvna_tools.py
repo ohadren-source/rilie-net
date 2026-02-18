@@ -1,11 +1,14 @@
 """
+
 guvna_tools.py
 
 All standalone dataclasses, free functions, type aliases, and semantic clusters
 used by the Guvna governor. No methods, no Guvna class.
 
 REVISION: Wilden-Swift split into modulate (Guvna) + score (Talk).
+
 "Big words do nothing but confuse and lose." — Rakim
+
 """
 
 from __future__ import annotations
@@ -26,6 +29,7 @@ logger = logging.getLogger("guvna")
 # search_fn is something like bravesearchsync(query: str, numresults: int = 5)
 # returning a list of {"title": str, "link": str, "snippet": str} dicts.
 SearchFn = Callable[..., List[Dict[str, str]]]
+
 
 # ============================================================================
 # RILIE SELF STATE – who she is, always accessible
@@ -56,6 +60,7 @@ class RilieSelfState:
     constitution_loaded: bool = False
     constitution_flags: Dict[str, Any] = field(default_factory=dict)
 
+
 # ============================================================================
 # SOCIAL STATE – she always stays below the user
 # ============================================================================
@@ -76,6 +81,7 @@ def infer_user_status(text: str) -> float:
     Never used to judge – used to calibrate her own tone.
     """
     s = text.lower()
+
     if any(k in s for k in ["i don't get this", "i'm dumb", "i'm lost"]):
         return 0.6
     if any(k in s for k in ["explain like i'm five", "eli5", "keep it simple"]):
@@ -104,7 +110,9 @@ def infer_user_status(text: str) -> float:
         ]
     ):
         return 0.8
+
     return 0.7
+
 
 # ============================================================================
 # WIT STATE + DETECTION
@@ -124,6 +132,7 @@ def detect_wit(text: str) -> WitState:
     """Detect rhetorical moves in the user's input."""
     s = text.lower()
     w = WitState()
+
     if "you" in s or "rilie" in s:
         w.self_ref = True
     if ("obviously" in s and "not" in s) or "paradox" in s:
@@ -149,6 +158,7 @@ def detect_wit(text: str) -> WitState:
         ]
     ):
         w.persuasion = True
+
     return w
 
 
@@ -206,7 +216,6 @@ def wilden_swift_score(
     tl = text.lower().strip()
     words = tl.split()
     word_count = len(words)
-
     scores = {}
 
     # 1. LITERAL
@@ -313,11 +322,9 @@ def wilden_swift(
     """
     modulated = wilden_swift_modulate(base_reply, wit, social, language)
     score_result = wilden_swift_score(modulated, wit, social, language)
-
     if not hasattr(wilden_swift, '_last_scores'):
         wilden_swift._last_scores = {}
     wilden_swift._last_scores = score_result
-
     return modulated
 
 
@@ -337,13 +344,20 @@ class LanguageMode:
     poetry: bool = False
 
 
+# Punctuation characters to strip from words during language detection.
+# Defined as a module-level constant to avoid quote-escaping issues.
+_PUNCT_STRIP = ".,!?;:" + "\\" + "\"'()"
+
+
 def detect_language_mode(text: str) -> LanguageMode:
     """Detect whether the user is speaking literally, figuratively, poetically, etc."""
     s = text.lower()
     m = LanguageMode()
+
     if " like a " in s or " as a " in s or " as if " in s:
         m.simile = True
         m.figurative = True
+
     if any(
         k in s
         for k in [
@@ -353,6 +367,7 @@ def detect_language_mode(text: str) -> LanguageMode:
     ):
         m.analogy = True
         m.figurative = True
+
     if any(
         k in s
         for k in [
@@ -362,11 +377,14 @@ def detect_language_mode(text: str) -> LanguageMode:
     ):
         m.metaphor = True
         m.figurative = True
+
+    # Alliteration detection — strip punctuation from each word
     words = [
-        w.strip(".,!?;:\\"'()")
+        w.strip(_PUNCT_STRIP)
         for w in s.split()
-        if w.strip(".,!?;:\\"'()")
+        if w.strip(_PUNCT_STRIP)
     ]
+
     if len(words) >= 3:
         for i in range(len(words) - 2):
             trio = words[i : i + 3]
@@ -374,10 +392,13 @@ def detect_language_mode(text: str) -> LanguageMode:
             if len(initials) == 3 and len(set(initials)) == 1:
                 m.alliteration = True
                 break
+
     if "\n" in text and len(text.splitlines()) > 2:
         m.poetry = True
+
     if not m.figurative and not m.poetry:
         m.literal = True
+
     return m
 
 
@@ -403,6 +424,7 @@ class RilieAction:
 class CATCH44DNA:
     """
     Frozen DNA of the Catch-44 framework. Non-negotiable.
+
     In Ohad's system:
     - Real Intelligence = IQ / Ego (ego must approach 0)
     - WE > I (collective wisdom before self)
@@ -575,8 +597,10 @@ def detect_tone_from_stimulus(stimulus: str) -> str:
     Used only for the single emoji + label line.
     """
     s = stimulus.strip().lower()
+
     if not s:
         return "insightful"
+
     if is_serious_subject_text(s):
         if any(
             w in s
@@ -587,18 +611,22 @@ def detect_tone_from_stimulus(stimulus: str) -> str:
         ):
             return "compassionate"
         return "insightful"
+
     if any(w in s for w in ["joke", "funny", "lol", "lmao", "haha", "jajaja", "playful"]):
         return "amusing"
+
     if any(
         w in s
         for w in ["feel", "sad", "scared", "anxious", "hurt", "grief", "lonely"]
     ):
         return "compassionate"
+
     if any(
         w in s
         for w in ["burnout", "tired", "overwhelmed", "heal", "recover", "nourish"]
     ):
         return "nourishing"
+
     if any(
         w in s
         for w in [
@@ -607,10 +635,13 @@ def detect_tone_from_stimulus(stimulus: str) -> str:
         ]
     ):
         return "strategic"
+
     if s.startswith("why ") or s.startswith("how "):
         return "insightful"
+
     if s.startswith("what is ") or s.startswith("define "):
         return "insightful"
+
     return "insightful"
 
 
