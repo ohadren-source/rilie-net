@@ -45,7 +45,7 @@ from session import (
 from talk import talk, TalkMemory
 
 # ✅ MEANING INTEGRATION — For logging and API responses
-from guvna.meaning import MeaningFingerprint
+#from guvna.meaning import MeaningFingerprint
 
 # 👇 NEW: Chomsky integration for name extraction
 from ChomskyAtTheBit import classify_stimulus
