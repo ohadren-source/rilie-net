@@ -15,6 +15,15 @@ Built on:
 - spaCy dependency parsing (UD-style deps: nsubj, obj, ROOT, etc.) [web:197][web:319]
 - spaCy POS / morphology for tense-ish signals (VBD/VBN vs VBP/VBZ + markers) [web:197][web:316][web:319]
 """
+# Add this at the VERY TOP of ChomskyAtTheBit.py, line 1
+import sys
+try:
+    import spacy
+    print(f"SPACY VERSION: {spacy.__version__}", file=sys.stderr)
+    nlp = spacy.load("en_core_web_sm")
+    print("SPACY MODEL LOADED OK", file=sys.stderr)
+except Exception as e:
+    print(f"SPACY LOAD FAILED: {e}", file=sys.stderr)
 
 from __future__ import annotations
 
