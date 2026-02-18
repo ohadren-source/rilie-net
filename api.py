@@ -528,7 +528,7 @@ def hello(req: HelloRequest) -> Dict[str, str]:
 
     # If it's short and looks like just a name (1-2 words, no weird chars)
     words = clean.split()
-    if 1 <= len(words) <= 2 and all(w.isalpha() and len(w) <= 20 for w in words):
+    if 1 <= len(words) <= 6 and all(w.isalpha() and len(w) <= 21 for w in words):
         return {"name": clean.title()}
 
     # Couldn't parse — mate it is
