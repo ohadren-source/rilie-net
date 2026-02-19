@@ -988,6 +988,13 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # Persist on session
     session["display_name"] = display_name
     result.setdefault("display_name", display_name)
+    # Hostess line on very first turn with this client_ip
+    if not session.get("has_spoken"):
+        result["result"] = f"Pleasure to meet you, {display_name}!  What's on your mind? 🍳"
+        result["status"] = "GREETING"
+        session["has_spoken"] = True
+
+
 
     # Snapshot state + save session
     snapshot_guvna_state(guvna, session)
