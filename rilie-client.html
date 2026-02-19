@@ -639,7 +639,7 @@
       .rilie-main { margin-left: 0; }
       .rilie-shell { padding: 24px 16px; }
     }
-    /* ── CUT 2: file chip in stream ── */
+    /* ── file chip in stream ── */
     .rilie-file-chip {
       display: inline-flex;
       align-items: center;
@@ -919,6 +919,10 @@
         // Append user message to conversation flow
         const userDiv = document.createElement("div");
         userDiv.style.marginBottom = "16px";
+          userDiv.innerHTML = "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
+
+        const files2 = fileInput.files;
+
           // file chip in stream
           const chipHtml = (files2 && files2.length > 0)
             ? Array.from(files2).map(f =>
@@ -926,9 +930,7 @@
               ).join("")
             : "";
           userDiv.innerHTML = chipHtml + "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
-        outputEl.appendChild(userDiv);
-
-        const files2 = fileInput.files;
+          outputEl.appendChild(userDiv);
         let res;
 
         if (files2 && files2.length > 0) {
