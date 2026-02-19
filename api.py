@@ -681,7 +681,7 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     )
     if m:
         name = m.group(1).strip()
-        if name and name.lower() not in _BAD_NAMES and len(name) >= 2:
+        if name and name.lower() not in BAD_NAMES and len(name) >= 2:
             return name.title()
 
     # NER fallback
@@ -691,7 +691,7 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
         persons = [e.text.strip() for e in doc.ents if e.label_ == "PERSON"]
         if persons:
             best = max(persons, key=len)
-            if best.lower() not in _BAD_NAMES and len(best) >= 2:
+            if best.lower() not in BAD_NAMES and len(best) >= 2:
                 return best
     except Exception:
         pass
