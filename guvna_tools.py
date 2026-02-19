@@ -23,6 +23,145 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 logger = logging.getLogger("guvna")
 
 # ============================================================================
+# STIMULUS NORMALIZATION — runs before anything else sees the input
+# ============================================================================
+
+# All the ways humans spell her name — all roads lead to RILIE
+_RILIE_VARIANTS: List[str] = [
+    "riley", "riely", "rylie", "rylee", "rily",
+    "riliy", "rillie", "rilee", "rieley",
+    "RILEY", "RYLIE", "RIELY", "RILY", "Rilie", "Riley",
+]
+
+# Words she should never "correct" or synonym-swap — proper nouns, brand terms
+_PROTECTED_WORDS = {
+    "rilie", "RILIE", "soi", "SOi", "sauc", "catch44", "catch-44",
+    "escoffier", "chomsky", "guvna", "brootlyn",
+}
+
+# ── pyspellchecker ────────────────────────────────────────────────────────────
+try:
+    from spellchecker import SpellChecker as _SpellChecker
+    _spell = _SpellChecker()
+    _spell.word_frequency.load_words(list(_PROTECTED_WORDS))
+    _SPELLCHECK_AVAILABLE = True
+except ImportError:
+    _SPELLCHECK_AVAILABLE = False
+    _spell = None
+
+# ── WordNet + wordfreq ────────────────────────────────────────────────────────
+try:
+    from nltk.corpus import wordnet as _wn
+    from wordfreq import zipf_frequency as _zipf
+    _WORDNET_AVAILABLE = True
+except ImportError:
+    _WORDNET_AVAILABLE = False
+    _wn = None  # type: ignore
+    _zipf = None  # type: ignore
+
+
+def _common_synonym(word: str, pos: Optional[str] = None) -> str:
+    """
+    Return the most common synonym of `word` by Zipf frequency.
+    If nothing beats the original, return the original unchanged.
+    Common usage always wins over textbook vocabulary.
+
+    pos: 'n' noun | 'v' verb | 'a' adj | 'r' adv | None = try all
+    """
+    if not _WORDNET_AVAILABLE or not _wn or not _zipf:
+        return word
+
+    if word.lower() in _PROTECTED_WORDS:
+        return word
+
+    synsets = _wn.synsets(word, pos=pos) if pos else _wn.synsets(word)
+    if not synsets:
+        return word
+
+    candidates: Dict[str, float] = {}
+    for synset in synsets[:3]:  # top 3 synsets only — don't over-expand
+        for lemma in synset.lemmas():
+            candidate = lemma.name().replace("_", " ")
+            if candidate.lower() == word.lower():
+                continue
+            if candidate.lower() in _PROTECTED_WORDS:
+                continue
+            freq = _zipf(candidate, "en")
+            if freq > 0:
+                candidates[candidate] = freq
+
+    if not candidates:
+        return word
+
+    # Always prefer the highest-frequency (most common) option
+    best = max(candidates, key=lambda c: candidates[c])
+    original_freq = _zipf(word, "en")
+
+    # Only swap if the replacement is meaningfully more common
+    if candidates[best] > original_freq + 0.5:
+        return best
+
+    return word
+
+
+def normalize_stimulus(stimulus: str) -> str:
+    """
+    Light normalization before anything else sees the input.
+
+    Order matters:
+    1. Spellcheck — fix typos first so WordNet gets clean input
+    2. Name normalization — RILEY/Rylie/riely → RILIE (AFTER spellcheck)
+    3. Collapse excess whitespace
+
+    Synonym ranking (common_synonym) is available as a standalone tool
+    for response generation — not applied to stimulus to preserve intent.
+    """
+    if not stimulus:
+        return stimulus
+
+    normalized = stimulus.strip()
+
+    # ── Step 1: Spellcheck ────────────────────────────────────────────────────
+    if _SPELLCHECK_AVAILABLE and _spell:
+        words = normalized.split()
+        corrected_words = []
+        for word in words:
+            # Preserve punctuation around the word
+            stripped = word.strip(".,!?;:'\"()")
+            if not stripped:
+                corrected_words.append(word)
+                continue
+
+            # Skip: too short, numbers, ALL_CAPS acronyms, protected words
+            if (len(stripped) <= 2
+                    or stripped.isdigit()
+                    or stripped.isupper()
+                    or stripped.lower() in _PROTECTED_WORDS):
+                corrected_words.append(word)
+                continue
+
+            correction = _spell.correction(stripped)
+            if correction and correction.lower() != stripped.lower():
+                corrected = word.replace(stripped, correction, 1)
+                corrected_words.append(corrected)
+            else:
+                corrected_words.append(word)
+        normalized = " ".join(corrected_words)
+
+    # ── Step 2: Name normalization (AFTER spellcheck) ─────────────────────────
+    for variant in _RILIE_VARIANTS:
+        normalized = re.sub(
+            r'\b' + re.escape(variant) + r'\b',
+            "RILIE",
+            normalized,
+        )
+
+    # ── Step 3: Collapse whitespace ───────────────────────────────────────────
+    normalized = re.sub(r' {2,}', ' ', normalized).strip()
+
+    return normalized
+
+# ============================================================================
 # TYPE ALIASES
 # ============================================================================
 
@@ -502,21 +641,30 @@ SELF_REFERENCE_CLUSTERS: Dict[str, List[str]] = {
         "what are you good at",
         "what do you know",
         "what are your limits",
-        "can you",
-        "are you able to",
+        "can you do",
+        "can you think",
+        "can you feel",
+        "can you learn",
+        "are you able to think",
+        "are you able to feel",
+        "are you able to learn",
     ],
     "comparison": [
         "how are you different",
         "what makes you different",
         "difference between you and",
-        "compared to",
-        "better than",
+        "how do you compare to",
+        "are you better than",
         "versus chatgpt",
         "vs chatgpt",
         "vs gpt",
         "versus gpt",
-        "unlike other",
+        "unlike other ai",
         "what sets you apart",
+        "how are you different from chatgpt",
+        "how are you different from gpt",
+        "what's the difference between you and",
+        "what is the difference between you and",
     ],
 }
 
