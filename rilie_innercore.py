@@ -557,7 +557,7 @@ def construct_response(stimulus: str, snippet: str) -> str:
                 )
             else:
                 core = snippet_clean
-                if subject and subject.strip():
+                if subject and subject.strip() and len(subject.strip()) > 2 and subject.strip()[0].isalpha():
                     return (
                         f"This hits {subject.strip()}... let's explore "
                         f"{core[0].lower()}{core[1:]} if you're game"

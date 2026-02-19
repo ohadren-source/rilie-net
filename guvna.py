@@ -1,53 +1,87 @@
 """
+
 guvna.py
 
 Act 5 – The Governor (REVISED)
 
 Orchestrates Acts 1–4 by delegating to the RILIE class (Act 4 – The Restaurant),
+
 which wires through:
-  - Triangle (Act 1 – safety / nonsense gate)
-  - DDD / Hostess (Act 2 – disclosure level)
-  - Kitchen / Core (Act 3 – interpretation passes)
+
+- Triangle (Act 1 – safety / nonsense gate)
+
+- DDD / Hostess (Act 2 – disclosure level)
+
+- Kitchen / Core (Act 3 – interpretation passes)
 
 The Governor (Act 5) adds:
-  - Final authority on what gets served
-  - YELLOW GATE – conversation health monitoring + tone degradation detection
-  - Optional web lookup (Brave/Google) as a KISS pre-pass
-  - Tone signaling via a single governing emoji per response
-  - Comparison between web baseline and RILIE's own compression
-  - CATCH44 DNA ethical guardrails
-  - Self-awareness fast path (_is_about_me)
-  - Wit detection + wilden_swift tone modulation (Guvna owns modulate)
-  - Language mode detection (literal/figurative/metaphor/simile/poetry)
-  - Social status tracking (user always above self)
-  - Library index for domain engine access (678 domains across B-U + urban_design)
-  - WHOSONFIRST – greeting gate on first contact (before Triangle)
-  - Curiosity resurface – past insights as context before RILIE processes
-  - Domain lenses flow into RILIE for weighted interpretation
-  - Déjà-vu as informative context on the plate
-  - Memory seeds curiosity – interesting topics get queued
+
+- Final authority on what gets served
+
+- YELLOW GATE – conversation health monitoring + tone degradation detection
+
+- Optional web lookup (Brave/Google) as a KISS pre-pass
+
+- Tone signaling via a single governing emoji per response
+
+- Comparison between web baseline and RILIE's own compression
+
+- CATCH44 DNA ethical guardrails
+
+- Self-awareness fast path (_is_about_me)
+
+- Wit detection + wilden_swift tone modulation (Guvna owns modulate)
+
+- Language mode detection (literal/figurative/metaphor/simile/poetry)
+
+- Social status tracking (user always above self)
+
+- Library index for domain engine access (678 domains across B-U + urban_design)
+
+- WHOSONFIRST – greeting gate on first contact (before Triangle)
+
+- Curiosity resurface – past insights as context before RILIE processes
+
+- Domain lenses flow into RILIE for weighted interpretation
+
+- Déjà-vu as informative context on the plate
+
+- Memory seeds curiosity – interesting topics get queued
 
 TIER 2 WIRING:
-  1. Curiosity resurfaces into Step 3.5 (context, not afterthought)
-  2. wilden_swift_modulate() in Step 5 (Guvna owns shaping, Talk owns scoring)
-  3. Domain lenses flow into rilie.process() (Kitchen uses them to weight)
-  4. Déjà-vu rides as informative context (not a gate)
-  5. Memory seeds curiosity (bidirectional from day one)
+
+1. Curiosity resurfaces into Step 3.5 (context, not afterthought)
+
+2. wilden_swift_modulate() in Step 5 (Guvna owns shaping, Talk owns scoring)
+
+3. Domain lenses flow into rilie.process() (Kitchen uses them to weight)
+
+4. Déjà-vu rides as informative context (not a gate)
+
+5. Memory seeds curiosity (bidirectional from day one)
 
 678 total bool/curve gates, all demiglace to Boole substrate
+
 """
 
 from __future__ import annotations
 
 import logging
+
 from typing import Any, Dict, List, Optional, Set, Tuple
+
 from dataclasses import dataclass, field
 
 from conversation_memory import ConversationMemory
+
 from photogenic_db import PhotogenicDB
+
 from rilie import RILIE
+
 from soi_domain_map import build_domain_index, get_tracks_for_domains, get_human_wisdom
+
 from library import build_library_index, LibraryIndex
+
 from guvna_tools import (
     RilieSelfState,
     SocialState,
@@ -59,9 +93,9 @@ from guvna_tools import (
     infer_user_status,
     detect_wit,
     detect_language_mode,
-    wilden_swift_modulate,   # NEW: Guvna owns modulation
-    wilden_swift_score,      # NEW: Talk owns scoring (exported for Talk's use)
-    wilden_swift,            # COMPAT: backwards-compatible wrapper
+    wilden_swift_modulate,  # NEW: Guvna owns modulation
+    wilden_swift_score,     # NEW: Talk owns scoring (exported for Talk's use)
+    wilden_swift,           # COMPAT: backwards-compatible wrapper
     _is_about_me,
     load_charculterie_manifesto,
     detect_tone_from_stimulus,
@@ -114,7 +148,6 @@ class DomainLibraryMetadata:
     })
     boole_substrate: str = "All domains reduce to bool/curve gates"
     core_tracks: List[int] = field(default_factory=lambda: [0, 2, 5, 23, 37, 67])
-
 
 # ============================================================================
 # THE GOVERNOR (REVISED — TIER 2 WIRING)
@@ -231,6 +264,7 @@ class Guvna:
             ethics_source="Catch-44 DNA + 678-Domain Library",
             dna_active=True,
         )
+
         self.social_state = SocialState()
         self.dna = CATCH44DNA()
 
@@ -252,12 +286,11 @@ class Guvna:
             "loaded", False
         )
         logger.info("GUVNA: Charculterie Manifesto loaded" if self.self_state.constitution_loaded
-                     else "GUVNA: Charculterie Manifesto not found (using defaults)")
+                    else "GUVNA: Charculterie Manifesto not found (using defaults)")
 
     # -----------------------------------------------------------------
     # APERTURE – First contact. Before anything else.
     # -----------------------------------------------------------------
-
     def greet(self, stimulus: str, known_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         APERTURE – Turn 0 only. First thing that happens.
@@ -274,7 +307,7 @@ class Guvna:
                 if intro in s:
                     idx = s.index(intro) + len(intro)
                     rest = stimulus[idx:].strip().split()[0] if idx < len(stimulus) else ""
-                    name = rest.strip(".,!?;:'\"")
+                    name = rest.strip(".,!?;:'"")
                     if name and len(name) > 1:
                         known_name = name.capitalize()
                         break
@@ -294,10 +327,8 @@ class Guvna:
 
         self.turn_count += 1
         self.memory.turn_count += 1
-
         tone = detect_tone_from_stimulus(stimulus)
         result_with_tone = apply_tone_header(greeting_text, tone)
-
         response = {
             "stimulus": stimulus,
             "result": result_with_tone,
@@ -308,14 +339,12 @@ class Guvna:
             "user_name": self.user_name,
             "whosonfirst": False,
         }
-
         self.whosonfirst = False
         return self._finalize_response(response)
 
     # -----------------------------------------------------------------
     # MAIN PROCESS – Core response pipeline (TIER 2 WIRED)
     # -----------------------------------------------------------------
-
     def process(self, stimulus: str, maxpass: int = 1) -> Dict[str, Any]:
         """
         Main entry point for conversation.
@@ -341,8 +370,15 @@ class Guvna:
 
         # ==============================================================
         # STEP 1: SELF-AWARENESS FAST PATH
+        # ✂ CUT 1: expanded gate catches all self-questions
         # ==============================================================
-        if _is_about_me(stimulus):
+        try:
+            from rilie_innercore import is_self_question
+            _self_gate = _is_about_me(stimulus) or is_self_question(stimulus)
+        except ImportError:
+            _self_gate = _is_about_me(stimulus)
+
+        if _self_gate:
             return self._finalize_response(self._respond_from_self(stimulus))
 
         # ==============================================================
@@ -360,8 +396,6 @@ class Guvna:
         # ==============================================================
         # STEP 3.5: CURIOSITY RESURFACE (Tier 2 — context before RILIE)
         # ==============================================================
-        # She walks into the kitchen already knowing what she explored.
-        # Not an afterthought.
         curiosity_context = ""
         if self.curiosity_engine and hasattr(self.curiosity_engine, 'resurface'):
             try:
@@ -379,8 +413,8 @@ class Guvna:
                         for r in curiosity_results[:3]
                         if r.get("insight") or r.get("tangent")
                     )
-                    if curiosity_context:
-                        logger.info("GUVNA: Curiosity resurfaced from banks_curiosity")
+                if curiosity_context:
+                    logger.info("GUVNA: Curiosity resurfaced from banks_curiosity")
             except Exception as e:
                 logger.debug("GUVNA: banks curiosity search failed (non-fatal): %s", e)
 
@@ -389,15 +423,12 @@ class Guvna:
         # ==============================================================
         # STEP 4: RILIE CORE PROCESSING (Acts 1-4) — DOMAIN LENSES FLOW
         # ==============================================================
-        # TIER 2: Domain lenses now flow into RILIE so the Kitchen
-        # uses them to weight interpretation passes. Supreme burrito.
         rilie_result = self.rilie.process(
             stimulus=stimulus,
             baseline_text=baseline_text,
-            domain_hints=soi_domain_names,         # NEW: domains flow in
-            curiosity_context=curiosity_context,    # NEW: curiosity as context
+            domain_hints=soi_domain_names,
+            curiosity_context=curiosity_context,
         )
-
         if not rilie_result:
             rilie_result = {}
         raw.update(rilie_result)
@@ -405,15 +436,12 @@ class Guvna:
         # ==============================================================
         # STEP 5: GOVERNOR OVERSIGHT (Act 5) — MODULATE, NOT SCORE
         # ==============================================================
-        # Wit detection
         wit = detect_wit(stimulus)
         raw["wit"] = wit
 
-        # Language mode detection
         language = detect_language_mode(stimulus)
         raw["language_mode"] = language
 
-        # Tone detection
         tone = detect_tone_from_stimulus(stimulus)
         if is_serious_subject_text(stimulus):
             if any(w in stimulus.lower() for w in ["feel", "hurt", "scared", "pain"]):
@@ -421,13 +449,11 @@ class Guvna:
         raw["tone"] = tone
         raw["tone_emoji"] = TONE_EMOJIS.get(tone, TONE_EMOJIS["insightful"])
 
-        # TIER 2: wilden_swift_modulate — Guvna owns shaping, Talk owns scoring
         result_text = raw.get("result", "")
         if result_text and wit:
             result_text = wilden_swift_modulate(result_text, wit, self.social_state, language)
             raw["result"] = result_text
 
-        # Social status inference
         user_status = infer_user_status(stimulus)
         self.social_state.user_status = user_status
         self.social_state.self_status = min(user_status - 0.1, 0.4)
@@ -451,28 +477,23 @@ class Guvna:
         memory_callback = _annotations.get("callback", "")
         memory_thread = _annotations.get("thread_pull", "")
         memory_polaroid = memory_result.get("polaroid_text", None)
-
         _energy = memory_result.get("energy_guidance") or {}
         conversation_health = max(0, min(100, _energy.get("energy", 1.0) * 100))
         raw["conversation_health"] = conversation_health
 
-        # TIER 2: Déjà-vu as informative context (not a gate)
-        # It rides on the plate. The Kitchen reads it as awareness.
         dejavu = raw.get("dejavu", {"count": 0, "frequency": 0, "similarity": "none"})
         if dejavu.get("frequency", 0) > 0:
             logger.info("GUVNA: Déjà-vu signal (freq=%d) — informative context, not gate",
-                       dejavu["frequency"])
+                        dejavu["frequency"])
 
-        # TIER 2: Memory seeds curiosity (bidirectional cross-talk)
-        # Interesting topics from conversation get queued for exploration.
         if self.curiosity_engine and soi_domain_names:
             try:
                 for domain in soi_domain_names[:2]:
                     self.curiosity_engine.queue_tangent(
                         tangent=f"Explore {domain} in context of: {stimulus[:80]}",
                         seed_query=stimulus,
-                        relevance=0.3,   # Low relevance to current response
-                        interest=0.8,    # High self-interest for exploration
+                        relevance=0.3,
+                        interest=0.8,
                     )
             except Exception as e:
                 logger.debug("GUVNA: Curiosity seeding failed (non-fatal): %s", e)
@@ -511,7 +532,6 @@ class Guvna:
         if result_text and not result_text.startswith(tone) and not is_blocked:
             raw["result"] = apply_tone_header(result_text, tone)
 
-        # Memory enrichments
         result_text = raw.get("result", "")
         if memory_callback and result_text:
             raw["result"] = memory_callback + "\n\n" + result_text
@@ -525,16 +545,27 @@ class Guvna:
 
     # -----------------------------------------------------------------
     # SELF-AWARENESS FAST PATH
+    # ✂ CUT 2: delegates to Kitchen's get_self_answer() for rich identity
     # -----------------------------------------------------------------
-
     def _respond_from_self(self, stimulus: str) -> Dict[str, Any]:
         """
         Self-aware response for 'about me' queries.
-        Just her name. Like a person would.
+        Delegates to Kitchen's get_self_answer() for rich identity responses.
+        Covers: name, maker, vs-ChatGPT, what do you care about, trust you, etc.
         """
-        response_text = "My name is RILIE."
+        try:
+            from rilie_innercore import get_self_answer
+            answer = get_self_answer(stimulus)
+            if answer:
+                return {
+                    "result": answer,
+                    "status": "SELF_REFLECTION",
+                    "triangle_reason": "CLEAN",
+                }
+        except ImportError:
+            pass
         return {
-            "result": response_text,
+            "result": "My name is RILIE.",
             "status": "SELF_REFLECTION",
             "triangle_reason": "CLEAN",
         }
@@ -542,7 +573,6 @@ class Guvna:
     # -----------------------------------------------------------------
     # DOMAIN LENSES + BASELINE
     # -----------------------------------------------------------------
-
     def _apply_domain_lenses(self, stimulus: str) -> Dict[str, Any]:
         """
         Apply domain-specific lenses using 678-domain library.
@@ -567,11 +597,9 @@ class Guvna:
         """
         baseline = {"text": "", "source": "", "raw_results": []}
         stimulus_lower = (stimulus or "").lower()
-
         known_patterns = ["what is", "explain", "tell me about", "how does"]
         is_entity_question = not any(p in stimulus_lower for p in known_patterns)
         should_force_google = is_entity_question or len(stimulus) < 30
-
         try:
             if self.search_fn:
                 baseline_query = stimulus if should_force_google else f"what is the correct response to {stimulus}"
@@ -579,7 +607,6 @@ class Guvna:
                 if results and isinstance(results, list):
                     baseline["raw_results"] = results
                     snippets = [r.get("snippet", "") for r in results if r.get("snippet")]
-
                     bad_markers = [
                         "in this lesson",
                         "you'll learn the difference between",
@@ -589,7 +616,6 @@ class Guvna:
                         "learn english fast with real lessons",
                         "sign up for your free lifetime account",
                     ]
-
                     for snippet in snippets:
                         lower = snippet.lower()
                         if any(m in lower for m in bad_markers):
@@ -600,13 +626,11 @@ class Guvna:
                         break
         except Exception as e:
             logger.debug("Baseline lookup error: %s", e)
-
         return baseline
 
     # -----------------------------------------------------------------
     # RESPONSE FINALIZATION
     # -----------------------------------------------------------------
-
     def _finalize_response(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         """Finalize response: add metadata, ensure all required fields present."""
         final = {
@@ -659,6 +683,7 @@ def create_guvna(
 ) -> Guvna:
     """
     Factory function to create a Governor with full domain library.
+
     Returns:
         Initialized Guvna instance with 678 domains loaded
     """

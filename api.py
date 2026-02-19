@@ -681,7 +681,7 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     )
     if m:
         name = m.group(1).strip()
-        if name and name.lower() not in BAD_NAMES and len(name) >= 2:
+        if name and name.lower() not in _BAD_NAMES and len(name) >= 2:
             return name.title()
 
     # NER fallback
@@ -691,7 +691,7 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
         persons = [e.text.strip() for e in doc.ents if e.label_ == "PERSON"]
         if persons:
             best = max(persons, key=len)
-            if best.lower() not in BAD_NAMES and len(best) >= 2:
+            if best.lower() not in _BAD_NAMES and len(best) >= 2:
                 return best
     except Exception:
         pass
@@ -912,8 +912,40 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     restore_guvna_state(guvna, session)
     restore_talk_memory(talk_memory, session)
 
-    # Core Guvna call
-    result = guvna.process(stimulus, maxpass=req.max_pass)
+    # Pre-split: detect multiple questions BEFORE guvna
+    def _detect_multi_question(s: str):
+        """Split stimulus into parts if user explicitly requested numbered answers."""
+        import re
+        # Only trigger if they asked for numbered format explicitly
+        if not re.search(r'\b(1\.|2\.|3\.|question|each|order|following)\b', s, re.IGNORECASE):
+            return None
+        # Split on question marks, numbered patterns, or explicit question boundaries
+        parts = re.split(r'(?<=[?!])\s+(?=[A-Z])|(?=\b[1-9]\.\s)', s)
+        # Clean and filter
+        parts = [p.strip() for p in parts if p.strip() and len(p.strip()) > 8]
+        # Only split if we found more than 1 real question
+        if len(parts) > 1:
+            return parts
+        return None
+
+    pre_parts = _detect_multi_question(stimulus)
+    if pre_parts:
+        logger.info("PRE-SPLIT multi-question: %d parts", len(pre_parts))
+        multi = process_multi_question_parts(
+            pre_parts, guvna_instance=guvna, max_pass=req.max_pass, session=session
+        )
+        result = {
+            "result": multi["combined_result"],
+            "status": "MULTI_QUESTION_PROCESSED",
+            "is_multi_question": True,
+            "part_count": multi["part_count"],
+            "parts": multi["parts"],
+            "all_parts_passed": multi["all_passed"],
+            "quality_score": multi["quality_score"],
+        }
+    else:
+        # Core Guvna call
+        result = guvna.process(stimulus, maxpass=req.max_pass)
 
     # Multi-question handling
     if is_multi_question_response(result):
