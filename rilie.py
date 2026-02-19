@@ -25,6 +25,15 @@ ARCHITECTURE (v4.1.1 — Guvna integration complete):
      - chomsky_speech_engine: grammatical transformation
   7. Tangent Extraction — feeds curiosity engine
 
+MEASURESTICK (replaces YARDSTICK v4.1):
+  Not a gate. A quality SIGNAL. Three dimensions:
+  - Relevance: token overlap with stimulus (did she stay on target?)
+  - Originality: inverse Google hits (low hits = her own voice = good)
+  - Coherence: word variety ratio (real thought vs word salad)
+  RILIE's voice ALWAYS serves first. Baseline only wins if she produced
+  genuine nothing AND Chomsky flagged structural failure simultaneously.
+  Signal stored in banks_measurestick for learning, not punishment.
+
 CHANGES FROM v4.1:
   - process() now accepts domain_hints and curiosity_context from Guvna
   - Curiosity context: Guvna-resurfaced takes priority, Banks is fallback
@@ -395,43 +404,108 @@ def _search_banks_if_available(query: str) -> Dict[str, List[Dict]]:
         }
 
 
-def _google_yardstick(response: str, search_fn) -> int:
+def _measurestick(response: str, stimulus: str, search_fn) -> Dict[str, Any]:
     """
-    GOOGLE YARDSTICK: Search her response in quotes.
-    Returns the number of results found.
-    < 9 results = nobody has ever said this = not a real sentence.
+    MEASURESTICK: Quality signal — not a gate. Never kills a response.
+    Informs the Governor. RILIE's voice is protected.
+
+    Three dimensions measured:
+    A. RELEVANCE   — does the response contain tokens from the stimulus?
+                     Low relevance = she drifted. High = she's on target.
+    B. ORIGINALITY — how many Google results for this exact phrase?
+                     Low results = original voice. High = baseline regurgitation.
+    C. COHERENCE   — does the response have enough word variety to be a real thought?
+                     Low = word salad. High = real sentence.
+
+    Returns dict with scores + recommendation. Guvna decides what to do with it.
+    RILIE's own voice ALWAYS gets a chance to serve first.
     """
-    # Take the first ~60 chars to keep the query reasonable
+    result = {
+        "relevance": 0.0,
+        "originality": 1.0,   # default: assume original
+        "coherence": 0.0,
+        "google_hits": -1,    # -1 = not checked
+        "recommendation": "SERVE",  # SERVE | ANNOTATE | PREFER_BASELINE
+        "reason": "",
+    }
+
+    if not response or not response.strip():
+        result["recommendation"] = "PREFER_BASELINE"
+        result["reason"] = "empty response"
+        return result
+
+    # --- A. RELEVANCE --- token overlap with stimulus
+    r_words = set(re.sub(r"[^a-zA-Z0-9]", " ", response.lower()).split())
+    s_words = set(re.sub(r"[^a-zA-Z0-9]", " ", stimulus.lower()).split())
+    stop = {"the","a","an","is","are","was","were","i","you","it","to","of","and","or","in","on","at","be"}
+    r_content = r_words - stop
+    s_content = s_words - stop
+    if s_content:
+        overlap = len(r_content & s_content) / len(s_content)
+        result["relevance"] = round(overlap, 3)
+    else:
+        result["relevance"] = 1.0  # no content words to miss
+
+    # --- B. ORIGINALITY --- Google hit count (low = original = good)
     snippet = response.strip()
     if len(snippet) > 60:
         snippet = snippet[:60].rsplit(" ", 1)[0]
-
-    # Strip special chars that break quoted search
     snippet = re.sub(r"[—–\"\'\\(\\)\\[\\]]", " ", snippet)
     snippet = re.sub(r"\s+", " ", snippet).strip()
 
-    if not snippet or len(snippet) < 10:
-        return 999  # Too short to judge, let it pass
+    if snippet and len(snippet) >= 10 and search_fn:
+        try:
+            hits = search_fn(f'"{snippet}"')
+            google_hits = len(hits) if hits and isinstance(hits, list) else 0
+            result["google_hits"] = google_hits
+            # Low hits = original voice = high originality score
+            if google_hits == 0:
+                result["originality"] = 1.0   # nobody has said this — pure RILIE
+            elif google_hits < 3:
+                result["originality"] = 0.85  # rare — still her voice
+            elif google_hits < 10:
+                result["originality"] = 0.5   # common phrase
+            else:
+                result["originality"] = 0.2   # likely baseline regurgitation
+        except Exception:
+            pass  # search failed — originality stays at default 1.0
 
-    query = f'"{snippet}"'
-    try:
-        results = search_fn(query)
-        if results and isinstance(results, list):
-            return len(results)
-        return 0
-    except Exception:
-        return 999  # Search failed, let it pass
+    # --- C. COHERENCE --- word variety (unique/total ratio)
+    words = response.split()
+    if len(words) >= 4:
+        coherence = len(set(w.lower() for w in words)) / len(words)
+        result["coherence"] = round(coherence, 3)
+    else:
+        result["coherence"] = 0.5  # too short to judge
+
+    # --- RECOMMENDATION --- inform only, never kill
+    if result["relevance"] < 0.05 and result["coherence"] < 0.4:
+        result["recommendation"] = "PREFER_BASELINE"
+        result["reason"] = f"low relevance ({result['relevance']}) + low coherence ({result['coherence']})"
+    elif result["originality"] > 0.7:
+        result["recommendation"] = "SERVE"
+        result["reason"] = f"original voice (originality={result['originality']})"
+    elif result["relevance"] > 0.3:
+        result["recommendation"] = "SERVE"
+        result["reason"] = f"on target (relevance={result['relevance']})"
+    else:
+        result["recommendation"] = "ANNOTATE"
+        result["reason"] = f"low signal — annotate but serve"
+
+    return result
 
 
-def _store_yardstick_failure(
+def _store_measurestick_signal(
     stimulus: str,
-    bad_response: str,
-    correct_response: str,
-    result_count: int,
+    rilie_response: str,
+    baseline_response: str,
+    measure: Dict[str, Any],
 ) -> None:
     """
-    Store a yardstick failure in Banks so she never says it again.
-    Bad response + correct response = learning pair.
+    Store MEASURESTICK signal in Banks — not failures, SIGNALS.
+    Low originality = she borrowed too much from baseline. Worth knowing.
+    High originality + low relevance = she drifted. Worth knowing.
+    This is learning data, not punishment data.
     """
     try:
         from banks import get_db_connection
@@ -440,38 +514,54 @@ def _store_yardstick_failure(
             return
         cur = conn.cursor()
 
-        # Ensure table exists
         cur.execute(
             """
-            CREATE TABLE IF NOT EXISTS banks_yardstick (
+            CREATE TABLE IF NOT EXISTS banks_measurestick (
                 id SERIAL PRIMARY KEY,
                 stimulus TEXT NOT NULL,
-                bad_response TEXT NOT NULL,
-                correct_response TEXT NOT NULL,
-                result_count INTEGER DEFAULT 0,
+                rilie_response TEXT NOT NULL,
+                baseline_response TEXT NOT NULL,
+                relevance FLOAT DEFAULT 0,
+                originality FLOAT DEFAULT 0,
+                coherence FLOAT DEFAULT 0,
+                google_hits INTEGER DEFAULT -1,
+                recommendation TEXT,
+                reason TEXT,
                 created_at TIMESTAMP DEFAULT NOW()
             )
             """
         )
 
         cur.execute(
-            """INSERT INTO banks_yardstick
-               (stimulus, bad_response, correct_response, result_count)
-               VALUES (%s, %s, %s, %s)""",
+            """INSERT INTO banks_measurestick
+               (stimulus, rilie_response, baseline_response,
+                relevance, originality, coherence, google_hits,
+                recommendation, reason)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
             (
                 stimulus[:500],
-                bad_response[:500],
-                correct_response[:500],
-                result_count,
+                rilie_response[:500],
+                baseline_response[:500],
+                measure.get("relevance", 0),
+                measure.get("originality", 0),
+                measure.get("coherence", 0),
+                measure.get("google_hits", -1),
+                measure.get("recommendation", ""),
+                measure.get("reason", ""),
             ),
         )
 
         conn.commit()
         cur.close()
         conn.close()
-        logger.info("YARDSTICK: stored failure for '%s'", stimulus[:50])
+        logger.info(
+            "MEASURESTICK: signal stored — %s (relevance=%.2f originality=%.2f)",
+            measure.get("recommendation", "?"),
+            measure.get("relevance", 0),
+            measure.get("originality", 0),
+        )
     except Exception as e:
-        logger.debug("YARDSTICK storage error: %s", e)
+        logger.debug("MEASURESTICK storage error: %s", e)
 
 
 # ============================================================================
@@ -961,88 +1051,93 @@ class RILIE:
             shaped = ohad_redirect("")
             raw["status"] = "COURTESYEXIT"
 
-        # QUALITY GATE 2: CHOMSKY + GOOGLE YARDSTICK (2x reinforced)
+        # QUALITY SIGNAL: MEASURESTICK (informer, not gate)
+        # RILIE's voice is ALWAYS served first.
+        # MEASURESTICK annotates. Guvna governs.
+        measure: Dict[str, Any] = {}
         if (
             disclosure.value != "taste"
             and shaped
             and len(shaped.split()) > 4
-            and baseline_text.strip()
         ):
-            rejected = False
-
-            # Gate A: CHOMSKY — structural check
+            # --- CHOMSKY structural annotation ---
+            chomsky_category = "ok"
             try:
                 from ChomskyAtTheBit import classify_stimulus
                 parsed = classify_stimulus(shaped)
-                if parsed["category"] in ("words", "incomplete"):
-                    logger.warning(
-                        "CHOMSKY REJECT (%s): '%s'",
-                        parsed["category"],
+                chomsky_category = parsed.get("category", "ok")
+                if chomsky_category in ("words", "incomplete"):
+                    logger.info(
+                        "MEASURESTICK CHOMSKY (%s): '%s'",
+                        chomsky_category,
                         shaped[:80],
                     )
-                    _store_yardstick_failure(
-                        stimulus=original_question,
-                        bad_response=shaped,
-                        correct_response=baseline_text,
-                        result_count=-1,  # -1 = Chomsky reject
-                    )
-                    rejected = True
             except Exception as e:
-                logger.debug("Chomsky gate error: %s", e)
+                logger.debug("Chomsky annotation error: %s", e)
 
-            # Gate B: GOOGLE YARDSTICK — only if Chomsky passed
-            if not rejected and active_search:
+            # --- MEASURESTICK — 3-dimension quality signal ---
+            if active_search and baseline_text.strip():
                 try:
-                    yardstick_result = _google_yardstick(
-                        shaped, active_search
+                    measure = _measurestick(shaped, original_question, active_search)
+                    logger.info(
+                        "MEASURESTICK: recommendation=%s relevance=%.2f originality=%.2f coherence=%.2f hits=%d",
+                        measure.get("recommendation", "?"),
+                        measure.get("relevance", 0),
+                        measure.get("originality", 0),
+                        measure.get("coherence", 0),
+                        measure.get("google_hits", -1),
                     )
-                    if yardstick_result < 3:
-                        logger.warning(
-                            "YARDSTICK REJECT (%d results): '%s'",
-                            yardstick_result,
-                            shaped[:80],
-                        )
-                        _store_yardstick_failure(
-                            stimulus=original_question,
-                            bad_response=shaped,
-                            correct_response=baseline_text,
-                            result_count=yardstick_result,
-                        )
-                        rejected = True
-                except Exception as e:
-                    logger.debug("Yardstick gate error: %s", e)
 
-            # If either gate rejected, serve modified baseline
-            if rejected:
-                import html as _html
-                clean_bl = _html.unescape(baseline_text)
-                clean_bl = re.sub(r"<[^>]+>", "", clean_bl)
-                clean_bl = re.sub(r"\s+", " ", clean_bl).strip()
+                    # Store signal for learning (not punishment)
+                    _store_measurestick_signal(
+                        stimulus=original_question,
+                        rilie_response=shaped,
+                        baseline_response=baseline_text,
+                        measure=measure,
+                    )
 
-                if len(clean_bl) > 300:
-                    clean_bl = clean_bl[:300]
-                    for _sep in [". ", "! ", "? "]:
-                        _idx = clean_bl.rfind(_sep)
-                        if _idx > 100:
-                            clean_bl = clean_bl[: _idx + 1]
-                            break
+                    # ONLY prefer baseline if RILIE produced genuine nothing
+                    # Low relevance AND low coherence AND Chomsky flagged it
+                    if (
+                        measure.get("recommendation") == "PREFER_BASELINE"
+                        and chomsky_category in ("words", "incomplete")
+                        and baseline_text.strip()
+                    ):
+                        import html as _html
+                        clean_bl = _html.unescape(baseline_text)
+                        clean_bl = re.sub(r"<[^>]+>", "", clean_bl)
+                        clean_bl = re.sub(r"\s+", " ", clean_bl).strip()
+
+                        if len(clean_bl) > 300:
+                            clean_bl = clean_bl[:300]
+                            for _sep in [". ", "! ", "? "]:
+                                _idx = clean_bl.rfind(_sep)
+                                if _idx > 100:
+                                    clean_bl = clean_bl[: _idx + 1]
+                                    break
+                            else:
+                                clean_bl = clean_bl.rsplit(" ", 1)[0]
+
+                        # Use meaning fingerprint to shape baseline delivery
+                        if clean_bl and fingerprint:
+                            gap = fingerprint.gap or ""
+                            if "acknowledgment" in gap:
+                                clean_bl = f"I hear you. {clean_bl}"
+                            elif fingerprint.act == "GET" and fingerprint.weight > 0.6:
+                                pass
+                            elif fingerprint.act == "SHOW":
+                                clean_bl = f"Got it. {clean_bl}"
+
+                        if clean_bl:
+                            shaped = clean_bl
+                            raw["status"] = "MEASURESTICK_BASELINE"
+                            logger.info("MEASURESTICK: baseline served (RILIE produced nothing)")
                     else:
-                        clean_bl = clean_bl.rsplit(" ", 1)[0]
+                        # RILIE's voice wins. Annotate the plate.
+                        raw["measurestick"] = measure
 
-                # Use meaning fingerprint to shape HOW she serves the baseline
-                if clean_bl and fingerprint:
-                    gap = fingerprint.gap or ""
-                    if "acknowledgment" in gap:
-                        clean_bl = f"I hear you. {clean_bl}"
-                    elif fingerprint.act == "GET" and fingerprint.weight > 0.6:
-                        # Heavy question — direct answer, no filler
-                        pass
-                    elif fingerprint.act == "SHOW":
-                        clean_bl = f"Got it. {clean_bl}"
-
-                if clean_bl:
-                    shaped = clean_bl
-                    raw["status"] = "YARDSTICK_BASELINE"
+                except Exception as e:
+                    logger.debug("Measurestick error: %s", e)
 
         # Record what she actually said
         self.conversation.record_exchange(original_question, shaped)
