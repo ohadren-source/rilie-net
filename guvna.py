@@ -668,10 +668,13 @@ class Guvna:
             "love that", "nice one", "well done", "you're good", "youre good",
             "you're great", "youre great", "you're amazing", "youre amazing",
         ]
-        if any(cp in sl for cp in compliment_phrases) and word_count <= 7:
+        # "you're [noun/adjective]" — directed at her, 4 words or less
+        if re.search(r"\byou'?re\b", sl) and word_count <= 4:
             replies = [
-                "Appreciate that. 🙏", "Thank you — genuinely.",
-                "That means something.", "I'll take it. 🍳",
+                "Appreciate that. 🙏",
+                "That means something.",
+                "I'll take it. 🍳",
+                "Thank you — genuinely.",
             ]
             return {"result": random.choice(replies), "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
 
@@ -712,7 +715,7 @@ class Guvna:
         expr = re.sub(r'(\d)\s*[xX]\s*(\d)', r'\1 * \2', expr)
         # Strip question prefixes
         expr = re.sub(
-            r"^(what'?s?|calculate|compute|solve|what is|whats|evaluate)\s+",
+            r"^(what'?s?|calculate|compute|solve|what is|whats|evaluate|how much is|how much|find|figure out)\s+",
             '', expr
         ).strip().rstrip('?').strip()
         # Must contain at least one real operator

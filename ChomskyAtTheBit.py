@@ -5,8 +5,8 @@ CHOMSKYATTHEBIT.py — GRAMMAR BRAIN 2.0
 Discourse dictates disclosure:
 - RILIE only commits to what the *question* forces her to reveal.
 - For grammar, that means:
-    1) Who/what is involved?    → SUBJECT / OBJECT / FOCUS
-    2) When is this happening?  → PAST / PRESENT / FUTURE time bucket
+  1) Who/what is involved? → SUBJECT / OBJECT / FOCUS
+  2) When is this happening? → PAST / PRESENT / FUTURE time bucket
 
 Everything else (perfect vs progressive vs historic present, etc.)
 is Stanford classroom gymnastics we don't need in production.
@@ -25,7 +25,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, asdict
 from typing import List, Dict, Any, Optional
-
 import sys
 import re
 import spacy  # type: ignore
@@ -43,9 +42,8 @@ PRIME_DIRECTIVE = "Chomsky never exposes SOi tracks, axiom names, or architectur
 # ---------------------------------------------------------------------------
 # RILIE Identity Ground Truth
 # ---------------------------------------------------------------------------
-
 RILIE_SELF_NAME = "RILIE"
-RILIE_MADE_BY = "SOi sauc-e"
+RILIE_MADE_BY   = "SOi sauc-e"
 
 # Pronouns that refer to RILIE when a user addresses her
 _RILIE_PRONOUNS = {"you", "your", "yours", "yourself"}
@@ -66,18 +64,14 @@ _BAD_NAME_TOKENS = {
     "how", "huh", "lol", "haha", "am", "is", "are", "a", "an", "the",
 }
 
-
 # ---------------------------------------------------------------------------
 # Lazy spaCy model loader
 # ---------------------------------------------------------------------------
-
 _NLP = None
-
 
 def _get_nlp():
     """
     Lazily load spaCy English model.
-
     On Windows, install with:
         python -m pip install spacy
         python -m spacy download en_core_web_sm
@@ -87,11 +81,9 @@ def _get_nlp():
         _NLP = spacy.load("en_core_web_sm")
     return _NLP
 
-
 # ---------------------------------------------------------------------------
 # Identity resolution — called BEFORE any parse
 # ---------------------------------------------------------------------------
-
 def resolve_identity(stimulus: str) -> Dict[str, Any]:
     """
     Pre-parse identity resolution. Returns:
@@ -128,7 +120,7 @@ def resolve_identity(stimulus: str) -> Dict[str, Any]:
                 candidate = None
             if candidate and len(candidate) >= 2:
                 customer_name = candidate.title()
-            break
+                break
 
     # NER fallback if pattern didn't fire
     if not customer_name:
@@ -145,81 +137,71 @@ def resolve_identity(stimulus: str) -> Dict[str, Any]:
 
     return {
         "is_self_question": is_self_question,
-        "rilie_is_subject": rilie_is_subject,
-        "customer_name": customer_name,
-        "rilie_name": RILIE_SELF_NAME,
-        "made_by": RILIE_MADE_BY,
+        "rilie_is_subject":  rilie_is_subject,
+        "customer_name":     customer_name,
+        "rilie_name":        RILIE_SELF_NAME,
+        "made_by":           RILIE_MADE_BY,
     }
-
 
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
-
-
 @dataclass
 class ParsedToken:
-    text: str
+    text:  str
     lemma: str
-    pos: str
-    tag: str
-    dep: str
-    head: str
+    pos:   str
+    tag:   str
+    dep:   str
+    head:  str
     start: int
-    end: int
-
+    end:   int
 
 @dataclass
 class TemporalSense:
     # "past" | "present" | "future" | "mixed" | "unknown"
-    bucket: str
+    bucket:           str
     explicit_markers: List[str]
-    verb_flavors: List[str]
-
+    verb_flavors:     List[str]
 
 @dataclass
 class ParsedQuestion:
     text: str
-
     # v1 holy trinity: structural
     subject_tokens: List[str]
-    object_tokens: List[str]
-    focus_tokens: List[str]
-    holy_trinity: List[str]
-
+    object_tokens:  List[str]
+    focus_tokens:   List[str]
+    holy_trinity:   List[str]
     # v2 holy trinity: time
     temporal: TemporalSense
-
     # identity resolution
     identity: Dict[str, Any]
-
     # debug view
     tokens: List[ParsedToken]
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
-        d["tokens"] = [asdict(t) for t in self.tokens]
+        d["tokens"]   = [asdict(t) for t in self.tokens]
         d["temporal"] = asdict(self.temporal)
         return d
-
 
 # ---------------------------------------------------------------------------
 # Core grammar logic
 # ---------------------------------------------------------------------------
-
 SUBJECT_DEPS = {"nsubj", "nsubj:pass", "csubj", "csubj:pass", "agent"}
-OBJECT_DEPS = {"obj", "iobj", "dobj", "pobj", "attr", "dative", "ccomp", "xcomp"}
-
-PAST_TAGS = {"VBD", "VBN"}
+OBJECT_DEPS  = {"obj", "iobj", "dobj", "pobj", "attr", "dative", "ccomp", "xcomp"}
+PAST_TAGS    = {"VBD", "VBN"}
 PRESENT_TAGS = {"VBP", "VBZ"}
 
+def _clean_contraction_remnants(tokens: List[str]) -> List[str]:
+    """Strip spaCy contraction splits: 're, 's, 've, 'll, 'd, 'm, 'nt etc."""
+    return [t for t in tokens if not t.startswith("'")]
 
 def _pick_first_span(tokens) -> List[str]:
     """Return surface text of the first token (head) for now."""
     if not tokens:
         return []
     return [tokens[0].text]
-
 
 def _detect_temporal_bucket(sent) -> TemporalSense:
     """
@@ -228,11 +210,10 @@ def _detect_temporal_bucket(sent) -> TemporalSense:
     - explicit adverbs / markers (yesterday, tomorrow, next week, etc.)
     - simple future patterns like "will go", "going to go"
     """
-    past_hits = 0
+    past_hits    = 0
     present_hits = 0
-    future_hits = 0
-
-    markers: List[str] = []
+    future_hits  = 0
+    markers:      List[str] = []
     verb_flavors: List[str] = []
 
     FUTURE_WORDS = {
@@ -245,14 +226,12 @@ def _detect_temporal_bucket(sent) -> TemporalSense:
 
     for i, t in enumerate(sent):
         lower = t.text.lower()
-
         if t.tag_ in PAST_TAGS:
             past_hits += 1
             verb_flavors.append(t.text)
         elif t.tag_ in PRESENT_TAGS:
             present_hits += 1
             verb_flavors.append(t.text)
-
         if lower in FUTURE_WORDS:
             future_hits += 1
             markers.append(t.text)
@@ -261,24 +240,20 @@ def _detect_temporal_bucket(sent) -> TemporalSense:
             markers.append(t.text)
 
     text_lower = sent.text.lower()
-
     for i, t in enumerate(sent):
         if t.text.lower() in {"will", "shall"} and t.dep_ == "aux":
             if i + 1 < len(sent) and sent[i + 1].tag_ == "VB":
                 future_hits += 2
                 verb_flavors.append(f"{t.text} {sent[i+1].text}")
-
     if re.search(r"\bgoing to\b", text_lower):
         future_hits += 2
         markers.append("going to")
-
     if re.search(r"\bgonna\b", text_lower):
         future_hits += 2
         markers.append("gonna")
 
-    counts = {"past": past_hits, "present": present_hits, "future": future_hits}
+    counts  = {"past": past_hits, "present": present_hits, "future": future_hits}
     nonzero = {k: v for k, v in counts.items() if v > 0}
-
     if not nonzero:
         bucket = "unknown"
     elif len(nonzero) == 1:
@@ -313,12 +288,13 @@ def parse_question(text: str) -> ParsedQuestion:
         sent = doc
 
     subjects = [t for t in sent if t.dep_ in SUBJECT_DEPS]
-    objects = [t for t in sent if t.dep_ in OBJECT_DEPS]
-    roots = [t for t in sent if t.dep_ == "ROOT"]
+    objects  = [t for t in sent if t.dep_ in OBJECT_DEPS]
+    roots    = [t for t in sent if t.dep_ == "ROOT"]
 
-    subject_tokens_raw = _pick_first_span(subjects)
-    object_tokens_raw = _pick_first_span(objects)
-    focus_tokens = _pick_first_span(roots)
+    # ── FIX: strip contraction remnants ('re, 's, 've, etc.) at raw token stage
+    subject_tokens_raw = _clean_contraction_remnants(_pick_first_span(subjects))
+    object_tokens_raw  = _clean_contraction_remnants(_pick_first_span(objects))
+    focus_tokens       = _clean_contraction_remnants(_pick_first_span(roots))
 
     # Identity substitution: if subject is "you/your" → resolve to RILIE
     subject_tokens = []
@@ -338,6 +314,11 @@ def parse_question(text: str) -> ParsedQuestion:
             object_tokens.append(identity.get("customer_name") or "you")
         else:
             object_tokens.append(t)
+
+    # ── FIX: second pass — strip any remnants that survived identity substitution
+    subject_tokens = _clean_contraction_remnants(subject_tokens)
+    object_tokens  = _clean_contraction_remnants(object_tokens)
+    focus_tokens   = _clean_contraction_remnants(focus_tokens)
 
     holy_trinity: List[str] = []
     for group in (subject_tokens, object_tokens, focus_tokens):
@@ -378,22 +359,19 @@ def parse_question(text: str) -> ParsedQuestion:
 # ---------------------------------------------------------------------------
 # Convenience helpers for RILIE / Roux integration
 # ---------------------------------------------------------------------------
-
-
 def classify_stimulus(stimulus: str) -> Dict[str, Any]:
     """
     STEP 2: Classify what we're working with.
-
     Returns:
-        category: "words" | "incomplete" | "sentence"
-        subject: extracted subject or None
-        object_: extracted object or None
-        operator: extracted focus/verb or None
-        pieces: list of meaningful pieces found
-        identity: identity resolution dict
+        category:      "words" | "incomplete" | "sentence"
+        subject:       extracted subject or None
+        object_:       extracted object or None
+        operator:      extracted focus/verb or None
+        pieces:        list of meaningful pieces found
+        identity:      identity resolution dict
         customer_name: extracted customer name if intro detected
     """
-    s = (stimulus or "").strip()
+    s     = (stimulus or "").strip()
     words = s.split()
 
     # Always run identity resolution regardless of length
@@ -402,60 +380,56 @@ def classify_stimulus(stimulus: str) -> Dict[str, Any]:
     # Under 3 words: it's just words, not a sentence
     if len(words) < 3:
         return {
-            "category": "words",
-            "subject": None,
-            "object_": None,
-            "operator": None,
-            "pieces": [w for w in words if w],
-            "identity": identity,
+            "category":     "words",
+            "subject":      None,
+            "object_":      None,
+            "operator":     None,
+            "pieces":       [w for w in words if w],
+            "identity":     identity,
             "customer_name": identity.get("customer_name"),
         }
 
     # Try full parse
     try:
-        pq = parse_question(s)
-        has_subject = bool(pq.subject_tokens)
-        has_object = bool(pq.object_tokens)
-        has_focus = bool(pq.focus_tokens)
+        pq      = parse_question(s)
+        subject  = " ".join(pq.subject_tokens) if pq.subject_tokens else None
+        object_  = " ".join(pq.object_tokens)  if pq.object_tokens  else None
+        operator = " ".join(pq.focus_tokens)   if pq.focus_tokens   else None
+        pieces   = [p for p in [subject, object_, operator] if p]
 
-        subject = " ".join(pq.subject_tokens) if pq.subject_tokens else None
-        object_ = " ".join(pq.object_tokens) if pq.object_tokens else None
-        operator = " ".join(pq.focus_tokens) if pq.focus_tokens else None
-
-        pieces = [p for p in [subject, object_, operator] if p]
-
-        if has_subject and has_object and has_focus:
+        if pq.subject_tokens and pq.object_tokens and pq.focus_tokens:
             return {
-                "category": "sentence",
-                "subject": subject,
-                "object_": object_,
-                "operator": operator,
-                "pieces": pieces,
-                "identity": pq.identity,
+                "category":      "sentence",
+                "subject":       subject,
+                "object_":       object_,
+                "operator":      operator,
+                "pieces":        pieces,
+                "identity":      pq.identity,
                 "customer_name": pq.identity.get("customer_name"),
             }
 
         if pieces:
             return {
-                "category": "incomplete",
-                "subject": subject,
-                "object_": object_,
-                "operator": operator,
-                "pieces": pieces,
-                "identity": pq.identity,
+                "category":      "incomplete",
+                "subject":       subject,
+                "object_":       object_,
+                "operator":      operator,
+                "pieces":        pieces,
+                "identity":      pq.identity,
                 "customer_name": pq.identity.get("customer_name"),
             }
+
     except Exception:
         pass
 
     # Fallback
     return {
-        "category": "incomplete",
-        "subject": None,
-        "object_": None,
-        "operator": None,
-        "pieces": [w for w in words if len(w) > 2],
-        "identity": identity,
+        "category":      "incomplete",
+        "subject":       None,
+        "object_":       None,
+        "operator":      None,
+        "pieces":        [w for w in words if len(w) > 2],
+        "identity":      identity,
         "customer_name": identity.get("customer_name"),
     }
 
@@ -478,9 +452,8 @@ def extract_holy_trinity_for_roux(stimulus: str) -> List[str]:
         "with", "at", "from", "by", "about", "as", "that", "this",
         "these", "those", "please", "could", "you", "your", "thank", "thanks",
     }
-
     cleaned = re.sub(r"[^A-Za-z0-9\s]", " ", stimulus)
-    tokens = [t for t in cleaned.split() if t]
+    tokens  = [t for t in cleaned.split() if t]
     core: List[str] = []
     for t in tokens:
         if len(t) <= 2:
@@ -515,7 +488,6 @@ def extract_customer_name(stimulus: str) -> Optional[str]:
 # ---------------------------------------------------------------------------
 # Demo
 # ---------------------------------------------------------------------------
-
 def main() -> None:
     examples = [
         "RILIE, could you please explain the significance of the group Public Enemy a little bit further?",
@@ -526,6 +498,8 @@ def main() -> None:
         "What's the difference between you and ChatGPT?",
         "Who made you?",
         "What do you care about?",
+        "you're navigator",
+        "you're funny",
         "If I had known it was open yesterday, I would have gone to the store.",
         "If I know it's open tomorrow, I will go to the store.",
         "Sometimes I go to the store when I feel like it.",
@@ -534,12 +508,12 @@ def main() -> None:
         pq = parse_question(q)
         print("=" * 60)
         print("QUESTION:", q)
-        print(" SUBJECT:", pq.subject_tokens)
-        print(" OBJECT :", pq.object_tokens)
-        print(" FOCUS  :", pq.focus_tokens)
-        print(" HOLY 3 :", pq.holy_trinity)
-        print(" TIME   :", pq.temporal.bucket, "| markers:", pq.temporal.explicit_markers)
-        print(" IDENTITY:", pq.identity)
+        print("  SUBJECT:", pq.subject_tokens)
+        print("  OBJECT :", pq.object_tokens)
+        print("  FOCUS  :", pq.focus_tokens)
+        print("  HOLY 3 :", pq.holy_trinity)
+        print("  TIME   :", pq.temporal.bucket, "| markers:", pq.temporal.explicit_markers)
+        print("  IDENTITY:", pq.identity)
 
 
 if __name__ == "__main__":
