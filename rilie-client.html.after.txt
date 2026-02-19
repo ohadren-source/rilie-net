@@ -639,31 +639,6 @@
       .rilie-main { margin-left: 0; }
       .rilie-shell { padding: 24px 16px; }
     }
-    /* ── CUT 2: file chip in stream ── */
-    .rilie-file-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 9px 3px 7px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 6px;
-      font-size: 11px;
-      color: rgba(255,255,255,0.45);
-      font-style: normal;
-      letter-spacing: 0.02em;
-      margin-bottom: 6px;
-    }
-    .rilie-file-chip svg {
-      width: 11px; height: 11px;
-      stroke: rgba(255,255,255,0.35);
-      fill: none;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      flex-shrink: 0;
-    }
-
   </style>
 </head>
 <body>
@@ -764,34 +739,36 @@
       <div class="rilie-footer">
         Inspired by those who gave without expecting anything in return (3),
         we're grateful (6)—and that's enough for us to do good work. (9)<br />
+        Runs on RILIE Sauce · 3.6.NIFE LLC · Ri: Real Intelligence 📱
       </div>
     </div>
   </div>
 
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-    const submitBtn = document.getElementById("rilie-submit");
-    const selfBtn = document.getElementById("rilie-self");
-    const inputEl = document.getElementById("rilie-input");
-    const outputEl = document.getElementById("rilie-output");
+    const submitBtn  = document.getElementById("rilie-submit");
+    const selfBtn    = document.getElementById("rilie-self");
+    const inputEl    = document.getElementById("rilie-input");
+    const outputEl   = document.getElementById("rilie-output");
 
     const GREETING_HTML = '<div style="margin-bottom:16px"><p><strong>RILIE:</strong> Hi there! What\'s your name? You can call me RILIE if you so please... :)</p></div>';
 
     console.log("submitBtn:", submitBtn);
-    console.log("inputEl:", inputEl);
+    console.log("inputEl:",  inputEl);
     console.log("outputEl:", outputEl);
-    const metaPanel = document.getElementById("rilie-meta");
-    const healthFill = document.getElementById("health-fill");
-    const healthPct = document.getElementById("health-pct");
-    const outputActions = document.getElementById("rilie-output-actions");
-    const shareBtn = document.getElementById("rilie-share");
-    const downloadBtn = document.getElementById("rilie-download");
-    const copyBtn = document.getElementById("rilie-copy");
-    const rewriteBtn = document.getElementById("rilie-rewrite");
-    const fileInput = document.getElementById("rilie-files");
-    const fileNames = document.getElementById("rilie-file-names");
-    const fileClear = document.getElementById("rilie-file-clear");
-    let lastStimulus = "";
+
+    const metaPanel      = document.getElementById("rilie-meta");
+    const healthFill     = document.getElementById("health-fill");
+    const healthPct      = document.getElementById("health-pct");
+    const outputActions  = document.getElementById("rilie-output-actions");
+    const shareBtn       = document.getElementById("rilie-share");
+    const downloadBtn    = document.getElementById("rilie-download");
+    const copyBtn        = document.getElementById("rilie-copy");
+    const rewriteBtn     = document.getElementById("rilie-rewrite");
+    const fileInput      = document.getElementById("rilie-files");
+    const fileNames      = document.getElementById("rilie-file-names");
+    const fileClear      = document.getElementById("rilie-file-clear");
+    let lastStimulus     = "";
 
     /* ── File Upload Display ── */
     fileInput.addEventListener("change", () => {
@@ -815,205 +792,179 @@
     function updateMeta(data) {
       metaPanel.classList.add("visible");
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "\u2014"; };
-      set("meta-status", data.status);
-      set("meta-quality", data.quality_score != null ? data.quality_score.toFixed(2) : "\u2014");
+      set("meta-status",     data.status);
+      set("meta-quality",    data.quality_score    != null ? data.quality_score.toFixed(2)    : "\u2014");
       set("meta-priorities", data.priorities_met);
-      set("meta-beige", data.anti_beige_score != null ? data.anti_beige_score.toFixed(2) : "\u2014");
-      set("meta-depth", (data.depth || 0) + " / " + (data.pass || 0));
-      set("meta-tone", (data.tone_emoji || "") + " " + (data.tone || ""));
-      set("meta-domains", (data.domains_used || []).join(", "));
-      set("meta-triangle", data.triangle_type || "CLEAN");
+      set("meta-beige",      data.anti_beige_score != null ? data.anti_beige_score.toFixed(2) : "\u2014");
+      set("meta-depth",      (data.depth || 0) + " / " + (data.pass || 0));
+      set("meta-tone",       (data.tone_emoji || "") + " " + (data.tone || ""));
+      set("meta-domains",    (data.domains_used || []).join(", "));
+      set("meta-triangle",   data.triangle_type || "CLEAN");
       const wit = data.wit || {};
-      const witActive = Object.entries(wit).filter(([k, v]) => v).map(([k]) => k);
+      const witActive = Object.entries(wit).filter(([k,v]) => v).map(([k]) => k);
       set("meta-wit", witActive.length ? witActive.join(", ") : "none");
       const lang = data.language_mode || {};
-      const langActive = Object.entries(lang).filter(([k, v]) => v).map(([k]) => k);
+      const langActive = Object.entries(lang).filter(([k,v]) => v).map(([k]) => k);
       set("meta-language", langActive.length ? langActive.join(", ") : "literal");
       const social = data.social || {};
-      set("meta-social", social.user_status != null ? "user=" + social.user_status.toFixed(2) + " self=" + social.self_status.toFixed(2) : "\u2014");
+      set("meta-social", social.user_status != null
+        ? "user=" + social.user_status.toFixed(2) + " self=" + social.self_status.toFixed(2)
+        : "\u2014");
       set("meta-curiosity", data.curiosity_informed ? "own discovery used" : "\u2014");
       const health = data.conversation_health || 100;
       healthFill.style.width = health + "%";
-      healthPct.textContent = Math.round(health);
-      if (health > 70) healthFill.style.background = "linear-gradient(90deg, #4a7, #5a8)";
+      healthPct.textContent  = Math.round(health);
+      if      (health > 70) healthFill.style.background = "linear-gradient(90deg, #4a7, #5a8)";
       else if (health > 50) healthFill.style.background = "linear-gradient(90deg, #aa8, #bb9)";
       else if (health > 30) healthFill.style.background = "linear-gradient(90deg, #a85, #b96)";
-      else healthFill.style.background = "linear-gradient(90deg, #a55, #b66)";
+      else                  healthFill.style.background = "linear-gradient(90deg, #a55, #b66)";
     }
 
     function escapeHtml(str) {
-      return str.replace(/[&<>\"']/g, (s) => (
+      return str.replace(/[&<>"']/g, (s) => (
         { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[s]
       ));
     }
 
-    // Render fenced ``` code blocks as cards with copy buttons
     function renderOutputWithCode(text) {
       const parts = text.split("```");
       let html = "";
-
       for (let i = 0; i < parts.length; i++) {
         const chunk = parts[i];
         if (i % 2 === 0) {
-          if (chunk.trim()) {
-            html += "<p>" + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
-          }
+          if (chunk.trim()) html += "<p>" + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
         } else {
           const lines = chunk.split("\n");
           let codeLines = lines;
-          if (lines[0].trim().match(/^[a-zA-Z0-9_+-]+$/)) {
-            codeLines = lines.slice(1);
-          }
+          if (lines.trim().match(/^[a-zA-Z0-9_+-]+$/)) codeLines = lines.slice(1);
           const codeHtml = escapeHtml(codeLines.join("\n"));
-          html += (
-            '<div class="rilie-code-block">' +
-              '<button class="rilie-code-copy">copy</button>' +
-              "<pre><code>" + codeHtml + "</code></pre>" +
-            "</div>"
-          );
+          html += '<div class="rilie-code-block"><button class="rilie-code-copy">copy</button><pre><code>' + codeHtml + '</code></pre></div>';
         }
       }
-
       outputEl.innerHTML = html;
-
       document.querySelectorAll(".rilie-code-copy").forEach((btn) => {
         btn.onclick = async () => {
           const code = btn.parentElement.querySelector("pre").innerText;
-          try {
-            await navigator.clipboard.writeText(code);
-            btn.textContent = "copied";
-            setTimeout(() => { btn.textContent = "copy"; }, 1200);
-          } catch (e) {}
+          try { await navigator.clipboard.writeText(code); btn.textContent = "copied"; setTimeout(() => { btn.textContent = "copy"; }, 1200); } catch (e) {}
         };
       });
     }
 
     /* ── Submit ── */
-    /* Every message goes to /v1/rilie. Raw string. No transformation. */
-    /* The API decides if this is a name or a conversation. */
     if (submitBtn) {
       submitBtn.onclick = async () => {
         console.log("Button clicked!");
-        const stimulus = inputEl.value;
-        const files = fileInput.files;
-        const hasFiles = files && files.length > 0;
+        const stimulus  = inputEl.value;
+        const files     = fileInput.files;
+        const hasFiles  = files && files.length > 0;
 
-      if (!stimulus && !hasFiles) {
-        const nudge = document.createElement("div");
-        nudge.style.marginBottom = "16px";
-        nudge.style.opacity = "0.6";
-        nudge.innerHTML = "<em>Drop something in. A question, a thought, a vibe. Then hit Go.</em>";
-        outputEl.appendChild(nudge);
-        outputEl.scrollTop = outputEl.scrollHeight;
-        return;
-      }
-
-      lastStimulus = stimulus;
-      inputEl.value = "";
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Going...";
-      outputActions.classList.remove("visible");
-
-      try {
-        // Append user message to conversation flow
-        const userDiv = document.createElement("div");
-        userDiv.style.marginBottom = "16px";
-          // file chip in stream
-          const chipHtml = (files2 && files2.length > 0)
-            ? Array.from(files2).map(f =>
-                `<div class="rilie-file-chip"><svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>${f.name}</div>`
-              ).join("")
-            : "";
-          userDiv.innerHTML = chipHtml + "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
-        outputEl.appendChild(userDiv);
-
-        const files2 = fileInput.files;
-        let res;
-
-        if (files2 && files2.length > 0) {
-          const formData = new FormData();
-          formData.append("stimulus", stimulus || "Please review the attached file(s)");
-          formData.append("max_pass", "3");
-          for (let i = 0; i < files2.length; i++) {
-            formData.append("files", files2[i]);
-          }
-          res = await fetch("/v1/rilie-upload", { method: "POST", body: formData });
-        } else {
-          res = await fetch("/v1/rilie", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ stimulus: stimulus })
-          });
-        }
-
-        if (!res.ok) {
-          const errDiv = document.createElement("div");
-          errDiv.style.color = "#a55";
-          errDiv.innerHTML = "<strong>Error:</strong> " + res.status;
-          outputEl.appendChild(errDiv);
+        if (!stimulus && !hasFiles) {
+          const nudge = document.createElement("div");
+          nudge.style.marginBottom = "16px";
+          nudge.style.opacity = "0.6";
+          nudge.innerHTML = "<em>Drop something in. A question, a thought, a vibe. Then hit Go.</em>";
+          outputEl.appendChild(nudge);
+          outputEl.scrollTop = outputEl.scrollHeight;
           return;
         }
 
-        const data = await res.json();
-        const rilieLine = data.result || "No result returned.";
+        lastStimulus = stimulus;
+        inputEl.value = "";
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Going...";
+        outputActions.classList.remove("visible");
 
-        const rilieDiv = document.createElement("div");
-        rilieDiv.style.marginBottom = "16px";
+        try {
+          /* ── CUT 2: build user div with optional file chip on top ── */
+          const userDiv = document.createElement("div");
+          userDiv.style.marginBottom = "16px";
 
-        const parts = rilieLine.split("```");
-        let html = "";
-        for (let i = 0; i < parts.length; i++) {
-          const chunk = parts[i];
-          if (i % 2 === 0) {
-            if (chunk.trim()) {
-              html += "<p><strong>RILIE:</strong> " + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
-            }
-          } else {
-            const lines = chunk.split("\n");
-            let codeLines = lines;
-            if (lines[0].trim().match(/^[a-zA-Z0-9_+-]+$/)) {
-              codeLines = lines.slice(1);
-            }
-            const codeHtml = escapeHtml(codeLines.join("\n"));
-            html += (
-              '<div class="rilie-code-block">' +
-                '<button class="rilie-code-copy">copy</button>' +
-                "<pre><code>" + codeHtml + "</code></pre>" +
-              "</div>"
-            );
+          let chipHtml = "";
+          if (hasFiles) {
+            const chipFiles = Array.from(files);
+            chipHtml = chipFiles.map(f =>
+              '<span class="rilie-file-chip">' +
+                '<svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>' +
+                escapeHtml(f.name) +
+              '</span>'
+            ).join(" ");
+            chipHtml = '<div style="margin-bottom:5px">' + chipHtml + '</div>';
           }
+
+          userDiv.innerHTML = chipHtml + "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
+          outputEl.appendChild(userDiv);
+
+          const files2 = fileInput.files;
+          let res;
+
+          if (files2 && files2.length > 0) {
+            const formData = new FormData();
+            formData.append("stimulus", stimulus || "Please review the attached file(s)");
+            formData.append("max_pass", "3");
+            for (let i = 0; i < files2.length; i++) formData.append("files", files2[i]);
+            res = await fetch("/v1/rilie-upload", { method: "POST", body: formData });
+          } else {
+            res = await fetch("/v1/rilie", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ stimulus: stimulus })
+            });
+          }
+
+          if (!res.ok) {
+            const errDiv = document.createElement("div");
+            errDiv.style.color = "#a55";
+            errDiv.innerHTML = "<strong>Error:</strong> " + res.status;
+            outputEl.appendChild(errDiv);
+            return;
+          }
+
+          const data = await res.json();
+          const rilieLine = data.result || "No result returned.";
+
+          const rilieDiv = document.createElement("div");
+          rilieDiv.style.marginBottom = "16px";
+
+          const parts = rilieLine.split("```");
+          let html = "";
+          for (let i = 0; i < parts.length; i++) {
+            const chunk = parts[i];
+            if (i % 2 === 0) {
+              if (chunk.trim()) html += "<p><strong>RILIE:</strong> " + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
+            } else {
+              const lines = chunk.split("\n");
+              let codeLines = lines;
+              if (lines[0].trim().match(/^[a-zA-Z0-9_+-]+$/)) codeLines = lines.slice(1);
+              const codeHtml = escapeHtml(codeLines.join("\n"));
+              html += '<div class="rilie-code-block"><button class="rilie-code-copy">copy</button><pre><code>' + codeHtml + '</code></pre></div>';
+            }
+          }
+          rilieDiv.innerHTML = html;
+          outputEl.appendChild(rilieDiv);
+
+          rilieDiv.querySelectorAll(".rilie-code-copy").forEach((btn) => {
+            btn.onclick = async () => {
+              const code = btn.parentElement.querySelector("pre").innerText;
+              try { await navigator.clipboard.writeText(code); btn.textContent = "copied"; setTimeout(() => { btn.textContent = "copy"; }, 1200); } catch (e) {}
+            };
+          });
+
+          outputEl.scrollTop = outputEl.scrollHeight;
+          updateMeta(data);
+          outputActions.classList.add("visible");
+
+        } catch (err) {
+          const errDiv = document.createElement("div");
+          errDiv.style.color = "#a55";
+          errDiv.innerHTML = "<strong>Request failed:</strong> " + err;
+          outputEl.appendChild(errDiv);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Learn from Go";
+          fileInput.value = "";
+          fileNames.textContent = "";
+          fileClear.classList.remove("visible");
         }
-        rilieDiv.innerHTML = html;
-        outputEl.appendChild(rilieDiv);
-
-        rilieDiv.querySelectorAll(".rilie-code-copy").forEach((btn) => {
-          btn.onclick = async () => {
-            const code = btn.parentElement.querySelector("pre").innerText;
-            try {
-              await navigator.clipboard.writeText(code);
-              btn.textContent = "copied";
-              setTimeout(() => { btn.textContent = "copy"; }, 1200);
-            } catch (e) {}
-          };
-        });
-
-        outputEl.scrollTop = outputEl.scrollHeight;
-
-        updateMeta(data);
-        outputActions.classList.add("visible");
-      } catch (err) {
-        const errDiv = document.createElement("div");
-        errDiv.style.color = "#a55";
-        errDiv.innerHTML = "<strong>Request failed:</strong> " + err;
-        outputEl.appendChild(errDiv);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Learn from Go";
-        fileInput.value = "";
-        fileNames.textContent = "";
-        fileClear.classList.remove("visible");
-      }
       };
     } else {
       console.error("submitBtn not found!");
@@ -1026,7 +977,7 @@
       const text = outputEl.textContent;
       const shareData = { title: "RILIE (3,6,9)", text: text.substring(0, 200) + (text.length > 200 ? "..." : ""), url: window.location.href };
       if (navigator.share) {
-        try { await navigator.share(shareData); } catch (e) { /* user cancelled */ }
+        try { await navigator.share(shareData); } catch (e) {}
       } else {
         try { await navigator.clipboard.writeText(window.location.href + "\n\n" + text); shareBtn.classList.add("copied"); setTimeout(() => shareBtn.classList.remove("copied"), 1500); }
         catch (e) {}
@@ -1037,13 +988,10 @@
       const text = outputEl.textContent;
       if (!text) return;
       const blob = new Blob([text], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "rilie-response.txt";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url; a.download = "rilie-response.txt";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
     };
 
@@ -1055,56 +1003,4 @@
           copyBtn.classList.add("copied");
           const o = copyBtn.innerHTML;
           copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
-          setTimeout(() => { copyBtn.classList.remove("copied"); copyBtn.innerHTML = o; }, 1500);
-        } catch (err) {
-          const ta = document.createElement("textarea");
-          ta.value = text;
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand("copy");
-          document.body.removeChild(ta);
-        }
-      }
-    };
-
-    rewriteBtn.onclick = () => { if (lastStimulus) { inputEl.value = lastStimulus; submitBtn.click(); } };
-
-    inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitBtn.click(); } });
-
-    /* ── Sidebar Actions ── */
-    document.getElementById("sidebar-new").onclick = () => {
-      inputEl.value = "";
-      outputEl.innerHTML = GREETING_HTML;
-      metaPanel.classList.remove("visible");
-      outputActions.classList.remove("visible");
-      healthFill.style.width = "100%";
-      healthPct.textContent = "100";
-      fileInput.value = "";
-      fileNames.textContent = "";
-      fileClear.classList.remove("visible");
-      lastStimulus = "";
-      inputEl.focus();
-    };
-
-    document.getElementById("sidebar-history").onclick = () => {
-      outputEl.textContent = "History \u2014 coming soon. Every conversation remembered.";
-      outputActions.classList.remove("visible");
-    };
-
-    document.getElementById("sidebar-discover").onclick = () => {
-      inputEl.focus();
-    };
-
-    document.getElementById("sidebar-spaces").onclick = () => {
-      outputEl.textContent = "Spaces \u2014 coming soon. Collaborative rooms with shared context.";
-      outputActions.classList.remove("visible");
-    };
-
-    document.getElementById("sidebar-finance").onclick = () => {
-      outputEl.textContent = "Finance \u2014 coming soon. Real intelligence meets real numbers.";
-      outputActions.classList.remove("visible");
-    };
-    }); // Close DOMContentLoaded
-  </script>
-</body>
-</html>
+          setTimeout(() => { copyBtn.classList.remove("copied"); copyBtn.innerHTML = o; }, 
