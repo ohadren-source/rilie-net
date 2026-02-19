@@ -164,7 +164,7 @@ class GuvnaSelf:
           - self.user_name
           - self._awaiting_name = False
         """
-        if not self._awaiting_name or self.user_name:
+        if not self._awaiting_name or (self.user_name and self.user_name != "Mate"):
             return None
 
         words = s.strip().strip(".,!?;:\"'").split()
