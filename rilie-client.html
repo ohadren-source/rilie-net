@@ -3,8 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>RILIE (3,6,9)</title>
-
-  <!-- Favicon / app icon — 3Dent logo -->
   <link rel="icon" href="data:image/png;base64,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" />
   <link rel="apple-touch-icon" href="data:image/png;base64,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" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -71,18 +69,10 @@
       stroke-linejoin: round;
       transition: stroke 0.2s ease;
     }
-    .sidebar-btn:hover {
-      background: rgba(255,255,255,0.05);
-    }
-    .sidebar-btn:hover svg {
-      stroke: rgba(255,255,255,0.6);
-    }
-    .sidebar-btn.active {
-      background: rgba(255,255,255,0.07);
-    }
-    .sidebar-btn.active svg {
-      stroke: rgba(255,255,255,0.7);
-    }
+    .sidebar-btn:hover { background: rgba(255,255,255,0.05); }
+    .sidebar-btn:hover svg { stroke: rgba(255,255,255,0.6); }
+    .sidebar-btn.active { background: rgba(255,255,255,0.07); }
+    .sidebar-btn.active svg { stroke: rgba(255,255,255,0.7); }
 
     .sidebar-label {
       font-size: 8px;
@@ -133,7 +123,6 @@
       letter-spacing: 0.03em;
     }
 
-    /* Top bar with title on left, controls on right */
     .rilie-top-bar {
       display: flex;
       justify-content: space-between;
@@ -192,10 +181,11 @@
       margin-bottom: 18px;
     }
 
+    /* ── CUT 1: textarea height reduced by ~1/3 (180px → 120px) ── */
     .rilie-input-section .rilie-textarea {
       flex: 1;
       margin: 0;
-      min-height: 180px;
+      min-height: 120px;
     }
 
     .rilie-input-sidebar {
@@ -206,7 +196,7 @@
     }
 
     /* ── Custom File Upload ── */
-    .rilie-file { 
+    .rilie-file {
       margin-bottom: 0;
       flex-shrink: 0;
     }
@@ -257,13 +247,9 @@
         linear-gradient(180deg, #222226 0%, #161618 100%);
     }
     .rilie-file-btn svg {
-      width: 13px;
-      height: 13px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
+      width: 13px; height: 13px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
 
     .rilie-file-names {
@@ -297,9 +283,7 @@
       flex-shrink: 0;
     }
 
-    .rilie-input-sidebar .rilie-btn-wrap {
-      gap: 8px;
-    }
+    .rilie-input-sidebar .rilie-btn-wrap { gap: 8px; }
 
     .rilie-input-sidebar .rilie-button,
     .rilie-input-sidebar .rilie-button-sm {
@@ -363,20 +347,16 @@
       transition: all 0.2s ease;
       z-index: 10;
     }
-
-    .rilie-textarea-file-btn:hover {
-      background: rgba(255,255,255,0.12);
-    }
-
+    .rilie-textarea-file-btn:hover { background: rgba(255,255,255,0.12); }
     .rilie-textarea-file-btn svg {
-      width: 16px;
-      height: 16px;
+      width: 16px; height: 16px;
       stroke: rgba(255,255,255,0.6);
       fill: none;
       stroke-width: 2;
       stroke-linecap: round;
       stroke-linejoin: round;
     }
+
     .rilie-button::before {
       content: '';
       position: absolute;
@@ -483,28 +463,13 @@
       margin-bottom: 24px;
     }
 
-    .rilie-output::-webkit-scrollbar {
-      width: 6px;
-    }
-    .rilie-output::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .rilie-output::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.1);
-      border-radius: 3px;
-    }
-    .rilie-output::-webkit-scrollbar-thumb:hover {
-      background: rgba(255,255,255,0.2);
-    }
+    .rilie-output::-webkit-scrollbar { width: 6px; }
+    .rilie-output::-webkit-scrollbar-track { background: transparent; }
+    .rilie-output::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    .rilie-output::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-    .rilie-output > div {
-      margin-bottom: 16px;
-      padding: 0;
-    }
-
-    .rilie-output strong {
-      color: rgba(255,255,255,0.95);
-    }
+    .rilie-output > div { margin-bottom: 16px; padding: 0; }
+    .rilie-output strong { color: rgba(255,255,255,0.95); }
 
     /* ── Code block cards inside Answer ── */
     .rilie-code-block {
@@ -518,16 +483,10 @@
       font-size: 12px;
       overflow-x: auto;
     }
-
-    .rilie-code-block pre {
-      margin: 0;
-      white-space: pre;
-    }
-
+    .rilie-code-block pre { margin: 0; white-space: pre; }
     .rilie-code-copy {
       position: absolute;
-      top: 6px;
-      right: 8px;
+      top: 6px; right: 8px;
       font-size: 10px;
       padding: 2px 6px;
       border-radius: 5px;
@@ -539,7 +498,7 @@
       letter-spacing: 0.08em;
     }
 
-    /* ── Output Action Bar (share, download, copy, rewrite) ── */
+    /* ── Output Action Bar ── */
     .rilie-output-actions {
       display: none;
       align-items: center;
@@ -586,6 +545,31 @@
     }
     .rilie-action-btn.copied { color: #5a8; border-color: rgba(85,170,136,0.3); }
 
+    /* ── CUT 2: file chip in stream ── */
+    .rilie-file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px 3px 7px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 6px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      font-style: normal;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+    }
+    .rilie-file-chip svg {
+      width: 11px; height: 11px;
+      stroke: rgba(255,255,255,0.35);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
     .rilie-meta {
       margin-top: 18px;
       padding: 12px 14px;
@@ -602,10 +586,10 @@
     .rilie-meta-row { display: flex; justify-content: space-between; padding: 2px 0; }
     .rilie-meta-key { color: rgba(255,255,255,0.25); }
     .rilie-meta-val { color: rgba(255,255,255,0.45); }
-    .rilie-meta-val.green { color: #5a8; }
+    .rilie-meta-val.green  { color: #5a8; }
     .rilie-meta-val.yellow { color: #aa8; }
     .rilie-meta-val.orange { color: #a85; }
-    .rilie-meta-val.red { color: #a55; }
+    .rilie-meta-val.red    { color: #a55; }
 
     .rilie-health-bar {
       margin-top: 14px;
@@ -618,13 +602,10 @@
       letter-spacing: 0.05em;
       flex-shrink: 0;
     }
-
-    .rilie-input-sidebar .rilie-health-bar {
-      margin: 0;
-    }
+    .rilie-input-sidebar .rilie-health-bar { margin: 0; }
 
     .rilie-health-track {
-      flex: 1; 
+      flex: 1;
       height: 3px;
       background: rgba(255,255,255,0.04);
       border-radius: 2px;
@@ -649,11 +630,10 @@
 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
+      to   { opacity: 1; transform: translateY(0); }
     }
     .rilie-shell { animation: fadeUp 0.6s ease-out; }
 
-    /* ── Responsive ── */
     @media (max-width: 640px) {
       .rilie-sidebar { width: 0; overflow: hidden; border: none; }
       .rilie-main { margin-left: 0; }
@@ -722,26 +702,22 @@
           <div style="margin-bottom:16px"><p><strong>RILIE:</strong> Hi there! What's your name? You can call me RILIE if you so please... :)</p></div>
         </div>
         <div id="rilie-output-actions" class="rilie-output-actions">
-          <!-- Share -->
           <button class="rilie-action-btn" id="rilie-share" title="Share">
             <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           </button>
-          <!-- Download -->
           <button class="rilie-action-btn" id="rilie-download" title="Download">
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           </button>
-          <!-- Copy -->
           <button class="rilie-action-btn" id="rilie-copy" title="Copy">
             <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
-          <!-- Rewrite -->
           <button class="rilie-action-btn" id="rilie-rewrite" title="Rewrite">
             <svg viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
           </button>
         </div>
       </div>
 
-      <!-- INPUT AT BOTTOM WITH SIDEBAR CONTROLS -->
+      <!-- INPUT AT BOTTOM -->
       <label class="rilie-label" for="rilie-input">Your Turn</label>
       <div class="rilie-input-section">
         <div style="flex: 1; position: relative;">
@@ -758,7 +734,7 @@
         </div>
       </div>
 
-      <div id="rilie-meta" class="rilie-meta" style="display: none;">
+      <div id="rilie-meta" class="rilie-meta" style="display: none;"></div>
 
       <div class="rilie-footer">
         Inspired by those who gave without expecting anything in return (3),
@@ -770,28 +746,29 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-    const submitBtn = document.getElementById("rilie-submit");
-    const selfBtn = document.getElementById("rilie-self");
-    const inputEl = document.getElementById("rilie-input");
-    const outputEl = document.getElementById("rilie-output");
+    const submitBtn  = document.getElementById("rilie-submit");
+    const selfBtn    = document.getElementById("rilie-self");
+    const inputEl    = document.getElementById("rilie-input");
+    const outputEl   = document.getElementById("rilie-output");
 
     const GREETING_HTML = '<div style="margin-bottom:16px"><p><strong>RILIE:</strong> Hi there! What\'s your name? You can call me RILIE if you so please... :)</p></div>';
 
     console.log("submitBtn:", submitBtn);
-    console.log("inputEl:", inputEl);
+    console.log("inputEl:",  inputEl);
     console.log("outputEl:", outputEl);
-    const metaPanel = document.getElementById("rilie-meta");
-    const healthFill = document.getElementById("health-fill");
-    const healthPct = document.getElementById("health-pct");
-    const outputActions = document.getElementById("rilie-output-actions");
-    const shareBtn = document.getElementById("rilie-share");
-    const downloadBtn = document.getElementById("rilie-download");
-    const copyBtn = document.getElementById("rilie-copy");
-    const rewriteBtn = document.getElementById("rilie-rewrite");
-    const fileInput = document.getElementById("rilie-files");
-    const fileNames = document.getElementById("rilie-file-names");
-    const fileClear = document.getElementById("rilie-file-clear");
-    let lastStimulus = "";
+
+    const metaPanel      = document.getElementById("rilie-meta");
+    const healthFill     = document.getElementById("health-fill");
+    const healthPct      = document.getElementById("health-pct");
+    const outputActions  = document.getElementById("rilie-output-actions");
+    const shareBtn       = document.getElementById("rilie-share");
+    const downloadBtn    = document.getElementById("rilie-download");
+    const copyBtn        = document.getElementById("rilie-copy");
+    const rewriteBtn     = document.getElementById("rilie-rewrite");
+    const fileInput      = document.getElementById("rilie-files");
+    const fileNames      = document.getElementById("rilie-file-names");
+    const fileClear      = document.getElementById("rilie-file-clear");
+    let lastStimulus     = "";
 
     /* ── File Upload Display ── */
     fileInput.addEventListener("change", () => {
@@ -815,199 +792,179 @@
     function updateMeta(data) {
       metaPanel.classList.add("visible");
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "\u2014"; };
-      set("meta-status", data.status);
-      set("meta-quality", data.quality_score != null ? data.quality_score.toFixed(2) : "\u2014");
+      set("meta-status",     data.status);
+      set("meta-quality",    data.quality_score    != null ? data.quality_score.toFixed(2)    : "\u2014");
       set("meta-priorities", data.priorities_met);
-      set("meta-beige", data.anti_beige_score != null ? data.anti_beige_score.toFixed(2) : "\u2014");
-      set("meta-depth", (data.depth || 0) + " / " + (data.pass || 0));
-      set("meta-tone", (data.tone_emoji || "") + " " + (data.tone || ""));
-      set("meta-domains", (data.domains_used || []).join(", "));
-      set("meta-triangle", data.triangle_type || "CLEAN");
+      set("meta-beige",      data.anti_beige_score != null ? data.anti_beige_score.toFixed(2) : "\u2014");
+      set("meta-depth",      (data.depth || 0) + " / " + (data.pass || 0));
+      set("meta-tone",       (data.tone_emoji || "") + " " + (data.tone || ""));
+      set("meta-domains",    (data.domains_used || []).join(", "));
+      set("meta-triangle",   data.triangle_type || "CLEAN");
       const wit = data.wit || {};
-      const witActive = Object.entries(wit).filter(([k, v]) => v).map(([k]) => k);
+      const witActive = Object.entries(wit).filter(([k,v]) => v).map(([k]) => k);
       set("meta-wit", witActive.length ? witActive.join(", ") : "none");
       const lang = data.language_mode || {};
-      const langActive = Object.entries(lang).filter(([k, v]) => v).map(([k]) => k);
+      const langActive = Object.entries(lang).filter(([k,v]) => v).map(([k]) => k);
       set("meta-language", langActive.length ? langActive.join(", ") : "literal");
       const social = data.social || {};
-      set("meta-social", social.user_status != null ? "user=" + social.user_status.toFixed(2) + " self=" + social.self_status.toFixed(2) : "\u2014");
+      set("meta-social", social.user_status != null
+        ? "user=" + social.user_status.toFixed(2) + " self=" + social.self_status.toFixed(2)
+        : "\u2014");
       set("meta-curiosity", data.curiosity_informed ? "own discovery used" : "\u2014");
       const health = data.conversation_health || 100;
       healthFill.style.width = health + "%";
-      healthPct.textContent = Math.round(health);
-      if (health > 70) healthFill.style.background = "linear-gradient(90deg, #4a7, #5a8)";
+      healthPct.textContent  = Math.round(health);
+      if      (health > 70) healthFill.style.background = "linear-gradient(90deg, #4a7, #5a8)";
       else if (health > 50) healthFill.style.background = "linear-gradient(90deg, #aa8, #bb9)";
       else if (health > 30) healthFill.style.background = "linear-gradient(90deg, #a85, #b96)";
-      else healthFill.style.background = "linear-gradient(90deg, #a55, #b66)";
+      else                  healthFill.style.background = "linear-gradient(90deg, #a55, #b66)";
     }
 
     function escapeHtml(str) {
-      return str.replace(/[&<>\"']/g, (s) => (
+      return str.replace(/[&<>"']/g, (s) => (
         { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[s]
       ));
     }
 
-    // Render fenced ``` code blocks as cards with copy buttons
     function renderOutputWithCode(text) {
       const parts = text.split("```");
       let html = "";
-
       for (let i = 0; i < parts.length; i++) {
         const chunk = parts[i];
         if (i % 2 === 0) {
-          if (chunk.trim()) {
-            html += "<p>" + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
-          }
+          if (chunk.trim()) html += "<p>" + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
         } else {
           const lines = chunk.split("\n");
           let codeLines = lines;
-          if (lines[0].trim().match(/^[a-zA-Z0-9_+-]+$/)) {
-            codeLines = lines.slice(1);
-          }
+          if (lines.trim().match(/^[a-zA-Z0-9_+-]+$/)) codeLines = lines.slice(1);
           const codeHtml = escapeHtml(codeLines.join("\n"));
-          html += (
-            '<div class="rilie-code-block">' +
-              '<button class="rilie-code-copy">copy</button>' +
-              "<pre><code>" + codeHtml + "</code></pre>" +
-            "</div>"
-          );
+          html += '<div class="rilie-code-block"><button class="rilie-code-copy">copy</button><pre><code>' + codeHtml + '</code></pre></div>';
         }
       }
-
       outputEl.innerHTML = html;
-
       document.querySelectorAll(".rilie-code-copy").forEach((btn) => {
         btn.onclick = async () => {
           const code = btn.parentElement.querySelector("pre").innerText;
-          try {
-            await navigator.clipboard.writeText(code);
-            btn.textContent = "copied";
-            setTimeout(() => { btn.textContent = "copy"; }, 1200);
-          } catch (e) {}
+          try { await navigator.clipboard.writeText(code); btn.textContent = "copied"; setTimeout(() => { btn.textContent = "copy"; }, 1200); } catch (e) {}
         };
       });
     }
 
     /* ── Submit ── */
-    /* Every message goes to /v1/rilie. Raw string. No transformation. */
-    /* The API decides if this is a name or a conversation. */
     if (submitBtn) {
       submitBtn.onclick = async () => {
         console.log("Button clicked!");
-        const stimulus = inputEl.value;
-        const files = fileInput.files;
-        const hasFiles = files && files.length > 0;
+        const stimulus  = inputEl.value;
+        const files     = fileInput.files;
+        const hasFiles  = files && files.length > 0;
 
-      if (!stimulus && !hasFiles) {
-        const nudge = document.createElement("div");
-        nudge.style.marginBottom = "16px";
-        nudge.style.opacity = "0.6";
-        nudge.innerHTML = "<em>Drop something in. A question, a thought, a vibe. Then hit Go.</em>";
-        outputEl.appendChild(nudge);
-        outputEl.scrollTop = outputEl.scrollHeight;
-        return;
-      }
-
-      lastStimulus = stimulus;
-      inputEl.value = "";
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Going...";
-      outputActions.classList.remove("visible");
-
-      try {
-        // Append user message to conversation flow
-        const userDiv = document.createElement("div");
-        userDiv.style.marginBottom = "16px";
-        userDiv.innerHTML = "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
-        outputEl.appendChild(userDiv);
-
-        const files2 = fileInput.files;
-        let res;
-
-        if (files2 && files2.length > 0) {
-          const formData = new FormData();
-          formData.append("stimulus", stimulus || "Please review the attached file(s)");
-          formData.append("max_pass", "3");
-          for (let i = 0; i < files2.length; i++) {
-            formData.append("files", files2[i]);
-          }
-          res = await fetch("/v1/rilie-upload", { method: "POST", body: formData });
-        } else {
-          res = await fetch("/v1/rilie", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ stimulus: stimulus })
-          });
-        }
-
-        if (!res.ok) {
-          const errDiv = document.createElement("div");
-          errDiv.style.color = "#a55";
-          errDiv.innerHTML = "<strong>Error:</strong> " + res.status;
-          outputEl.appendChild(errDiv);
+        if (!stimulus && !hasFiles) {
+          const nudge = document.createElement("div");
+          nudge.style.marginBottom = "16px";
+          nudge.style.opacity = "0.6";
+          nudge.innerHTML = "<em>Drop something in. A question, a thought, a vibe. Then hit Go.</em>";
+          outputEl.appendChild(nudge);
+          outputEl.scrollTop = outputEl.scrollHeight;
           return;
         }
 
-        const data = await res.json();
-        const rilieLine = data.result || "No result returned.";
+        lastStimulus = stimulus;
+        inputEl.value = "";
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Going...";
+        outputActions.classList.remove("visible");
 
-        const rilieDiv = document.createElement("div");
-        rilieDiv.style.marginBottom = "16px";
+        try {
+          /* ── CUT 2: build user div with optional file chip on top ── */
+          const userDiv = document.createElement("div");
+          userDiv.style.marginBottom = "16px";
 
-        const parts = rilieLine.split("```");
-        let html = "";
-        for (let i = 0; i < parts.length; i++) {
-          const chunk = parts[i];
-          if (i % 2 === 0) {
-            if (chunk.trim()) {
-              html += "<p><strong>RILIE:</strong> " + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
-            }
-          } else {
-            const lines = chunk.split("\n");
-            let codeLines = lines;
-            if (lines[0].trim().match(/^[a-zA-Z0-9_+-]+$/)) {
-              codeLines = lines.slice(1);
-            }
-            const codeHtml = escapeHtml(codeLines.join("\n"));
-            html += (
-              '<div class="rilie-code-block">' +
-                '<button class="rilie-code-copy">copy</button>' +
-                "<pre><code>" + codeHtml + "</code></pre>" +
-              "</div>"
-            );
+          let chipHtml = "";
+          if (hasFiles) {
+            const chipFiles = Array.from(files);
+            chipHtml = chipFiles.map(f =>
+              '<span class="rilie-file-chip">' +
+                '<svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>' +
+                escapeHtml(f.name) +
+              '</span>'
+            ).join(" ");
+            chipHtml = '<div style="margin-bottom:5px">' + chipHtml + '</div>';
           }
+
+          userDiv.innerHTML = chipHtml + "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
+          outputEl.appendChild(userDiv);
+
+          const files2 = fileInput.files;
+          let res;
+
+          if (files2 && files2.length > 0) {
+            const formData = new FormData();
+            formData.append("stimulus", stimulus || "Please review the attached file(s)");
+            formData.append("max_pass", "3");
+            for (let i = 0; i < files2.length; i++) formData.append("files", files2[i]);
+            res = await fetch("/v1/rilie-upload", { method: "POST", body: formData });
+          } else {
+            res = await fetch("/v1/rilie", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ stimulus: stimulus })
+            });
+          }
+
+          if (!res.ok) {
+            const errDiv = document.createElement("div");
+            errDiv.style.color = "#a55";
+            errDiv.innerHTML = "<strong>Error:</strong> " + res.status;
+            outputEl.appendChild(errDiv);
+            return;
+          }
+
+          const data = await res.json();
+          const rilieLine = data.result || "No result returned.";
+
+          const rilieDiv = document.createElement("div");
+          rilieDiv.style.marginBottom = "16px";
+
+          const parts = rilieLine.split("```");
+          let html = "";
+          for (let i = 0; i < parts.length; i++) {
+            const chunk = parts[i];
+            if (i % 2 === 0) {
+              if (chunk.trim()) html += "<p><strong>RILIE:</strong> " + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
+            } else {
+              const lines = chunk.split("\n");
+              let codeLines = lines;
+              if (lines[0].trim().match(/^[a-zA-Z0-9_+-]+$/)) codeLines = lines.slice(1);
+              const codeHtml = escapeHtml(codeLines.join("\n"));
+              html += '<div class="rilie-code-block"><button class="rilie-code-copy">copy</button><pre><code>' + codeHtml + '</code></pre></div>';
+            }
+          }
+          rilieDiv.innerHTML = html;
+          outputEl.appendChild(rilieDiv);
+
+          rilieDiv.querySelectorAll(".rilie-code-copy").forEach((btn) => {
+            btn.onclick = async () => {
+              const code = btn.parentElement.querySelector("pre").innerText;
+              try { await navigator.clipboard.writeText(code); btn.textContent = "copied"; setTimeout(() => { btn.textContent = "copy"; }, 1200); } catch (e) {}
+            };
+          });
+
+          outputEl.scrollTop = outputEl.scrollHeight;
+          updateMeta(data);
+          outputActions.classList.add("visible");
+
+        } catch (err) {
+          const errDiv = document.createElement("div");
+          errDiv.style.color = "#a55";
+          errDiv.innerHTML = "<strong>Request failed:</strong> " + err;
+          outputEl.appendChild(errDiv);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Learn from Go";
+          fileInput.value = "";
+          fileNames.textContent = "";
+          fileClear.classList.remove("visible");
         }
-        rilieDiv.innerHTML = html;
-        outputEl.appendChild(rilieDiv);
-
-        rilieDiv.querySelectorAll(".rilie-code-copy").forEach((btn) => {
-          btn.onclick = async () => {
-            const code = btn.parentElement.querySelector("pre").innerText;
-            try {
-              await navigator.clipboard.writeText(code);
-              btn.textContent = "copied";
-              setTimeout(() => { btn.textContent = "copy"; }, 1200);
-            } catch (e) {}
-          };
-        });
-
-        outputEl.scrollTop = outputEl.scrollHeight;
-
-        updateMeta(data);
-        outputActions.classList.add("visible");
-      } catch (err) {
-        const errDiv = document.createElement("div");
-        errDiv.style.color = "#a55";
-        errDiv.innerHTML = "<strong>Request failed:</strong> " + err;
-        outputEl.appendChild(errDiv);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Learn from Go";
-        fileInput.value = "";
-        fileNames.textContent = "";
-        fileClear.classList.remove("visible");
-      }
       };
     } else {
       console.error("submitBtn not found!");
@@ -1020,7 +977,7 @@
       const text = outputEl.textContent;
       const shareData = { title: "RILIE (3,6,9)", text: text.substring(0, 200) + (text.length > 200 ? "..." : ""), url: window.location.href };
       if (navigator.share) {
-        try { await navigator.share(shareData); } catch (e) { /* user cancelled */ }
+        try { await navigator.share(shareData); } catch (e) {}
       } else {
         try { await navigator.clipboard.writeText(window.location.href + "\n\n" + text); shareBtn.classList.add("copied"); setTimeout(() => shareBtn.classList.remove("copied"), 1500); }
         catch (e) {}
@@ -1031,13 +988,10 @@
       const text = outputEl.textContent;
       if (!text) return;
       const blob = new Blob([text], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "rilie-response.txt";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url; a.download = "rilie-response.txt";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
     };
 
@@ -1049,56 +1003,4 @@
           copyBtn.classList.add("copied");
           const o = copyBtn.innerHTML;
           copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
-          setTimeout(() => { copyBtn.classList.remove("copied"); copyBtn.innerHTML = o; }, 1500);
-        } catch (err) {
-          const ta = document.createElement("textarea");
-          ta.value = text;
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand("copy");
-          document.body.removeChild(ta);
-        }
-      }
-    };
-
-    rewriteBtn.onclick = () => { if (lastStimulus) { inputEl.value = lastStimulus; submitBtn.click(); } };
-
-    inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitBtn.click(); } });
-
-    /* ── Sidebar Actions ── */
-    document.getElementById("sidebar-new").onclick = () => {
-      inputEl.value = "";
-      outputEl.innerHTML = GREETING_HTML;
-      metaPanel.classList.remove("visible");
-      outputActions.classList.remove("visible");
-      healthFill.style.width = "100%";
-      healthPct.textContent = "100";
-      fileInput.value = "";
-      fileNames.textContent = "";
-      fileClear.classList.remove("visible");
-      lastStimulus = "";
-      inputEl.focus();
-    };
-
-    document.getElementById("sidebar-history").onclick = () => {
-      outputEl.textContent = "History \u2014 coming soon. Every conversation remembered.";
-      outputActions.classList.remove("visible");
-    };
-
-    document.getElementById("sidebar-discover").onclick = () => {
-      inputEl.focus();
-    };
-
-    document.getElementById("sidebar-spaces").onclick = () => {
-      outputEl.textContent = "Spaces \u2014 coming soon. Collaborative rooms with shared context.";
-      outputActions.classList.remove("visible");
-    };
-
-    document.getElementById("sidebar-finance").onclick = () => {
-      outputEl.textContent = "Finance \u2014 coming soon. Real intelligence meets real numbers.";
-      outputActions.classList.remove("visible");
-    };
-    }); // Close DOMContentLoaded
-  </script>
-</body>
-</html>
+          setTimeout(() => { copyBtn.classList.remove("copied"); copyBtn.innerHTML = o; }, 
