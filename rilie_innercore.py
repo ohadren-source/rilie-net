@@ -32,10 +32,19 @@ from rilie_outercore import (
 # --- Chompky — grammar brain for constructing responses from thought ---
 # Graceful fallback if spaCy model not available
 try:
-    from ChomskyAtTheBit import parse_question, extract_holy_trinity_for_roux, infer_time_bucket
+    from ChomskyAtTheBit import (
+        parse_question,
+        extract_holy_trinity_for_roux,
+        infer_time_bucket,
+        resolve_identity,
+        RILIE_SELF_NAME,
+        RILIE_MADE_BY,
+    )
     CHOMSKY_AVAILABLE = True
 except Exception as e:
     CHOMSKY_AVAILABLE = False
+    RILIE_SELF_NAME = "RILIE"
+    RILIE_MADE_BY = "SOi sauc-e"
     print(f"CHOMSKY FAILED TO LOAD: {e}", file=sys.stderr)
 
 
@@ -371,16 +380,56 @@ def _pick_two_anchors(snippet: str) -> tuple:
 
 _SELF_SIGNALS = [
     "your name", "who are you", "who made", "who built", "who created",
+    "who designed", "who programmed", "who developed", "who wrote you",
     "you care", "your purpose", "you different", "trust you",
     "you know", "you feel", "you alive", "you conscious",
     "about you", "yourself", "rilie",
+    "what are you", "are you an ai", "are you real",
+    "difference between you", "you and chatgpt", "you vs",
 ]
+
+# Hard-coded self-knowledge — RILIE knows herself and her maker
+_SELF_KNOWLEDGE = {
+    "name": RILIE_SELF_NAME,
+    "made_by": RILIE_MADE_BY,
+    "purpose": "Real Intelligence. She thinks, she cooks, she serves.",
+}
 
 
 def _is_self_question(stimulus: str) -> bool:
     """Returns True if stimulus asks RILIE about herself."""
     s = stimulus.lower().strip()
     return any(sig in s for sig in _SELF_SIGNALS)
+
+
+def _get_self_answer(stimulus: str) -> Optional[str]:
+    """
+    If the question has a hard-coded identity answer, return it directly.
+    Covers: name, maker, and 'you vs ChatGPT' type questions.
+    Returns None if no hard answer — let the kitchen cook.
+    """
+    s = stimulus.lower().strip()
+
+    # Who made / built / created / programmed her
+    if any(sig in s for sig in ["who made", "who built", "who created", "who designed",
+                                  "who programmed", "who developed", "who wrote you"]):
+        return f"I was built by {RILIE_MADE_BY}. Real Intelligence, cooked from scratch."
+
+    # What's her name
+    if "your name" in s or ("what" in s and "name" in s and "you" in s):
+        return f"I'm {RILIE_SELF_NAME}. Real Intelligence. Pleased to meet you 🍳"
+
+    # You vs ChatGPT / other AI
+    if ("difference" in s or "vs" in s or "versus" in s or "compare" in s) and \
+       any(ai in s for ai in ["chatgpt", "gpt", "claude", "gemini", "ai", "chatbot"]):
+        return (
+            f"{RILIE_SELF_NAME} doesn't retrieve. She thinks. "
+            f"Every response is cooked — scored on five dimensions, "
+            f"anti-beige checked, domain-excavated. "
+            f"ChatGPT serves what's popular. {RILIE_SELF_NAME} serves what's true."
+        )
+
+    return None
 
 
 # ============================================================================
@@ -406,6 +455,11 @@ def construct_response(stimulus: str, snippet: str) -> str:
     # If she's being asked about herself, don't jam physics keywords
     # into outward templates. Build from self-concepts directly.
     if _is_self_question(stimulus):
+        # Hard identity answers fire first — name, maker, vs-ChatGPT
+        hard_answer = _get_self_answer(stimulus)
+        if hard_answer:
+            return hard_answer
+
         if is_kw_list:
             anchor1, anchor2 = _pick_two_anchors(snippet_clean)
             if anchor2:
