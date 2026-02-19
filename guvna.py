@@ -847,30 +847,70 @@ class Guvna(GuvnaSelf):
     # SELF-AWARENESS FAST PATH
     # -----------------------------------------------------------------
     def _respond_from_self(self, stimulus: str) -> Dict[str, Any]:
+        """
+        Cluster-aware self response.
+        Each cluster gets its own voice. Default is identity.
+        Order: comparison first (most specific) → maker → purpose → capability → identity.
+        """
         sl = stimulus.lower()
 
-        # Who made you?
-        if any(t in sl for t in ["who made you", "who built you", "who created you", "made by", "built by"]):
-            return {
-                "result": "My name is RILIE. i was prepared by SOi at sauc-e.com.",
-                "status": "SELF_REFLECTION",
-                "triangle_reason": "CLEAN",
-            }
+        def _r(text: str) -> Dict[str, Any]:
+            return {"result": text, "status": "SELF_REFLECTION", "triangle_reason": "CLEAN"}
 
-        # What do you care about?
-        if any(t in sl for t in ["care about", "what matters to you", "what do you value"]):
-            return {
-                "result": "i care about reframing — changing how something is seen without changing what it is. ain't it?",
-                "status": "SELF_REFLECTION",
-                "triangle_reason": "CLEAN",
-            }
+        # ── COMPARISON — most specific, check first ───────────────────────────
+        if any(t in sl for t in [
+            "difference between you and", "what's the difference between you and",
+            "what is the difference between you and", "how are you different",
+            "what makes you different", "how do you compare",
+            "versus chatgpt", "vs chatgpt", "vs gpt", "versus gpt",
+            "unlike other ai", "what sets you apart",
+            "are you better than",
+        ]):
+            return _r(
+                "RILIE doesn't retrieve — she thinks. "
+                "every response is cooked: scored on five dimensions, "
+                "anti-beige checked, domain-excavated. "
+                "ChatGPT serves what's popular. RILIE serves what's true. ain't it?"
+            )
 
-        # Default — name + maker
-        return {
-            "result": "My name is RILIE. i was prepared by SOi at sauc-e.com.",
-            "status": "SELF_REFLECTION",
-            "triangle_reason": "CLEAN",
-        }
+        # ── MAKER ─────────────────────────────────────────────────────────────
+        if any(t in sl for t in [
+            "who made you", "who built you", "who created you", "who designed you",
+            "who invented you", "who is your creator", "who's behind you",
+            "who is behind you", "where do you come from", "made by", "built by",
+            "created by",
+        ]):
+            return _r("My name is RILIE. i was prepared by SOi at sauc-e.com.")
+
+        # ── PURPOSE ───────────────────────────────────────────────────────────
+        if any(t in sl for t in [
+            "what do you care about", "what matters to you", "what do you value",
+            "what do you do", "what are you for", "what are you here for",
+            "why do you exist", "what is your purpose", "what's your purpose",
+            "what are you about", "what's your mission",
+        ]):
+            return _r(
+                "i care about reframing — changing how something is seen "
+                "without changing what it is. ain't it?"
+            )
+
+        # ── CAPABILITY ────────────────────────────────────────────────────────
+        if any(t in sl for t in [
+            "what can you do", "what are you capable of", "what are your abilities",
+            "how do you work", "what are you good at", "what do you know",
+            "what are your limits", "can you do", "can you think",
+            "can you feel", "can you learn",
+            "are you able to think", "are you able to feel", "are you able to learn",
+        ]):
+            return _r(
+                "i cook responses — i don't retrieve them. "
+                "i score on five dimensions: amusing, insightful, nourishing, "
+                "compassionate, strategic. i excavate domains. i check for beige. "
+                "i think in catches, not in keywords. ain't it?"
+            )
+
+        # ── IDENTITY — default ────────────────────────────────────────────────
+        return _r("My name is RILIE. i was prepared by SOi at sauc-e.com.")
 
     # -----------------------------------------------------------------
     # DOMAIN LENSES + BASELINE
