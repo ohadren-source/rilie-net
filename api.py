@@ -3,8 +3,8 @@ api.py — RILIE API v0.9.0 + Chomsky name tap
 
 Session persistence wired in. She remembers who you are between visits.
 
-Now also extracts a likely name anchor from stimulus via ChomskyAtTheBit
-and exposes it as a canonical `display_name` everywhere.
+Now also extracts a likely name anchor from stimulus via ChomskyAtTheBit,
+and uses it as a canonical `display_name` across the conversation.
 """
 
 import os
@@ -139,7 +139,7 @@ def build_library_index() -> LibraryIndex:
     if library_dir not in sys.path:
         sys.path.insert(0, library_dir)
 
-    # FIX: LibraryIndex is a typing alias, so we create a plain dict
+    # LibraryIndex is a typing alias; use a plain dict at runtime.
     index: LibraryIndex = {}
 
     def safe_import(module_name: str, index_key: str, tags: list) -> None:
@@ -263,7 +263,7 @@ def build_library_index() -> LibraryIndex:
     )
 
     # ... keep all other safe_import calls from your original v0.9.0 here ...
-    # SOi sauc‑e special load, SOiOS, networktheory, bigbang, etc. – unchanged.
+    # SOi sauce, SOiOS, networktheory, bigbang, etc. – unchanged.
 
     logger.info("Library index complete (%d domain engines loaded)", len(index))
     return index
@@ -925,7 +925,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     restore_guvna_state(guvna, session)
     restore_talk_memory(talk_memory, session)
 
-    # Core Guvna call
+    # Core Guvna call (fix kwarg name: maxpass)
     result = guvna.process(stimulus, maxpass=req.max_pass)
 
     # Multi-question handling
@@ -957,6 +957,8 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         quality=quality,
         tone=tone,
         topics=session.get("topics", []),
+    )
+
     # Christening → updates display_name via update_name
     if mem_result.get("christening"):
         result["christening"] = mem_result["christening"]
@@ -966,10 +968,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             christened=True,
         )
 
-    # Topic tracking
+    # Topic tracking (Moment is an object, not a dict)
     if mem_result.get("moment"):
         moment = mem_result["moment"]
-        # If Moment is a dataclass / object with .tag
         tag = getattr(moment, "tag", None)
         record_topics(session, domains_hit, tag)
 
@@ -997,6 +998,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         return result
 
     return build_plate(result)
+
 
 @app.post("/v1/rilie-upload")
 async def run_rilie_upload(
@@ -1104,6 +1106,7 @@ def generate_file(req: GenerateFileRequest) -> Dict[str, Any]:
             "download_url": "",
         }
 
+    # Fix kwarg name: maxpass
     result = guvna.process(stimulus, maxpass=3)
     content = str(result.get("result", ""))
     ext = sanitize_ext(req.ext)
