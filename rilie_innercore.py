@@ -557,9 +557,9 @@ def construct_response(stimulus: str, snippet: str) -> str:
                 )
             else:
                 core = snippet_clean
-                if subject:
+                if subject and subject.strip():
                     return (
-                        f"This hits {subject}... let's explore "
+                        f"This hits {subject.strip()}... let's explore "
                         f"{core[0].lower()}{core[1:]} if you're game"
                     )
                 return f"The thing about {core[0].lower()}{core[1:]}"
@@ -1132,7 +1132,7 @@ def run_pass_pipeline(
         if clean_bl:
             bl_scores = {k: fn(clean_bl) for k, fn in SCORERS.items()}
             bl_overall = sum(bl_scores[k] * WEIGHTS[k] for k in bl_scores) / 4.5
-            bl_overall *= 1.2  # Baseline advantage — she has to EARN beating it
+            bl_overall *= 1.03  # Baseline advantage — 3% edge only
             if bl_overall > best_score:
                 baseline_wins = True
                 debug_audit = _build_debug_audit(
