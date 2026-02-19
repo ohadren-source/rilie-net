@@ -1024,4 +1024,73 @@ class Guvna:
             "pass": raw.get("pass", 0),
             "disclosure_level": raw.get("disclosure_level", "standard"),
             "triangle_reason": raw.get("triangle_reason", "CLEAN"),
-            "wit":
+            "wit": raw.get("wit"),
+            "language_mode": raw.get("language_mode"),
+            "social": raw.get("social", {}),
+            "dejavu": raw.get("dejavu", {"count": 0, "frequency": 0, "similarity": "none"}),
+            "baseline": raw.get("baseline", {}),
+            "baseline_used": raw.get("baseline_used", False),
+            "domain_annotations": raw.get("domain_annotations", {}),
+            "soi_domains": raw.get("soi_domains", []),
+            "curiosity_context": raw.get("curiosity_context", ""),
+            "conversation_health": raw.get("conversation_health", 100),
+            "memory_polaroid": raw.get("memory_polaroid"),
+            "turn_count": self.turn_count,
+            "user_name": self.user_name,
+            "whosonfirst": self.whosonfirst,
+            "library_metadata": {
+                "total_domains": self.library_metadata.total_domains,
+                "files_loaded": len(self.library_metadata.files),
+                "boole_substrate": self.library_metadata.boole_substrate,
+                "core_tracks": self.library_metadata.core_tracks,
+            },
+        }
+        # Track response history for recall + clarification fast paths
+        result_text = final.get("result", "")
+        if result_text:
+            self._response_history.append(result_text)
+            if len(self._response_history) > 20:
+                self._response_history.pop(0)
+        return final
+
+
+# ============================================================================
+# CONVENIENCE FUNCTION
+# ============================================================================
+
+def create_guvna(
+    roux_seeds: Optional[Dict[str, Dict[str, Any]]] = None,
+    search_fn: Optional[SearchFn] = None,
+    library_index: Optional[LibraryIndex] = None,
+    manifesto_path: Optional[str] = None,
+    curiosity_engine: Optional[Any] = None,
+) -> "Guvna":
+    """
+    Factory function to create a Governor with full domain library.
+    Returns:
+        Initialized Guvna instance with 678 domains loaded
+    """
+    return Guvna(
+        roux_seeds=roux_seeds,
+        search_fn=search_fn,
+        library_index=library_index,
+        manifesto_path=manifesto_path,
+        curiosity_engine=curiosity_engine,
+    )
+
+
+if __name__ == "__main__":
+    guvna = create_guvna()
+    print(f"✓ GUVNA booted with {guvna.library_metadata.total_domains} domains")
+    print(f"✓ Libraries: {len(guvna.library_metadata.files)} files")
+    print(f"✓ Constitution: {'Loaded' if guvna.self_state.constitution_loaded else 'Using defaults'}")
+    print(f"✓ DNA Active: {guvna.self_state.dna_active}")
+    print(f"✓ Curiosity Engine: {'Wired' if guvna.curiosity_engine else 'Not wired'}")
+    greeting_response = guvna.greet("Hi, my name is Alex")
+    print(f"\nGreeting Response:\n{greeting_response['result']}")
+    test_stimulus = "What is the relationship between density and understanding?"
+    response = guvna.process(test_stimulus)
+    print(f"\nTalk Response:\nTone: {response['tone']} {response['tone_emoji']}")
+    print(f"Domains Used: {response['soi_domains'][:5]}")
+    print(f"Conversation Health: {response['conversation_health']}")
+    print(f"Curiosity Context: {response.get('curiosity_context', 'none')}")
