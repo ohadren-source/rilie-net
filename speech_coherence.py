@@ -143,44 +143,37 @@ def has_critical_ambiguity(text: str) -> bool:
     return False
 
 
-def clean_formatting(text: str) -> str:
+def stitch_connective_tissue(text: str) -> str:
     """
     When Kitchen outputs concepts bumping into each other without connectors,
-    stitch them with em dashes or periods.
+    stitch them with em dashes.
 
     Pattern: "RILIE doesn't retrieve She thinks" → "RILIE doesn't retrieve — she thinks"
-    Pattern: "It reframe — to change" → already fine, leave it
-
-    Rule: if two capitalized words or a sentence-ending word is followed directly
-    by another sentence start with no punctuation — insert em dash.
     Never insert if punctuation already exists.
     """
     if not text:
         return text
 
-    # Fix: word directly followed by capital word with no punctuation
-    # "retrieve She" → "retrieve — she"
     text = re.sub(
         r'([a-z])(\s+)([A-Z][a-z])',
         lambda m: m.group(1) + " — " + m.group(3).lower(),
         text
     )
 
-    # Fix: pronoun subject collision "It reframe" → "i care about reframing"
-    # This is upstream (guvna _respond_from_self) — leave it there.
-    # speech_coherence only stitches, never rewrites subject.
-
     return text
+
+
+def clean_formatting(text: str) -> str:
     """Light formatting cleanup."""
-    
+
     if not text:
         return text
-    
+
     while "  " in text:
         text = text.replace("  ", " ")
-    
+
     text = re.sub(r'\s+([.!?])', r'\1', text)
-    
+
     return text
 
 
