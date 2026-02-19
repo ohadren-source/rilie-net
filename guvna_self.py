@@ -40,6 +40,7 @@ from __future__ import annotations
 import logging
 import random
 import re
+from collections import deque
 from typing import Any, Dict, List, Optional
 
 from guvna_tools import (
@@ -81,7 +82,7 @@ class GuvnaSelf:
         self.user_name: Optional[str] = None
         self.whosonfirst: bool = True
         self._awaiting_name: bool = False
-        self._response_history: List[str] = []
+        self._response_history: deque = deque(maxlen=20)
 
     # -----------------------------------------------------------------
     # APERTURE — First contact. Before anything else.
@@ -119,8 +120,7 @@ class GuvnaSelf:
 
         if self.user_name:
             greeting_text = (
-                f"Hi {self.user_name}! It's great talking to you again... "
-                "what's on your mind today?"
+                f"Hi {self.user_name}! What's on your mind today?"
             )
             self._awaiting_name = False
         else:
@@ -284,7 +284,7 @@ class GuvnaSelf:
             bridges = [
                 f"What I'm getting at: {last}",
                 f"Put another way — {last}",
-                f"Simpler: {last}",
+                f"Different angle — {last}",
             ]
             return {
                 "result": random.choice(bridges),
@@ -349,7 +349,7 @@ class GuvnaSelf:
         This is THE WRITER — every response gets logged to _response_history here.
         That's what makes _handle_recall and _handle_clarification work.
 
-        Adds all required fields, fills defaults, caps history at 20.
+        Adds all required fields, fills defaults. History cap handled by deque(maxlen=20).
 
         Called at the end of:
           - greet()
@@ -371,6 +371,7 @@ class GuvnaSelf:
             "wit": raw.get("wit"),
             "language_mode": raw.get("language_mode"),
             "social": raw.get("social", {}),
+            "rx_signal": raw.get("rx_signal"),  # affirmation/negation reception signal
             "dejavu": raw.get(
                 "dejavu",
                 {"count": 0, "frequency": 0, "similarity": "none"},
@@ -397,7 +398,5 @@ class GuvnaSelf:
         result_text = final.get("result", "")
         if result_text:
             self._response_history.append(result_text)
-            if len(self._response_history) > 20:
-                self._response_history.pop(0)
 
         return final

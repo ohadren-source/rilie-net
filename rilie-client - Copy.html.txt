@@ -545,6 +545,31 @@
     }
     .rilie-action-btn.copied { color: #5a8; border-color: rgba(85,170,136,0.3); }
 
+    /* ── CUT 2: file chip in stream ── */
+    .rilie-file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px 3px 7px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 6px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      font-style: normal;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+    }
+    .rilie-file-chip svg {
+      width: 11px; height: 11px;
+      stroke: rgba(255,255,255,0.35);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
     .rilie-meta {
       margin-top: 18px;
       padding: 12px 14px;
@@ -613,6 +638,30 @@
       .rilie-sidebar { width: 0; overflow: hidden; border: none; }
       .rilie-main { margin-left: 0; }
       .rilie-shell { padding: 24px 16px; }
+    }
+    /* ── file chip in stream ── */
+    .rilie-file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px 3px 7px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 6px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      font-style: normal;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+    }
+    .rilie-file-chip svg {
+      width: 11px; height: 11px;
+      stroke: rgba(255,255,255,0.35);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
     }
 
   </style>
@@ -880,17 +929,18 @@
         // Append user message to conversation flow
         const userDiv = document.createElement("div");
         userDiv.style.marginBottom = "16px";
+          userDiv.innerHTML = "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
 
         const files2 = fileInput.files;
 
-        // file chip in stream
-        const chipHtml = (files2 && files2.length > 0)
-          ? Array.from(files2).map(f =>
-              `<div class="rilie-file-chip"><svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>${f.name}</div>`
-            ).join("")
-          : "";
-        userDiv.innerHTML = chipHtml + "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
-        outputEl.appendChild(userDiv);
+          // file chip in stream
+          const chipHtml = (files2 && files2.length > 0)
+            ? Array.from(files2).map(f =>
+                `<div class="rilie-file-chip"><svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>${f.name}</div>`
+              ).join("")
+            : "";
+          userDiv.innerHTML = chipHtml + "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
+          outputEl.appendChild(userDiv);
         let res;
 
         if (files2 && files2.length > 0) {

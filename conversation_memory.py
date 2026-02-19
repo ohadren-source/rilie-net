@@ -1109,7 +1109,60 @@ class ConversationMemory:
             "goodbye_text": None,
             "polaroid_text": None,
             "christening": None,
+            "rx_signal": None,  # affirmation/negation signal
         }
+
+        # --- AFFIRMATION / NEGATION SIGNAL ---
+        # Refined customer reception signal — informs flow direction
+        _sl = stimulus.lower().strip()
+        _affirmation_signals = [
+            "yes", "yeah", "exactly", "right", "correct", "that's it",
+            "keep going", "more", "love that", "perfect", "spot on",
+            "you got it", "bingo", "definitely", "absolutely", "yes!",
+            "that's right", "yes exactly", "100%", "💯", "👍",
+        ]
+        _negation_signals = [
+            "no", "nope", "wrong", "not quite", "not what i meant",
+            "that's not", "thats not", "different", "miss", "missed",
+            "not right", "try again", "no no", "that's wrong",
+            "you misunderstood", "not exactly", "👎",
+        ]
+        _rx = None
+        if any(_sl == sig or _sl.startswith(sig + " ") or _sl.endswith(" " + sig)
+               for sig in _affirmation_signals):
+            _rx = "affirmation"
+        elif any(_sl == sig or _sl.startswith(sig + " ") or _sl.endswith(" " + sig)
+                 for sig in _negation_signals):
+            _rx = "negation"
+        result["rx_signal"] = _rx
+
+        # --- GRACEFUL BUFFER PRUNING (prevents LIFO collapse) ---
+        # When moments buffer exceeds 50, summarize oldest half.
+        # Keep all beautiful moments. Compress ordinary ones.
+        # Never discard — summarize. LIFO collapse fixed.
+        _BUFFER_MAX = 50
+        if len(self.moments) > _BUFFER_MAX:
+            beautiful = [m for m in self.moments if m.is_beautiful]
+            ordinary = [m for m in self.moments if not m.is_beautiful]
+            # Keep all beautiful moments + most recent 10 ordinary
+            # Compress remaining ordinary into a single summary moment
+            if len(ordinary) > 10:
+                summary_turns = len(ordinary) - 10
+                summary_moment = Moment(
+                    turn=ordinary[0].turn,
+                    user_words=f"[{summary_turns} ordinary turns summarized]",
+                    domain_hit="",
+                    tone="neutral",
+                    resonance=0.05,
+                    tag="ordinary",
+                    user_energy=0.3,
+                )
+                self.moments = [summary_moment] + beautiful + ordinary[-10:]
+                logger.info(
+                    "MEMORY: buffer pruned gracefully — %d ordinary compressed, %d beautiful kept",
+                    summary_turns,
+                    len(beautiful),
+                )
 
         # --- Measure energy ---
         energy_guidance = self.get_energy_guidance(stimulus)

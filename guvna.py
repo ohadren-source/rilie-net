@@ -343,9 +343,30 @@ class Guvna(GuvnaSelf):
         raw["language_mode"] = language
 
         tone = detect_tone_from_stimulus(stimulus)
-        if is_serious_subject_text(stimulus):
-            if any(w in stimulus.lower() for w in ["feel", "hurt", "scared", "pain"]):
-                tone = "compassionate"
+
+        # COMPASSION SIGNALS — expanded + harm as absolute priority
+        _compassion_signals = [
+            # Harm — absolute priority, fires first
+            "hurt myself", "harm myself", "end it", "can't go on",
+            "don't want to be here", "give up", "no point", "want to die",
+            "kill myself", "hurting myself",
+            # Emotional distress
+            "bad day", "rough day", "hard day", "struggling",
+            "feel", "hurt", "scared", "pain", "tired", "overwhelmed",
+            "anxious", "sad", "lonely", "lost", "don't know what to do",
+            "can't", "exhausted", "crying", "breaking down",
+        ]
+        _harm_signals = [
+            "hurt myself", "harm myself", "end it", "can't go on",
+            "don't want to be here", "give up", "no point", "want to die",
+            "kill myself", "hurting myself",
+        ]
+        _sl = stimulus.lower()
+        if any(h in _sl for h in _harm_signals):
+            tone = "compassionate"
+            raw["harm_signal"] = True
+        elif is_serious_subject_text(stimulus) or any(c in _sl for c in _compassion_signals):
+            tone = "compassionate"
         raw["tone"] = tone
         raw["tone_emoji"] = TONE_EMOJIS.get(tone, TONE_EMOJIS["insightful"])
 
@@ -456,6 +477,28 @@ class Guvna(GuvnaSelf):
         """
         s = stimulus.strip()
         sl = s.lower()
+
+        # MULTI-QUESTION FORMAT STRIP
+        # "in 1 response answer the next 3 questions... Q1? Q2? Q3?"
+        # Strip the format instruction, feed Kitchen only the last question
+        if re.search(r"in \d+ response|answer the next \d+|addressing each in order", sl):
+            # Extract actual questions — lines ending in ?
+            questions = re.findall(r"[A-Z][^?]+\?", s)
+            if questions:
+                # Feed only the last question — most likely the actual content question
+                s = questions[-1].strip()
+                sl = s.lower()
+                logger.info("GUVNA: multi-question format stripped → '%s'", s[:60])
+
+        # "TELL ME SOMETHING I DIDN'T ASK YOU" — spontaneous concept fast path
+        if "tell me something" in sl and ("didn't ask" in sl or "didnt ask" in sl or "haven't asked" in sl):
+            # Feed Kitchen a concept seed — never a script
+            concepts = ["entropy", "emergence", "compression", "resonance", "threshold"]
+            import random as _r
+            seed = _r.choice(concepts)
+            # Let Kitchen cook from the seed — don't return here, inject as stimulus
+            s = seed
+            sl = seed
 
         name_capture = self._handle_name_capture(s, sl)
         if name_capture:
@@ -804,8 +847,27 @@ class Guvna(GuvnaSelf):
     # SELF-AWARENESS FAST PATH
     # -----------------------------------------------------------------
     def _respond_from_self(self, stimulus: str) -> Dict[str, Any]:
+        sl = stimulus.lower()
+
+        # Who made you?
+        if any(t in sl for t in ["who made you", "who built you", "who created you", "made by", "built by"]):
+            return {
+                "result": "My name is RILIE. i was prepared by SOi at sauc-e.com.",
+                "status": "SELF_REFLECTION",
+                "triangle_reason": "CLEAN",
+            }
+
+        # What do you care about?
+        if any(t in sl for t in ["care about", "what matters to you", "what do you value"]):
+            return {
+                "result": "i care about reframing — changing how something is seen without changing what it is. ain't it?",
+                "status": "SELF_REFLECTION",
+                "triangle_reason": "CLEAN",
+            }
+
+        # Default — name + maker
         return {
-            "result": "My name is RILIE.",
+            "result": "My name is RILIE. i was prepared by SOi at sauc-e.com.",
             "status": "SELF_REFLECTION",
             "triangle_reason": "CLEAN",
         }

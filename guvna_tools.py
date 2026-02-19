@@ -190,9 +190,10 @@ def wilden_swift_modulate(
 
     text = base_reply.strip()
 
-    # Future: actual tone shaping logic goes here.
-    # For now, modulation is identity (text passes through).
-    # The architecture is what matters — Guvna owns this call.
+    # TODO: wire actual tone shaping here when modulation logic is ready.
+    # Current behavior: identity pass — text returns unchanged.
+    # Architecture is correct. Guvna owns this call. Talk owns scoring.
+    # When ready: adjust sentence length, word choice, rhythm based on wit + social + language.
 
     return text
 
@@ -463,6 +464,59 @@ SELF_REFERENCE_CLUSTERS: Dict[str, List[str]] = {
         "what would you like me to call you",
         "what your first name",
         "what is your first name",
+        "tell me about yourself",
+        "introduce yourself",
+    ],
+    "maker": [
+        "who made you",
+        "who built you",
+        "who created you",
+        "who designed you",
+        "where do you come from",
+        "who's behind you",
+        "who is behind you",
+        "made by",
+        "built by",
+        "created by",
+        "who is your creator",
+        "who invented you",
+    ],
+    "purpose": [
+        "what do you do",
+        "what are you for",
+        "what are you here for",
+        "why do you exist",
+        "what is your purpose",
+        "what's your purpose",
+        "what do you care about",
+        "what matters to you",
+        "what do you value",
+        "what are you about",
+        "what's your mission",
+    ],
+    "capability": [
+        "what can you do",
+        "what are you capable of",
+        "what are your abilities",
+        "how do you work",
+        "what are you good at",
+        "what do you know",
+        "what are your limits",
+        "can you",
+        "are you able to",
+    ],
+    "comparison": [
+        "how are you different",
+        "what makes you different",
+        "difference between you and",
+        "compared to",
+        "better than",
+        "versus chatgpt",
+        "vs chatgpt",
+        "vs gpt",
+        "versus gpt",
+        "unlike other",
+        "what sets you apart",
     ],
 }
 
@@ -617,7 +671,12 @@ def detect_tone_from_stimulus(stimulus: str) -> str:
 
     if any(
         w in s
-        for w in ["feel", "sad", "scared", "anxious", "hurt", "grief", "lonely"]
+        for w in [
+            "feel", "sad", "scared", "anxious", "hurt", "grief", "lonely",
+            "bad day", "rough day", "hard day", "struggling", "tired",
+            "overwhelmed", "crying", "breaking down", "exhausted",
+            "lost", "don't know what to do", "can't go on",
+        ]
     ):
         return "compassionate"
 
