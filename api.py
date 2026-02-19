@@ -656,22 +656,47 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
     return plate
 
 # ---------------------------------------------------------------------------
-# Name extraction helpers — delegate to Chomsky's resolve_identity
+# Name extraction — one function, one regex, one job
 # ---------------------------------------------------------------------------
-
 
 def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
-    Single entry point for customer name extraction.
-    Delegates to ChomskyAtTheBit.extract_customer_name() which runs:
-      1) Regex intro patterns (fixes the Called bug — captures full name)
-      2) spaCy NER PERSON entities
-    Non-fatal: any error returns None.
+    Extract customer name — ONLY from intro stimuli.
+    Regex captures full name after any intro phrase, through trailing noise.
+    NER fallback for natural intros without a pattern.
     """
-    try:
-        return extract_customer_name(stimulus)
-    except Exception:
+    s = (stimulus or "").strip()
+    INTRO_SIGNALS = ["my name is", "i am called", "i'm called", "call me",
+                     "introduce myself", "they call me"]
+    if not any(sig in s.lower() for sig in INTRO_SIGNALS):
         return None
+
+    # Regex: capture everything after intro phrase until punctuation or known noise
+    m = re.search(
+        r"(?:my name is|i am called|i'm called|call me|i am|i'm|"
+        r"they call me|introduce myself(?: as)?)\s+"
+        r"([A-Za-z][A-Za-z\s'\-]{1,50}?)"
+        r"(?:\s*[.,!?]|\s+[Aa] |\s*$)",
+        s, re.IGNORECASE
+    )
+    if m:
+        name = m.group(1).strip()
+        if name and name.lower() not in _BAD_NAMES and len(name) >= 2:
+            return name.title()
+
+    # NER fallback
+    try:
+        nlp = _get_nlp()
+        doc = nlp(s)
+        persons = [e.text.strip() for e in doc.ents if e.label_ == "PERSON"]
+        if persons:
+            best = max(persons, key=len)
+            if best.lower() not in _BAD_NAMES and len(best) >= 2:
+                return best
+    except Exception:
+        pass
+
+    return None
 
 
 
