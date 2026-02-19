@@ -971,22 +971,12 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session["display_name"] = display_name
     result.setdefault("display_name", display_name)
 
-    # Greeting on first turn + intro loop exit guard
-    intro_attempts = session.get("intro_attempts", 0)
+    # Greeting on first turn — name intro only, kitchen handles everything else
     if not session.get("has_spoken"):
-        intro_attempts += 1
-        session["intro_attempts"] = intro_attempts
-        if intro_attempts > 1 or display_name == DEFAULT_NAME:
-            # Failed to get a name — pivot gracefully
-            result["result"] = "Let's skip the formalities. What's on your mind? 🍳"
-            result["status"] = "PIVOT"
-        else:
+        session["has_spoken"] = True
+        if display_name != DEFAULT_NAME:
             result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? 🍳"
             result["status"] = "GREETING"
-        session["has_spoken"] = True
-    else:
-        if result.get("depth", 0) > 0:
-            session["intro_attempts"] = 0
 
     # Snapshot state + save session
     snapshot_guvna_state(guvna, session)
