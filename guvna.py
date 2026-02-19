@@ -28,11 +28,17 @@ The Governor (Act 5) adds:
 - Memory seeds curiosity – interesting topics get queued
 
 FAST PATH CLASSIFIER (fires before Kitchen wakes up):
-- Name capture after greeting (“Ohad”)
-- Meta-corrections (“forget Spotify”, “never mind”)
+- Name capture after greeting ("Ohad")           ← via GuvnaSelf
+- Meta-corrections ("forget Spotify", "never mind") ← via GuvnaSelf
 - User lists (numbered lists like top-9 films)
-- Social glue (laughter, “that’s me”, “you’re navigator”, etc.)
-- Arithmetic, conversion, spelling, recall, clarification
+- Social glue (laughter, "that's me", "you're navigator", etc.)
+- Arithmetic, conversion, spelling
+- Recall, clarification                           ← via GuvnaSelf
+
+SELF-GOVERNING STATE (owned by GuvnaSelf mixin):
+- _response_history, user_name, _awaiting_name, whosonfirst, turn_count
+- greet(), _handle_name_capture(), _handle_recall()
+- _handle_clarification(), _handle_meta_correction(), _finalize_response()
 
 TIER 2 WIRING:
 1. Curiosity resurfaces into Step 3.5 (context, not afterthought)
@@ -79,6 +85,7 @@ from guvna_tools import (
     TONE_LABELS,
     is_serious_subject_text,
 )
+from guvna_self import GuvnaSelf  # ← Self-governing session awareness
 
 # Curiosity engine — resurface past insights as context
 try:
@@ -127,7 +134,7 @@ class DomainLibraryMetadata:
 # ============================================================================
 # THE GOVERNOR (REVISED — TIER 2 + FAST PATHS)
 # ============================================================================
-class Guvna:
+class Guvna(GuvnaSelf):
     """
     The Governor (Act 5) sits above The Restaurant (RILIE) and provides:
 
@@ -137,8 +144,10 @@ class Guvna:
     - Self-awareness fast path (_is_about_me)
 
     Fast Path Classifier:
-    - Name capture, meta-corrections, user lists
-    - Social glue, arithmetic, unit conversion, spelling, recall, clarification
+    - Name capture, meta-corrections             ← GuvnaSelf
+    - Recall, clarification                      ← GuvnaSelf
+    - User lists, social glue
+    - Arithmetic, unit conversion, spelling
 
     Tone & Expression:
     - Wit detection and wilden_swift_modulate
@@ -154,10 +163,15 @@ class Guvna:
 
     Conversation Management:
     - YELLOW GATE – conversation health monitoring
-    - WHOSONFIRST – greeting gate
+    - WHOSONFIRST – greeting gate                ← GuvnaSelf
     - Conversation memory (9 behaviors)
     - Photogenic DB (elephant memory)
     - Memory seeds curiosity (bidirectional cross-talk)
+
+    Self-Governing State (via GuvnaSelf mixin):
+    - _response_history, user_name, _awaiting_name, whosonfirst, turn_count
+    - greet(), _handle_name_capture(), _handle_recall()
+    - _handle_clarification(), _handle_meta_correction(), _finalize_response()
 
     Integration:
     - Orchestrates Acts 1–4 (Triangle, DDD/Hostess, Kitchen/Core, RILIE)
@@ -221,12 +235,10 @@ class Guvna:
         self.social_state = SocialState()
         self.dna = CATCH44DNA()
 
-        # CONVERSATION STATE
-        self.turn_count: int = 0
-        self.user_name: Optional[str] = None
-        self.whosonfirst: bool = True
-        self._awaiting_name: bool = False  # NEW: track after "what's your name?"
-        self._response_history: List[str] = []  # Governor's own response memory
+        # SELF-GOVERNING SESSION STATE — wired via GuvnaSelf mixin
+        # Initializes: turn_count, user_name, whosonfirst,
+        #              _awaiting_name, _response_history
+        self._init_self_state()
 
         # CONSTITUTION LOADING
         self.self_state.constitution_flags = load_charculterie_manifesto(manifesto_path)
@@ -240,71 +252,15 @@ class Guvna:
         )
 
     # -----------------------------------------------------------------
-    # APERTURE – First contact. Before anything else.
-    # -----------------------------------------------------------------
-    def greet(self, stimulus: str, known_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """
-        APERTURE – Turn 0 only. First thing that happens.
-        Either know them by name, or meet them.
-        Returns greeting response or None if not turn 0.
-        """
-        if not self.whosonfirst:
-            return None
-
-        if not known_name:
-            s = stimulus.lower().strip()
-            name_intros = ["my name is", "i'm ", "i am ", "call me", "name's"]
-            for intro in name_intros:
-                if intro in s:
-                    idx = s.index(intro) + len(intro)
-                    rest = stimulus[idx:].strip().split()[0] if idx < len(stimulus) else ""
-                    name = rest.strip(".,!?;:'\"")
-                    if name and len(name) > 1:
-                        known_name = name.capitalize()
-                        break
-
-        if known_name:
-            self.user_name = known_name
-
-        if self.user_name:
-            greeting_text = (
-                f"Hi {self.user_name}! It's great talking to you again... "
-                "what's on your mind today?"
-            )
-            self._awaiting_name = False
-        else:
-            greeting_text = (
-                "Hi there! What's your name? You can call me RILIE if you please... :)"
-            )
-            self._awaiting_name = True  # NEW: expect a name next turn
-
-        self.turn_count += 1
-        self.memory.turn_count += 1
-        tone = detect_tone_from_stimulus(stimulus)
-        result_with_tone = apply_tone_header(greeting_text, tone)
-        response = {
-            "stimulus": stimulus,
-            "result": result_with_tone,
-            "status": "APERTURE",
-            "tone": tone,
-            "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS["insightful"]),
-            "turn_count": self.turn_count,
-            "user_name": self.user_name,
-            "whosonfirst": False,
-        }
-        self.whosonfirst = False
-        return self._finalize_response(response)
-
-    # -----------------------------------------------------------------
     # MAIN PROCESS – Core response pipeline (TIER 2 + FAST PATHS)
     # -----------------------------------------------------------------
-    def process(self, stimulus: str, maxpass: int = 1) -> Dict[str, Any]:
+    def process(self, stimulus: str, maxpass: int = 1, **kwargs) -> Dict[str, Any]:
         """
         Main entry point for conversation.
         Orchestrates all 5 Acts: safety -> disclosure -> interpretation -> response -> governance.
 
         TIER 2 changes:
-        - Step 0: APERTURE check
+        - Step 0: APERTURE check                    ← GuvnaSelf.greet()
         - Step 1: Fast path classifier
         - Step 2: Self-awareness fast path
         - Step 3: Baseline lookup
@@ -312,6 +268,9 @@ class Guvna:
         - Step 4: Domain lenses → RILIE
         - Step 5: wilden_swift_modulate
         - Step 6: Memory + YELLOW GATE
+
+        kwargs accepted:
+        - reference_context: Optional[Dict] from session.resolve_reference()
         """
         self.turn_count += 1
         self.memory.turn_count += 1
@@ -478,9 +437,23 @@ class Guvna:
         return self._finalize_response(raw)
 
     # =====================================================================
-    # FAST PATH CLASSIFIER + HANDLERS
+    # FAST PATH CLASSIFIER
     # =====================================================================
     def _classify_stimulus(self, stimulus: str) -> Optional[Dict[str, Any]]:
+        """
+        Route stimulus through all fast paths before waking up Kitchen.
+
+        Order matters:
+        1. name_capture    — did she just ask for a name?   (GuvnaSelf)
+        2. meta_correction — "forget that / never mind"     (GuvnaSelf)
+        3. user_list       — numbered list acknowledgement
+        4. social_glue     — reactions, endearments, thanks, farewell
+        5. arithmetic      — math
+        6. conversion      — unit conversion
+        7. spelling        — how do you spell X
+        8. recall          — "what did you say / my name"   (GuvnaSelf)
+        9. clarification   — "what do you mean"             (GuvnaSelf)
+        """
         s = stimulus.strip()
         sl = s.lower()
 
@@ -522,66 +495,9 @@ class Guvna:
 
         return None
 
-    def _handle_name_capture(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
-        """Turn after 'what's your name?' – capture single-word name."""
-        if not self._awaiting_name or self.user_name:
-            return None
-        words = s.strip().strip(".,!?;:\"'").split()
-        if not words or len(words) > 3:
-            return None
-        _bad = {
-            "yes", "no", "ok", "okay", "sure", "hey", "hi", "hello",
-            "thanks", "nah", "idk", "what", "huh", "nothing", "nevermind",
-            "good", "fine", "great", "cool", "nice", "well",
-        }
-        candidate = words[0].capitalize()
-        if candidate.lower() in _bad:
-            return None
-        self.user_name = candidate
-        self._awaiting_name = False
-        replies = [
-            f"Nice to meet you, {self.user_name}! 🍳 What's on your mind?",
-            f"{self.user_name}! Good name. What are we getting into?",
-            f"Great, {self.user_name}. What's on your mind?",
-        ]
-        return {
-            "result": random.choice(replies),
-            "status": "NAME_CAPTURE",
-            "triangle_reason": "CLEAN",
-            "quality_score": 0.9,
-        }
-
-    def _handle_meta_correction(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
-        """User reacting to RILIE's bad response — reset and re-invite."""
-        meta_patterns = [
-            r"^forget\s+\w+",
-            r"^never ?mind",
-            r"^ignore that",
-            r"^skip that",
-            r"^drop it",
-            r"^move on",
-            r"^not that",
-            r"^no no",
-            r"^that's not",
-            r"^that was not",
-            r"^not what i",
-        ]
-        for pat in meta_patterns:
-            if re.search(pat, sl):
-                replies = [
-                    "Got it — my bad. Where were we? 🍳",
-                    "Noted. Let's reset — go ahead.",
-                    "Fair. Disregard that. Continue. 🍳",
-                    "Yeah that missed. Keep going — I'm with you.",
-                ]
-                return {
-                    "result": random.choice(replies),
-                    "status": "META_CORRECTION",
-                    "triangle_reason": "CLEAN",
-                    "quality_score": 0.8,
-                }
-        return None
-
+    # -----------------------------------------------------------------
+    # USER LIST
+    # -----------------------------------------------------------------
     def _handle_user_list(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
         """User is sharing a numbered list — acknowledge it, don't search it."""
         lines = [l.strip() for l in s.strip().splitlines() if l.strip()]
@@ -606,6 +522,9 @@ class Guvna:
             }
         return None
 
+    # -----------------------------------------------------------------
+    # SOCIAL GLUE
+    # -----------------------------------------------------------------
     def _handle_social_glue(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
         """
         Conversational glue: reactions, declarations, endearments,
@@ -791,7 +710,7 @@ class Guvna:
         return None
 
     # -----------------------------------------------------------------
-    # Arithmetic / conversion / spelling / recall / clarification
+    # ARITHMETIC / CONVERSION / SPELLING
     # -----------------------------------------------------------------
     def _solve_arithmetic(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
         expr = sl
@@ -863,7 +782,6 @@ class Guvna:
                 "quality_score": 1.0,
             }
 
-        # simple "how many X in a Y" paths could go here; left out for brevity
         return None
 
     def _solve_spelling(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
@@ -882,95 +800,12 @@ class Guvna:
             }
         return None
 
-    def _handle_recall(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
-        triggers = [
-            "what did you just say", "what did you say", "say that again",
-            "can you repeat", "repeat that", "what was that",
-            "do you remember my name", "what's my name", "whats my name",
-            "who am i", "do you know my name",
-        ]
-        if not any(t in sl for t in triggers):
-            return None
-
-        if any(t in sl for t in ["my name", "who am i", "know my name"]):
-            if self.user_name:
-                return {
-                    "result": f"Your name is {self.user_name}. 🐘",
-                    "status": "RECALL",
-                    "triangle_reason": "CLEAN",
-                    "quality_score": 1.0,
-                }
-            return {
-                "result": "I don't have your name yet — what should I call you?",
-                "status": "RECALL",
-                "triangle_reason": "CLEAN",
-                "quality_score": 1.0,
-            }
-
-        if self._response_history:
-            last = self._response_history[-1]
-            if "\n\n" in last:
-                last = last.split("\n\n", 1)[1]
-            return {
-                "result": f'I said: "{last}"',
-                "status": "RECALL",
-                "triangle_reason": "CLEAN",
-                "quality_score": 1.0,
-            }
-
-        return {
-            "result": "I don't have that in my memory yet — we've only just started.",
-            "status": "RECALL",
-            "triangle_reason": "CLEAN",
-            "quality_score": 0.7,
-        }
-
-    def _handle_clarification(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
-        clarify_triggers = [
-            "what do you mean", "what does that mean", "can you explain that",
-            "explain that", "i don't understand", "i dont understand",
-            "say that differently", "in other words", "what are you saying",
-        ]
-        short_triggers = ["huh?", "what?", "come again", "say again"]
-
-        word_count = len(s.split())
-        matched = any(t in sl for t in clarify_triggers) and word_count <= 8
-        matched = matched or any(
-            sl.strip().rstrip("?!.") == t.rstrip("?") for t in short_triggers
-        )
-        if not matched:
-            return None
-
-        if self._response_history:
-            last = self._response_history[-1]
-            if "\n\n" in last:
-                last = last.split("\n\n", 1)[1]
-            bridges = [
-                f"What I'm getting at: {last}",
-                f"Put another way — {last}",
-                f"Simpler: {last}",
-            ]
-            return {
-                "result": random.choice(bridges),
-                "status": "CLARIFICATION",
-                "triangle_reason": "CLEAN",
-                "quality_score": 0.8,
-            }
-
-        return {
-            "result": "Which part? Give me a bit more and I'll work with you on it.",
-            "status": "CLARIFICATION",
-            "triangle_reason": "CLEAN",
-            "quality_score": 0.7,
-        }
-
     # -----------------------------------------------------------------
     # SELF-AWARENESS FAST PATH
     # -----------------------------------------------------------------
     def _respond_from_self(self, stimulus: str) -> Dict[str, Any]:
-        response_text = "My name is RILIE."
         return {
-            "result": response_text,
+            "result": "My name is RILIE.",
             "status": "SELF_REFLECTION",
             "triangle_reason": "CLEAN",
         }
@@ -1039,56 +874,6 @@ class Guvna:
         except Exception as e:
             logger.debug("Baseline lookup error: %s", e)
         return baseline
-
-    # -----------------------------------------------------------------
-    # RESPONSE FINALIZATION
-    # -----------------------------------------------------------------
-    def _finalize_response(self, raw: Dict[str, Any]) -> Dict[str, Any]:
-        """Finalize response: add metadata, ensure all required fields present."""
-        final = {
-            "stimulus": raw.get("stimulus", ""),
-            "result": raw.get("result", ""),
-            "status": raw.get("status", "OK"),
-            "tone": raw.get("tone", "insightful"),
-            "tone_emoji": raw.get("tone_emoji", TONE_EMOJIS.get("insightful", "💡")),
-            "quality_score": raw.get("quality_score", 0.5),
-            "priorities_met": raw.get("priorities_met", 0),
-            "anti_beige_score": raw.get("anti_beige_score", 0.5),
-            "depth": raw.get("depth", 0),
-            "pass": raw.get("pass", 0),
-            "disclosure_level": raw.get("disclosure_level", "standard"),
-            "triangle_reason": raw.get("triangle_reason", "CLEAN"),
-            "wit": raw.get("wit"),
-            "language_mode": raw.get("language_mode"),
-            "social": raw.get("social", {}),
-            "dejavu": raw.get(
-                "dejavu",
-                {"count": 0, "frequency": 0, "similarity": "none"},
-            ),
-            "baseline": raw.get("baseline", {}),
-            "baseline_used": raw.get("baseline_used", False),
-            "domain_annotations": raw.get("domain_annotations", {}),
-            "soi_domains": raw.get("soi_domains", []),
-            "curiosity_context": raw.get("curiosity_context", ""),
-            "conversation_health": raw.get("conversation_health", 100),
-            "memory_polaroid": raw.get("memory_polaroid"),
-            "turn_count": self.turn_count,
-            "user_name": self.user_name,
-            "whosonfirst": self.whosonfirst,
-            "library_metadata": {
-                "total_domains": self.library_metadata.total_domains,
-                "files_loaded": len(self.library_metadata.files),
-                "boole_substrate": self.library_metadata.boole_substrate,
-                "core_tracks": self.library_metadata.core_tracks,
-            },
-        }
-        # Track response history for recall + clarification fast paths
-        result_text = final.get("result", "")
-        if result_text:
-            self._response_history.append(result_text)
-            if len(self._response_history) > 20:
-                self._response_history.pop(0)
-        return final
 
 
 # ============================================================================
