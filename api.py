@@ -957,8 +957,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         quality=quality,
         tone=tone,
         topics=session.get("topics", []),
-    )
-
     # Christening → updates display_name via update_name
     if mem_result.get("christening"):
         result["christening"] = mem_result["christening"]
@@ -970,11 +968,10 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     # Topic tracking
     if mem_result.get("moment"):
-        record_topics(
-            session,
-            domains_hit,
-            mem_result["moment"] and mem_result["moment"].get("tag"),
-        )
+        moment = mem_result["moment"]
+        # If Moment is a dataclass / object with .tag
+        tag = getattr(moment, "tag", None)
+        record_topics(session, domains_hit, tag)
 
     # 🔁 NEW: canonical display_name tap (non-blocking, best-effort)
     # 1) Use existing session name if present
@@ -1000,7 +997,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         return result
 
     return build_plate(result)
-
 
 @app.post("/v1/rilie-upload")
 async def run_rilie_upload(
