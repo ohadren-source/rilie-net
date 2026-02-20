@@ -1005,7 +1005,8 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     # Bare-name fallback: "Ohad" or "Ohad Oren" on first turn
     # Chomsky requires an intro phrase — this catches bare names without one
-    if not display_name and not session.get("has_spoken"):
+    is_first_turn = session.get("turn_count", 0) == 0
+    if not display_name and is_first_turn:
         words = stimulus.strip().strip(".,!?;:'\"").split()
         if 1 <= len(words) <= 2 and "?" not in stimulus:
             candidate = words[0].capitalize()
@@ -1017,8 +1018,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     result.setdefault("display_name", display_name)
 
     # Greeting on first turn — name intro only, kitchen handles everything else
-    if not session.get("has_spoken"):
-        session["has_spoken"] = True
+    if is_first_turn:
         if display_name != DEFAULT_NAME:
             result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? 🍳"
             result["status"] = "GREETING"
