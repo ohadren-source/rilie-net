@@ -914,6 +914,10 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     restore_guvna_state(guvna, session)
     restore_talk_memory(talk_memory, session)
 
+    # Capture is_first_turn NOW — before guvna.process() increments any counters
+    # If checked after guvna.process(), turn_count is already 1 and first turn is missed
+    is_first_turn = session.get("turn_count", 0) == 0
+
     # Pre-split: detect multiple questions BEFORE guvna
     def _detect_multi_question(s: str):
         """Split stimulus into parts if user explicitly requested numbered answers."""
@@ -1005,7 +1009,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     # Bare-name fallback: "Ohad" or "Ohad Oren" on first turn
     # Chomsky requires an intro phrase — this catches bare names without one
-    is_first_turn = session.get("turn_count", 0) == 0
     if not display_name and is_first_turn:
         words = stimulus.strip().strip(".,!?;:'\"").split()
         if 1 <= len(words) <= 2 and "?" not in stimulus:
