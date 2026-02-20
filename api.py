@@ -910,13 +910,35 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     client_ip = get_client_ip(request)
     session = load_session(client_ip)
 
+    # ------------------------------------------------------------------
+    # BASIC. Is there a name? Say it. If not: mate.
+    # ------------------------------------------------------------------
+    _name = _extract_name_with_chomsky(stimulus)
+    if not _name:
+        _words = stimulus.strip().strip(".,!?;:'").split()
+        if 1 <= len(_words) <= 3 and "?" not in stimulus:
+            _candidate = _words[0].capitalize()
+            if _candidate.lower() not in _BAD_NAMES and len(_candidate) >= 2:
+                _name = _candidate
+    _greet_as = _name if _name else "mate"
+    if not session.get("greeted"):
+        session["display_name"] = _greet_as
+        session["greeted"] = True
+        save_session(session)
+        return build_plate({
+            "result": "Pleasure to meet you, {}! What's on your mind? 🍳".format(_greet_as),
+            "status": "GREETING",
+            "display_name": _greet_as,
+            "quality_score": 1.0,
+            "priorities_met": 1,
+        })
     # Restore state
     restore_guvna_state(guvna, session)
     restore_talk_memory(talk_memory, session)
 
-    # Capture is_first_turn NOW — before guvna.process() increments any counters
-    # If checked after guvna.process(), turn_count is already 1 and first turn is missed
+    # Capture is_first_turn
     is_first_turn = session.get("turn_count", 0) == 0
+
 
     # Pre-split: detect multiple questions BEFORE guvna
     def _detect_multi_question(s: str):
@@ -1010,7 +1032,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # Bare-name fallback: "Ohad" or "Ohad Oren" on first turn
     # Chomsky requires an intro phrase — this catches bare names without one
     if not display_name and is_first_turn:
-        words = stimulus.strip().strip(".,!?;:'\"").split()
+        words = stimulus.strip().strip('.,!?;:').split()
         if 1 <= len(words) <= 2 and "?" not in stimulus:
             candidate = words[0].capitalize()
             if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
