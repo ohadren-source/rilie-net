@@ -1096,11 +1096,10 @@ class RILIE:
                         measure=measure,
                     )
 
-                    # ONLY prefer baseline if RILIE produced genuine nothing
-                    # Low relevance AND low coherence AND Chomsky flagged it
+                    # Prefer baseline if RILIE drifted off topic
+                    # Low relevance + low coherence is enough — Chomsky not required
                     if (
                         measure.get("recommendation") == "PREFER_BASELINE"
-                        and chomsky_category in ("words", "incomplete")
                         and baseline_text.strip()
                     ):
                         import html as _html
