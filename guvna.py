@@ -938,11 +938,20 @@ class Guvna(GuvnaSelf):
         should_force_google = is_entity_question or len(stimulus) < 30
         try:
             if self.search_fn:
-                baseline_query = (
-                    stimulus
-                    if should_force_google
-                    else f"what is the correct response to {stimulus}"
-                )
+                # Compress long conversational queries to clean search terms
+                # "I wanted to talk about NYHC..." → "New York Hardcore NYHC scene"
+                _raw_query = stimulus if should_force_google else f"what is the correct response to {stimulus}"
+                _stop = {"i","me","my","we","you","a","an","the","is","are","was",
+                         "were","to","of","and","or","in","on","at","be","do",
+                         "did","have","has","had","it","its","this","that","with",
+                         "for","about","what","your","thoughts","wanted","talk",
+                         "tell","asked","think","know","just","so","any","how","can"}
+                if len(_raw_query.split()) > 8:
+                    _words = [w.strip('.,!?;:()') for w in _raw_query.split()]
+                    _keywords = [w for w in _words if w.lower() not in _stop and len(w) > 2]
+                    baseline_query = " ".join(_keywords[:6]) if _keywords else _raw_query
+                else:
+                    baseline_query = _raw_query
                 results = self.search_fn(baseline_query)
                 if results and isinstance(results, list):
                     baseline["raw_results"] = results
@@ -957,7 +966,6 @@ class Guvna(GuvnaSelf):
                         "sign up for your free lifetime account",
                         "genius.com",
                         "azlyrics",
-                        "lyrics",
                         "songlyrics",
                         "metrolyrics",
                         "verse 1",
