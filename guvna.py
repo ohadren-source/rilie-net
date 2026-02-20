@@ -985,7 +985,7 @@ class Guvna(GuvnaSelf):
                         baseline["source"] = "google_baseline"
                         break
         except Exception as e:
-            logger.debug("Baseline lookup error: %s", e)
+            logger.info("GUVNA baseline lookup ERROR: %s", e)
         return baseline
 
 
