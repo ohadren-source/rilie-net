@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RILIE (3,6,9)</title>
+  <link rel="icon" href="data:image/png;base64,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" />
+  <link rel="apple-touch-icon" href="data:image/png;base64,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" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0a0a0a;
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(30,30,40,0.6) 0%, transparent 70%),
+        radial-gradient(ellipse at 80% 50%, rgba(20,20,30,0.4) 0%, transparent 70%);
+      color: #e8e8e8;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Sidebar ── */
+    .rilie-sidebar {
+      width: 56px;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #0c0c10 0%, #08080c 100%);
+      border-right: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 0;
+      gap: 6px;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      width: 30px;
+      height: 30px;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 1px 6px rgba(255,255,255,0.06));
+    }
+
+    .sidebar-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .sidebar-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: rgba(255,255,255,0.3);
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke 0.2s ease;
+    }
+    .sidebar-btn:hover { background: rgba(255,255,255,0.05); }
+    .sidebar-btn:hover svg { stroke: rgba(255,255,255,0.6); }
+    .sidebar-btn.active { background: rgba(255,255,255,0.07); }
+    .sidebar-btn.active svg { stroke: rgba(255,255,255,0.7); }
+
+    .sidebar-label {
+      font-size: 8px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 0.04em;
+      text-align: center;
+      margin-top: -2px;
+      font-weight: 500;
+    }
+
+    .sidebar-spacer { flex: 1; }
+
+    /* ── Main Content ── */
+    .rilie-main {
+      flex: 1;
+      margin-left: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .rilie-shell {
+      width: 100%;
+      max-width: 980px;
+      padding: 32px 28px;
+    }
+
+    .rilie-title {
+      text-align: left;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: linear-gradient(180deg, #fff 0%, #aab 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-top: 16px;
+    }
+
+    .rilie-subtitle {
+      text-align: left;
+      font-size: 13px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.45);
+      margin-top: 4px;
+      margin-bottom: 0;
+      letter-spacing: 0.03em;
+    }
+
+    .rilie-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .rilie-top-right {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-end;
+      min-width: 140px;
+    }
+
+    .rilie-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .rilie-textarea {
+      width: 100%;
+      margin-top: 8px;
+      margin-bottom: 18px;
+      padding: 14px 16px 50px 16px;
+      background: linear-gradient(180deg, #0e0e10 0%, #141418 100%);
+      color: #ddd;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      resize: vertical;
+      min-height: 27px;
+      max-height: 40px;
+      font-family: inherit;
+      font-size: 18px;
+      line-height: 1.6;
+      outline: none;
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+      position: relative;
+    }
+    .rilie-textarea:focus {
+      border-color: rgba(255,255,255,0.18);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.4), 0 0 0 3px rgba(255,255,255,0.04);
+    }
+    .rilie-textarea::placeholder { color: rgba(255,255,255,0.22); }
+
+    /* ── Input Section with Sidebar ── */
+    .rilie-input-section {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .rilie-input-section .rilie-textarea {
+      flex: 1;
+      margin: 0;
+      min-height: 120px;
+    }
+
+    .rilie-input-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 160px;
+    }
+
+    /* ── Custom File Upload ── */
+    .rilie-file {
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+    .rilie-file input[type="file"] { display: none; }
+
+    .rilie-file-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .rilie-file-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      color: rgba(255,255,255,0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 7px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.04) 52%, rgba(0,0,0,0.08) 100%),
+        linear-gradient(180deg, #1a1a1e 0%, #111114 100%);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .rilie-file-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+      border-radius: 6px 6px 0 0;
+      pointer-events: none;
+    }
+    .rilie-file-btn:hover {
+      color: rgba(255,255,255,0.8);
+      border-color: rgba(255,255,255,0.14);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 48%, rgba(0,0,0,0.02) 52%, rgba(0,0,0,0.06) 100%),
+        linear-gradient(180deg, #222226 0%, #161618 100%);
+    }
+    .rilie-file-btn svg {
+      width: 13px; height: 13px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .rilie-file-names {
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      font-style: italic;
+      max-width: 400px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rilie-file-clear {
+      font-size: 10px;
+      color: rgba(255,255,255,0.25);
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: inherit;
+      transition: color 0.2s ease;
+      display: none;
+    }
+    .rilie-file-clear:hover { color: rgba(255,255,255,0.5); }
+    .rilie-file-clear.visible { display: inline; }
+
+    .rilie-btn-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .rilie-input-sidebar .rilie-btn-wrap { gap: 8px; }
+
+    .rilie-input-sidebar .rilie-button,
+    .rilie-input-sidebar .rilie-button-sm {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
+    /* ── Primary — Aero Glass ── */
+    .rilie-button {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 28px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 45%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.15) 100%),
+        linear-gradient(180deg, #3a3a44 0%, #222228 100%);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.12) inset,
+        0 -1px 0 rgba(0,0,0,0.3) inset,
+        0 2px 8px rgba(0,0,0,0.5),
+        0 1px 2px rgba(0,0,0,0.3);
+      text-shadow: 0 -1px 1px rgba(0,0,0,0.4);
+    }
+
+    /* Button inside textarea */
+    .rilie-textarea-button {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      padding: 8px 14px;
+      font-size: 12px;
+      z-index: 10;
+    }
+
+    /* File upload button — bottom-left of textarea */
+    .rilie-textarea-file-btn {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.08);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+    .rilie-textarea-file-btn:hover { background: rgba(255,255,255,0.12); }
+    .rilie-textarea-file-btn svg {
+      width: 16px; height: 16px;
+      stroke: rgba(255,255,255,0.6);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .rilie-button::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.02) 100%);
+      border-radius: 8px 8px 0 0;
+      pointer-events: none;
+    }
+    .rilie-button:hover {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.12) 45%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.1) 100%),
+        linear-gradient(180deg, #444450 0%, #2a2a30 100%);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.15) inset,
+        0 -1px 0 rgba(0,0,0,0.3) inset,
+        0 3px 12px rgba(0,0,0,0.6),
+        0 1px 3px rgba(0,0,0,0.4);
+    }
+    .rilie-button:active {
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.05) 45%, rgba(255,255,255,0.02) 50%, rgba(255,255,255,0.05) 100%),
+        linear-gradient(180deg, #1a1a20 0%, #2a2a30 100%);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.2) inset, 0 2px 4px rgba(0,0,0,0.3) inset, 0 1px 2px rgba(0,0,0,0.2);
+    }
+    .rilie-button:disabled { opacity: 0.35; cursor: default; }
+
+    /* ── Secondary — subtle glass ── */
+    .rilie-button-sm {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 16px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      color: rgba(255,255,255,0.55);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 7px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 48%, rgba(0,0,0,0.04) 52%, rgba(0,0,0,0.08) 100%),
+        linear-gradient(180deg, #1a1a1e 0%, #111114 100%);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .rilie-button-sm::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+      border-radius: 6px 6px 0 0;
+      pointer-events: none;
+    }
+    .rilie-button-sm:hover {
+      color: rgba(255,255,255,0.8);
+      border-color: rgba(255,255,255,0.14);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 48%, rgba(0,0,0,0.02) 52%, rgba(0,0,0,0.06) 100%),
+        linear-gradient(180deg, #222226 0%, #161618 100%);
+    }
+
+    .rilie-lfg {
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.2);
+      font-weight: 500;
+    }
+
+    .rilie-output-label {
+      margin-top: 28px;
+      margin-bottom: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.5);
+    }
+    .rilie-output-tagline {
+      font-size: 11px;
+      color: rgba(255,255,255,0.28);
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+    .rilie-output-wrap { position: relative; }
+    .rilie-output {
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      font-family: 'Outfit', Consolas, Menlo, monospace;
+      font-size: 18px;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.85);
+      min-height: 200px;
+      max-height: 70vh;
+      overflow-y: auto;
+      box-shadow: none;
+      margin-bottom: 24px;
+    }
+
+    .rilie-output::-webkit-scrollbar { width: 6px; }
+    .rilie-output::-webkit-scrollbar-track { background: transparent; }
+    .rilie-output::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    .rilie-output::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+    .rilie-output > div { margin-bottom: 16px; padding: 0; }
+    .rilie-output strong { color: rgba(255,255,255,0.95); }
+
+    /* ── Code block cards inside Answer ── */
+    .rilie-code-block {
+      position: relative;
+      margin: 10px 0;
+      padding: 10px 12px;
+      background: #050507;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      font-family: Consolas, Menlo, Monaco, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+    }
+    .rilie-code-block pre { margin: 0; white-space: pre; }
+    .rilie-code-copy {
+      position: absolute;
+      top: 6px; right: 8px;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 5px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Output Action Bar ── */
+    .rilie-output-actions {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      justify-content: flex-end;
+    }
+    .rilie-output-actions.visible { display: flex; }
+    .rilie-action-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.35);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.2s ease;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0.04) 100%), #0e0e12;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .rilie-action-btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    .rilie-action-btn:hover {
+      color: rgba(255,255,255,0.6);
+      border-color: rgba(255,255,255,0.1);
+      background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(0,0,0,0.02) 100%), #141418;
+    }
+    .rilie-action-btn svg {
+      width: 12px; height: 12px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .rilie-action-btn.copied { color: #5a8; border-color: rgba(85,170,136,0.3); }
+
+    .rilie-meta {
+      margin-top: 18px;
+      padding: 12px 14px;
+      background: linear-gradient(180deg, #0a0a0e 0%, #08080c 100%);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 8px;
+      font-size: 11px;
+      font-family: 'Outfit', Consolas, Menlo, monospace;
+      color: #555;
+      display: none;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .rilie-meta.visible { display: block; }
+    .rilie-meta-row { display: flex; justify-content: space-between; padding: 2px 0; }
+    .rilie-meta-key { color: rgba(255,255,255,0.25); }
+    .rilie-meta-val { color: rgba(255,255,255,0.45); }
+    .rilie-meta-val.green  { color: #5a8; }
+    .rilie-meta-val.yellow { color: #aa8; }
+    .rilie-meta-val.orange { color: #a85; }
+    .rilie-meta-val.red    { color: #a55; }
+
+    .rilie-health-bar {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 10px;
+      color: rgba(255,255,255,0.2);
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+    .rilie-input-sidebar .rilie-health-bar { margin: 0; }
+
+    .rilie-health-track {
+      flex: 1;
+      height: 3px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .rilie-health-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4a7 0%, #5a8 100%);
+      border-radius: 2px;
+      transition: width 0.4s ease, background 0.4s ease;
+      box-shadow: 0 0 6px rgba(85,170,136,0.3);
+    }
+
+    .rilie-footer {
+      margin-top: 36px;
+      text-align: center;
+      font-size: 10px;
+      color: rgba(255,255,255,0.15);
+      line-height: 1.7;
+      letter-spacing: 0.02em;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .rilie-shell { animation: fadeUp 0.6s ease-out; }
+
+    @media (max-width: 640px) {
+      .rilie-sidebar { width: 0; overflow: hidden; border: none; }
+      .rilie-main { margin-left: 0; }
+      .rilie-shell { padding: 24px 16px; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- ── Sidebar ── -->
+  <nav class="rilie-sidebar">
+    <img src="/static/3Dent.png" alt="R" class="sidebar-logo" />
+
+    <button class="sidebar-btn" id="sidebar-new" title="New Conversation">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <span class="sidebar-label">New</span>
+
+    <button class="sidebar-btn" id="sidebar-history" title="History">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </button>
+    <span class="sidebar-label">History</span>
+
+    <button class="sidebar-btn active" id="sidebar-discover" title="Discover">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    </button>
+    <span class="sidebar-label">Discover</span>
+
+    <button class="sidebar-btn" id="sidebar-spaces" title="Spaces">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </button>
+    <span class="sidebar-label">Spaces</span>
+
+    <div class="sidebar-spacer"></div>
+
+    <button class="sidebar-btn" id="sidebar-finance" title="Finance">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </button>
+    <span class="sidebar-label">Finance</span>
+  </nav>
+
+  <!-- ── Main ── -->
+  <div class="rilie-main">
+    <div class="rilie-shell">
+      <div class="rilie-top-bar">
+        <div>
+          <div class="rilie-title">RILIE (3,6,9)</div>
+          <div class="rilie-subtitle">Real Intelligence, RI. Really? Play Around and Find Out :)</div>
+        </div>
+        <div class="rilie-top-right">
+          <button class="rilie-button-sm" id="rilie-self">Who is RILIE?</button>
+          <div class="rilie-health-bar">
+            <span>conversation health</span>
+            <div class="rilie-health-track">
+              <div class="rilie-health-fill" id="health-fill" style="width: 100%"></div>
+            </div>
+            <span id="health-pct">100</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- OUTPUT ON TOP -->
+      <div class="rilie-output-label">Discourse</div>
+      <div class="rilie-output-wrap">
+        <div id="rilie-output" class="rilie-output">
+          <div style="margin-bottom:16px"><p><strong>RILIE:</strong> Hi there! What's your name? You can call me RILIE if you so please... :)</p></div>
+        </div>
+        <div id="rilie-output-actions" class="rilie-output-actions">
+          <button class="rilie-action-btn" id="rilie-share" title="Share">
+            <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
+          <button class="rilie-action-btn" id="rilie-download" title="Download">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+          <button class="rilie-action-btn" id="rilie-copy" title="Copy">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <button class="rilie-action-btn" id="rilie-rewrite" title="Rewrite">
+            <svg viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- INPUT AT BOTTOM -->
+      <label class="rilie-label" for="rilie-input">Your Turn</label>
+      <div class="rilie-input-section">
+        <div style="flex: 1; position: relative;">
+          <textarea id="rilie-input" class="rilie-textarea" placeholder="What's on your mind?"></textarea>
+          <label for="rilie-files" class="rilie-textarea-file-btn">
+            <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </label>
+          <input id="rilie-files" type="file" multiple style="display: none;" />
+          <div style="position:absolute;bottom:12px;left:44px;z-index:10;display:flex;align-items:center;gap:6px;max-width:calc(100% - 200px);overflow:hidden;">
+            <span id="rilie-file-names" class="rilie-file-names"></span>
+            <button id="rilie-file-clear" class="rilie-file-clear">✕</button>
+          </div>
+          <button class="rilie-button rilie-textarea-button" id="rilie-submit">Learn from Go</button>
+        </div>
+      </div>
+
+      <div id="rilie-meta" class="rilie-meta" style="display: none;"></div>
+
+<div class="rilie-footer">
+  SOi
+  <a href="https://www.sauc-e.com" target="_blank" rel="noopener noreferrer">
+    <img
+      src="/static/369Mafia.jpg"
+      alt="sauc-e"
+      style="height:1em; vertical-align:-0.15em; margin:0 4px;"
+    >
+  </a>
+  Inspired by those who gave without expecting anything in return (3), we’re grateful (6)—and that’s enough for us to do good work. (9)
+  <br>
+</div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+    const submitBtn = document.getElementById("rilie-submit");
+    const selfBtn = document.getElementById("rilie-self");
+    const inputEl = document.getElementById("rilie-input");
+    const outputEl = document.getElementById("rilie-output");
+
+    const GREETING_HTML = '<div style="margin-bottom:16px"><p><strong>RILIE:</strong> Hi there! What\'s your name? You can call me RILIE if you so please... :)</p></div>';
+
+    console.log("submitBtn:", submitBtn);
+    console.log("inputEl:", inputEl);
+    console.log("outputEl:", outputEl);
+    const metaPanel = document.getElementById("rilie-meta");
+    const healthFill = document.getElementById("health-fill");
+    const healthPct = document.getElementById("health-pct");
+    const outputActions = document.getElementById("rilie-output-actions");
+    const shareBtn = document.getElementById("rilie-share");
+    const downloadBtn = document.getElementById("rilie-download");
+    const copyBtn = document.getElementById("rilie-copy");
+    const rewriteBtn = document.getElementById("rilie-rewrite");
+    const fileInput = document.getElementById("rilie-files");
+    const fileNames = document.getElementById("rilie-file-names");
+    const fileClear = document.getElementById("rilie-file-clear");
+    let lastStimulus = "";
+
+    /* ── File Upload Display ── */
+    fileInput.addEventListener("change", () => {
+      const files = fileInput.files;
+      if (files.length > 0) {
+        const names = Array.from(files).map(f => f.name).join(", ");
+        fileNames.textContent = files.length === 1 ? names : files.length + " files: " + names;
+        fileClear.classList.add("visible");
+      } else {
+        fileNames.textContent = "";
+        fileClear.classList.remove("visible");
+      }
+    });
+
+    fileClear.onclick = () => {
+      fileInput.value = "";
+      fileNames.textContent = "";
+      fileClear.classList.remove("visible");
+    };
+
+    function updateMeta(data) {
+      metaPanel.classList.add("visible");
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "\u2014"; };
+      set("meta-status", data.status);
+      set("meta-quality", data.quality_score != null ? data.quality_score.toFixed(2) : "\u2014");
+      set("meta-priorities", data.priorities_met);
+      set("meta-beige", data.anti_beige_score != null ? data.anti_beige_score.toFixed(2) : "\u2014");
+      set("meta-depth", (data.depth || 0) + " / " + (data.pass || 0));
+      set("meta-tone", (data.tone_emoji || "") + " " + (data.tone || ""));
+      set("meta-domains", (data.domains_used || []).join(", "));
+      set("meta-triangle", data.triangle_type || "CLEAN");
+      const wit = data.wit || {};
+      const witActive = Object.entries(wit).filter(([k, v]) => v).map(([k]) => k);
+      set("meta-wit", witActive.length ? witActive.join(", ") : "none");
+      const lang = data.language_mode || {};
+      const langActive = Object.entries(lang).filter(([k, v]) => v).map(([k]) => k);
+      set("meta-language", langActive.length ? langActive.join(", ") : "literal");
+      const social = data.social || {};
+      set("meta-social", social.user_status != null ? "user=" + social.user_status.toFixed(2) + " self=" + social.self_status.toFixed(2) : "\u2014");
+      set("meta-curiosity", data.curiosity_informed ? "own discovery used" : "\u2014");
+      const health = data.conversation_health || 100;
+      healthFill.style.width = health + "%";
+      healthPct.textContent = Math.round(health);
+      if (health > 70) healthFill.style.background = "linear-gradient(90deg, #4a7, #5a8)";
+      else if (health > 50) healthFill.style.background = "linear-gradient(90deg, #aa8, #bb9)";
+      else if (health > 30) healthFill.style.background = "linear-gradient(90deg, #a85, #b96)";
+      else healthFill.style.background = "linear-gradient(90deg, #a55, #b66)";
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>\"']/g, (s) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[s]
+      ));
+    }
+
+    // Render fenced ``` code blocks as cards with copy buttons
+    function renderOutputWithCode(text) {
+      const parts = text.split("```");
+      let html = "";
+
+      for (let i = 0; i < parts.length; i++) {
+        const chunk = parts[i];
+        if (i % 2 === 0) {
+          if (chunk.trim()) {
+            html += "<p>" + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
+          }
+        } else {
+          const lines = chunk.split("\n");
+          let codeLines = lines;
+          if (lines[0].trim().match(/^[a-zA-Z0-9_+-]+$/)) {
+            codeLines = lines.slice(1);
+          }
+          const codeHtml = escapeHtml(codeLines.join("\n"));
+          html += (
+            '<div class="rilie-code-block">' +
+              '<button class="rilie-code-copy">copy</button>' +
+              "<pre><code>" + codeHtml + "</code></pre>" +
+            "</div>"
+          );
+        }
+      }
+
+      outputEl.innerHTML = html;
+
+      document.querySelectorAll(".rilie-code-copy").forEach((btn) => {
+        btn.onclick = async () => {
+          const code = btn.parentElement.querySelector("pre").innerText;
+          try {
+            await navigator.clipboard.writeText(code);
+            btn.textContent = "copied";
+            setTimeout(() => { btn.textContent = "copy"; }, 1200);
+          } catch (e) {}
+        };
+      });
+    }
+
+    /* ── Submit ── */
+    /* Every message goes to /v1/rilie. Raw string. No transformation. */
+    /* The API decides if this is a name or a conversation. */
+    if (submitBtn) {
+      submitBtn.onclick = async () => {
+        console.log("Button clicked!");
+        const stimulus = inputEl.value;
+        const files = fileInput.files;
+        const hasFiles = files && files.length > 0;
+
+      if (!stimulus && !hasFiles) {
+        const nudge = document.createElement("div");
+        nudge.style.marginBottom = "16px";
+        nudge.style.opacity = "0.6";
+        nudge.innerHTML = "<em>Drop something in. A question, a thought, a vibe. Then hit Go.</em>";
+        outputEl.appendChild(nudge);
+        outputEl.scrollTop = outputEl.scrollHeight;
+        return;
+      }
+
+      lastStimulus = stimulus;
+      inputEl.value = "";
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Going...";
+      outputActions.classList.remove("visible");
+
+      try {
+        // Append user message to conversation flow
+        const userDiv = document.createElement("div");
+        userDiv.style.marginBottom = "16px";
+
+        const files2 = fileInput.files;
+
+        // file chip in stream
+        const chipHtml = (files2 && files2.length > 0)
+          ? Array.from(files2).map(f =>
+              `<div class="rilie-file-chip"><svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>${f.name}</div>`
+            ).join("")
+          : "";
+        userDiv.innerHTML = chipHtml + "<strong>You:</strong> " + escapeHtml(stimulus).replace(/\n/g, "<br>");
+        outputEl.appendChild(userDiv);
+        let res;
+
+        if (files2 && files2.length > 0) {
+          const formData = new FormData();
+          formData.append("stimulus", stimulus || "Please review the attached file(s)");
+          formData.append("max_pass", "3");
+          for (let i = 0; i < files2.length; i++) {
+            formData.append("files", files2[i]);
+          }
+          res = await fetch("/v1/rilie-upload", { method: "POST", body: formData });
+        } else {
+          res = await fetch("/v1/rilie", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stimulus: stimulus })
+          });
+        }
+
+        if (!res.ok) {
+          const errDiv = document.createElement("div");
+          errDiv.style.color = "#a55";
+          errDiv.innerHTML = "<strong>Error:</strong> " + res.status;
+          outputEl.appendChild(errDiv);
+          return;
+        }
+
+        const data = await res.json();
+        const rilieLine = data.result || "No result returned.";
+
+        const rilieDiv = document.createElement("div");
+        rilieDiv.style.marginBottom = "16px";
+
+        const parts = rilieLine.split("```");
+        let html = "";
+        for (let i = 0; i < parts.length; i++) {
+          const chunk = parts[i];
+          if (i % 2 === 0) {
+            if (chunk.trim()) {
+              html += "<p><strong>RILIE:</strong> " + escapeHtml(chunk).replace(/\n/g, "<br>") + "</p>";
+            }
+          } else {
+            const lines = chunk.split("\n");
+            let codeLines = lines;
+            if (lines[0].trim().match(/^[a-zA-Z0-9_+-]+$/)) {
+              codeLines = lines.slice(1);
+            }
+            const codeHtml = escapeHtml(codeLines.join("\n"));
+            html += (
+              '<div class="rilie-code-block">' +
+                '<button class="rilie-code-copy">copy</button>' +
+                "<pre><code>" + codeHtml + "</code></pre>" +
+              "</div>"
+            );
+          }
+        }
+        rilieDiv.innerHTML = html;
+        outputEl.appendChild(rilieDiv);
+
+        rilieDiv.querySelectorAll(".rilie-code-copy").forEach((btn) => {
+          btn.onclick = async () => {
+            const code = btn.parentElement.querySelector("pre").innerText;
+            try {
+              await navigator.clipboard.writeText(code);
+              btn.textContent = "copied";
+              setTimeout(() => { btn.textContent = "copy"; }, 1200);
+            } catch (e) {}
+          };
+        });
+
+        outputEl.scrollTop = outputEl.scrollHeight;
+
+        updateMeta(data);
+        outputActions.classList.add("visible");
+      } catch (err) {
+        const errDiv = document.createElement("div");
+        errDiv.style.color = "#a55";
+        errDiv.innerHTML = "<strong>Request failed:</strong> " + err;
+        outputEl.appendChild(errDiv);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Learn from Go";
+        fileInput.value = "";
+        fileNames.textContent = "";
+        fileClear.classList.remove("visible");
+      }
+      };
+    } else {
+      console.error("submitBtn not found!");
+    }
+
+    selfBtn.onclick = async () => { inputEl.value = "Who are you?"; submitBtn.click(); };
+
+    /* ── Output Actions ── */
+    shareBtn.onclick = async () => {
+      const text = outputEl.textContent;
+      const shareData = { title: "RILIE (3,6,9)", text: text.substring(0, 200) + (text.length > 200 ? "..." : ""), url: window.location.href };
+      if (navigator.share) {
+        try { await navigator.share(shareData); } catch (e) { /* user cancelled */ }
+      } else {
+        try { await navigator.clipboard.writeText(window.location.href + "\n\n" + text); shareBtn.classList.add("copied"); setTimeout(() => shareBtn.classList.remove("copied"), 1500); }
+        catch (e) {}
+      }
+    };
+
+    downloadBtn.onclick = () => {
+      const text = outputEl.textContent;
+      if (!text) return;
+      const blob = new Blob([text], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "rilie-response.txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    copyBtn.onclick = async () => {
+      const text = outputEl.textContent;
+      if (text) {
+        try {
+          await navigator.clipboard.writeText(text);
+          copyBtn.classList.add("copied");
+          const o = copyBtn.innerHTML;
+          copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+          setTimeout(() => { copyBtn.classList.remove("copied"); copyBtn.innerHTML = o; }, 1500);
+        } catch (err) {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        }
+      }
+    };
+
+    rewriteBtn.onclick = () => { if (lastStimulus) { inputEl.value = lastStimulus; submitBtn.click(); } };
+
+    inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitBtn.click(); } });
+
+    /* ── Sidebar Actions ── */
+    document.getElementById("sidebar-new").onclick = () => {
+      inputEl.value = "";
+      outputEl.innerHTML = GREETING_HTML;
+      metaPanel.classList.remove("visible");
+      outputActions.classList.remove("visible");
+      healthFill.style.width = "100%";
+      healthPct.textContent = "100";
+      fileInput.value = "";
+      fileNames.textContent = "";
+      fileClear.classList.remove("visible");
+      lastStimulus = "";
+      inputEl.focus();
+    };
+
+    document.getElementById("sidebar-history").onclick = () => {
+      outputEl.textContent = "History \u2014 coming soon. Every conversation remembered.";
+      outputActions.classList.remove("visible");
+    };
+
+    document.getElementById("sidebar-discover").onclick = () => {
+      inputEl.focus();
+    };
+
+    document.getElementById("sidebar-spaces").onclick = () => {
+      outputEl.textContent = "Spaces \u2014 coming soon. Collaborative rooms with shared context.";
+      outputActions.classList.remove("visible");
+    };
+
+    document.getElementById("sidebar-finance").onclick = () => {
+      outputEl.textContent = "Finance \u2014 coming soon. Real intelligence meets real numbers.";
+      outputActions.classList.remove("visible");
+    };
+    }); // Close DOMContentLoaded
+  </script>
+</body>
+</html>
