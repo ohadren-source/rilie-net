@@ -35,8 +35,26 @@ _RILIE_VARIANTS: List[str] = [
 
 # Words she should never "correct" or synonym-swap — proper nouns, brand terms
 _PROTECTED_WORDS = {
+    # Core architecture names — never touched
     "rilie", "RILIE", "soi", "SOi", "sauc", "catch44", "catch-44",
     "escoffier", "chomsky", "guvna", "brootlyn",
+    # Hip-hop proper nouns — spellchecker would mangle these
+    "rakim", "Rakim", "RAKIM",
+    "biggie", "Biggie", "tupac", "Tupac",
+    "nas", "Nas", "NAS",
+    "rza", "RZA", "gza", "GZA",
+    "nwa", "NWA",
+    "coltrane", "Coltrane",
+    "mingus", "Mingus",
+    "dre", "Dre",
+    "eminem", "Eminem",
+    "kanye", "Kanye",
+    "kendrick", "Kendrick",
+    "phenix", "Phenix",
+    # Genre/scene terms spellchecker might "correct"
+    "nyhc", "NYHC", "hardxcore",
+    "beastie", "cro-mags", "cromags",
+    "madball", "hatebreed", "fugazi",
 }
 
 # ── pyspellchecker ────────────────────────────────────────────────────────────
@@ -761,6 +779,7 @@ TONE_EMOJIS: Dict[str, str] = {
     "nourishing": "\U0001f372",
     "compassionate": "\u2764\ufe0f\u200d\U0001fa79",
     "strategic": "\u265f\ufe0f",
+    "engaged": "\U0001f3b5",       # music note — vibing, not analyzing
 }
 
 TONE_LABELS: Dict[str, str] = {
@@ -769,6 +788,7 @@ TONE_LABELS: Dict[str, str] = {
     "nourishing": "Nourishing first",
     "compassionate": "Care first",
     "strategic": "Strategy focus",
+    "engaged": "On it",            # short — conversational, no lecture
 }
 
 SERIOUS_KEYWORDS = [
@@ -849,6 +869,27 @@ def detect_tone_from_stimulus(stimulus: str) -> str:
     if s.startswith("what is ") or s.startswith("define "):
         return "insightful"
 
+    # ENGAGED — cultural reference / taste question / music/art conversation
+    # Fires when the user is sharing or asking about something they care about
+    # rather than asking for analysis. She vibes, not lectures.
+    _engaged_signals = [
+        # Taste / preference patterns
+        "you like", "you know", "you into", "you feel", "you heard",
+        "you familiar", "you fucks with", "do you like", "do you know",
+        "what do you think of", "what you think of",
+        "for sure", "ain't it", "right?",
+        # Cultural references — music
+        "rakim", "eric b", "public enemy", "coltrane", "bad brains",
+        "hip-hop", "hardcore", "punk", "jazz", "vinyl", "bars", "flow",
+        "golden age", "nyhc", "brootlyn",
+        # Cultural references — food/art
+        "escoffier", "bourdain", "phenix",
+        # Affirmations that signal conversation not query
+        "100", "facts", "word", "real talk", "no cap", "fr fr",
+    ]
+    if any(sig in s for sig in _engaged_signals):
+        return "engaged"
+
     return "insightful"
 
 
@@ -856,8 +897,16 @@ def apply_tone_header(result_text: str, tone: str) -> str:
     """
     Prefix the answer with a single, clear tone line, then a blank line,
     then the original text. Only one emoji per response.
+
+    SUPPRESSED for "engaged" tone — she's vibing, not analyzing.
+    Engaged responses are conversational. Headers belong on insight delivery.
     """
     tone = tone if tone in TONE_EMOJIS else "insightful"
+
+    # Engaged tone — no header stamp. She's in the conversation, not above it.
+    if tone == "engaged":
+        return result_text
+
     emoji = TONE_EMOJIS[tone]
     label = TONE_LABELS.get(tone, "Tone")
     header = f"{label} {emoji}"

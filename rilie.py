@@ -1,5 +1,5 @@
 """
-rilie.py — THE RESTAURANT (v4.1.1)
+rilie.py — THE RESTAURANT (v4.2.0)
 =================================
 
 Imports the Bouncer, the Hostess, the Kitchen, and the Speech Pipeline.
@@ -34,7 +34,20 @@ MEASURESTICK (replaces YARDSTICK v4.1):
   genuine nothing AND Chomsky flagged structural failure simultaneously.
   Signal stored in banks_measurestick for learning, not punishment.
 
-CHANGES FROM v4.1:
+CHANGES FROM v4.1.1 (v4.2.0):
+  - PersonModel.observe() — expanded music interest signals to 60+ artist names
+    and genre keywords. Catches "lil vert", "dick dale", "coltrane", etc.
+    Previously only caught generic vocabulary ("music", "hip-hop", "vinyl").
+  - _maybe_lookup_unknown_reference() — new function. When stimulus looks like
+    an unknown proper noun / artist name and Kitchen has no baseline to work from,
+    RILIE searches for it automatically before cooking. She doesn't hallucinate.
+    She doesn't go silent. She googles it.
+    Fires on: name-prefix patterns ("lil X", "young X", "dj X"),
+    capitalized non-first tokens, "and no X?" Rakim track patterns.
+    Skips known vocabulary. Skips long queries (> 8 words already have signal).
+  - Wired into process() between curiosity context and Kitchen call.
+
+CHANGES FROM v4.1 (v4.1.1):
   - process() now accepts domain_hints and curiosity_context from Guvna
   - Curiosity context: Guvna-resurfaced takes priority, Banks is fallback
   - domain_hints accepted for future Kitchen weighting (no-op for now)
@@ -118,8 +131,37 @@ class PersonModel:
         # Interest detection
         interest_signals = {
             "music": [
+                # Generic music vocabulary
                 "music", "song", "album", "artist", "band", "hip-hop",
-                "rap", "jazz", "guitar", "piano", "vinyl"
+                "rap", "jazz", "guitar", "piano", "vinyl", "track", "record",
+                "mixtape", "ep", "single", "producer", "mc", "dj", "emcee",
+                "beatmaker", "sample", "hook", "verse", "bars", "flow",
+                "lyrics", "rhyme", "freestyle", "cipher", "concert", "show",
+                "tour", "label", "release", "drop", "playlist", "stream",
+                # Golden age hip-hop anchors
+                "rakim", "eric b", "public enemy", "chuck d", "krs-one",
+                "big daddy kane", "slick rick", "gang starr", "guru",
+                "dj premier", "pete rock", "a tribe called quest", "atcq",
+                "de la soul", "mobb deep", "wu-tang", "rza", "gza",
+                "nas", "biggie", "notorious", "jay-z", "ll cool j",
+                "run dmc", "run-dmc", "grandmaster flash", "bambaataa",
+                "dead prez", "mos def", "talib kweli", "black thought",
+                "the roots", "common", "lupe fiasco", "kendrick", "outkast",
+                "andre 3000", "scarface", "geto boys", "ice cube", "nwa",
+                "dr dre", "eminem", "kanye", "method man", "prodigy",
+                # Jazz anchors
+                "coltrane", "miles davis", "charlie parker", "monk",
+                "mingus", "ornette", "herbie hancock", "wayne shorter",
+                "art blakey", "sonny rollins", "bill evans", "chet baker",
+                # NYHC / hardcore
+                "bad brains", "minor threat", "black flag", "agnostic front",
+                "cro-mags", "sick of it all", "madball", "gorilla biscuits",
+                "fugazi", "hatebreed", "misfits", "suicidal tendencies",
+                # General cultural music signals
+                "lil ", "young ", "chief ", "king ", "queen ",
+                "surf", "punk", "metal", "rock", "soul", "funk",
+                "reggae", "dancehall", "r&b", "rnb", "blues", "folk",
+                "electronic", "techno", "house", "trap", "drill",
             ],
             "food": [
                 "food", "cook", "recipe", "restaurant", "chef", "meal",
@@ -404,6 +446,125 @@ def _search_banks_if_available(query: str) -> Dict[str, List[Dict]]:
         }
 
 
+def _maybe_lookup_unknown_reference(stimulus: str, search_fn: SearchFn) -> str:
+    """
+    "lil vert" behavior — when RILIE doesn't recognize the reference,
+    she googles it and cooks from what comes back.
+
+    Fires when:
+    1. Stimulus is short (≤ 8 words) — long queries have enough context
+    2. Contains at least one token that looks like a proper noun
+       (capitalized, or known name-prefix like "lil ", "young ", "dj ")
+    3. No obvious keyword match to known vocabulary (not already a domain hit)
+
+    Returns: snippet text to use as baseline_text, or "" if no lookup needed.
+
+    She doesn't hallucinate. She doesn't go silent. She looks it up.
+    Bad markers from Guvna's baseline filter are reused here.
+    """
+    if not stimulus or not stimulus.strip():
+        return ""
+
+    s = stimulus.strip()
+    sl = s.lower()
+    words = s.split()
+
+    # Only fires on short stimuli — long ones have enough signal already
+    if len(words) > 8:
+        return ""
+
+    # Known vocabulary — if any of these are present, Kitchen has enough signal
+    _known_vocab = {
+        # Questions and discourse markers — not name lookups
+        "what", "why", "how", "when", "where", "who", "which",
+        "explain", "tell", "describe", "define", "is", "are", "was",
+        # Common concepts Kitchen handles without lookup
+        "music", "song", "album", "band", "artist", "rapper", "singer",
+        "movie", "film", "book", "show", "game", "sport",
+        "love", "life", "death", "time", "god", "truth",
+        "money", "work", "school", "food", "health",
+        # Architecture keywords she already knows
+        "rakim", "eric", "coltrane", "escoffier", "rilie", "soi",
+        "catch44", "phenix", "entropy", "emergence", "compression",
+    }
+    if any(kw in sl for kw in _known_vocab):
+        return ""
+
+    # Name-prefix patterns — "lil X", "young X", "dj X", "mc X" etc.
+    _name_prefixes = [
+        r"^lil\s+\w+",
+        r"^young\s+\w+",
+        r"^dj\s+\w+",
+        r"^mc\s+\w+",
+        r"^chief\s+\w+",
+        r"^king\s+\w+",
+        r"^big\s+\w+",
+        r"^little\s+\w+",
+        r"^ol'\s+\w+",
+        r"^old\s+\w+",
+    ]
+    has_name_prefix = any(re.match(pat, sl) for pat in _name_prefixes)
+
+    # Proper noun detection — at least one capitalized non-first word
+    # OR all words are capitalized fragments (like "Dick Dale")
+    has_proper_noun = False
+    if len(words) >= 2:
+        # Check non-first words for capitals
+        for w in words[1:]:
+            if w and w[0].isupper() and len(w) > 1 and w.isalpha():
+                has_proper_noun = True
+                break
+    elif len(words) == 1:
+        # Single word — only lookup if it's capitalized and not common
+        w = words[0].rstrip("?.,!")
+        if w and w[0].isupper() and len(w) > 2:
+            has_proper_noun = True
+
+    # Also fires on "and no X?" style references — Rakim track pattern
+    has_and_no = sl.startswith("and no ") or sl.startswith("and no?")
+
+    if not (has_name_prefix or has_proper_noun or has_and_no):
+        return ""
+
+    # We have an unknown reference. Look it up.
+    try:
+        # Clean query — strip question marks, normalize
+        query = re.sub(r"[?!.,]+$", "", s.strip())
+
+        # Bad markers — same filter as Guvna's baseline
+        _bad_markers = [
+            "in this lesson", "you'll learn", "you will learn",
+            "visit englishclass101", "englishclass101.com",
+            "sign up for your free", "genius.com", "azlyrics",
+            "songlyrics", "metrolyrics", "verse 1", "chorus", "[hook]",
+            "narration as", "imdb.com/title",
+        ]
+
+        results = search_fn(query)
+        if not results or not isinstance(results, list):
+            return ""
+
+        for r in results:
+            snippet = r.get("snippet", "")
+            if not snippet:
+                continue
+            lower = snippet.lower()
+            if any(m in lower for m in _bad_markers):
+                continue
+            if len(snippet.split()) >= 6:
+                logger.info(
+                    "RILIE unknown reference: '%s' → '%s...'",
+                    query,
+                    snippet[:60],
+                )
+                return snippet
+
+    except Exception as e:
+        logger.debug("RILIE unknown reference lookup error: %s", e)
+
+    return ""
+
+
 def _measurestick(response: str, stimulus: str, search_fn) -> Dict[str, Any]:
     """
     MEASURESTICK: Quality signal — not a gate. Never kills a response.
@@ -605,7 +766,7 @@ class RILIE:
         searchfn: Optional[SearchFn] = None,
     ) -> None:
         self.name = "RILIE"
-        self.version = "4.1.1"
+        self.version = "4.2.0"
         self.tracks_experienced = 0
 
         # Conversation state lives across turns per RILIE instance.
@@ -923,6 +1084,29 @@ class RILIE:
             logger.warning("SOiOS cycle failed: %s", e)
 
         # ------------------------------------------------------------------
+        # ------------------------------------------------------------------
+        # UNKNOWN CULTURAL REFERENCE DETECTION — "lil vert" behavior
+        # ------------------------------------------------------------------
+        # If the stimulus looks like a proper noun / name we don't recognize
+        # AND Guvna didn't already inject baseline_text,
+        # search for it and inject the result as context before Kitchen cooks.
+        #
+        # Signals: short input, capitalized tokens, not in known vocabulary,
+        # looks like a name or artist reference.
+        #
+        # She doesn't hallucinate. She doesn't go silent. She googles it.
+        # ------------------------------------------------------------------
+        if active_search and not baseline_text.strip():
+            _lookup = _maybe_lookup_unknown_reference(
+                original_question, active_search
+            )
+            if _lookup:
+                baseline_text = _lookup
+                logger.info(
+                    "RILIE: unknown reference lookup fired for: %s",
+                    original_question[:60],
+                )
+
         # Kitchen — interpretation passes
         # ------------------------------------------------------------------
         kitchen_input = original_question

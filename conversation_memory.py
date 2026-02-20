@@ -29,13 +29,30 @@ All fed by the photogenic memory filter:
 
 Banks.py stores the permanent rows.
 This module manages the live conversation buffer.
+
+FIXES (this revision):
+  - rx_signal now ACTS, not just logs.
+    affirmation -> quality +0.15, rx_direction="deepen" (Kitchen goes deeper)
+    negation -> quality -0.10, rx_direction="pivot" (Guvna reroutes Kitchen)
+    Previously: signal computed, stored, ignored.
+  - process_turn() primer path -- removed extra self.turn_count += 1.
+    check_primer() manages turn_count on turns 0 and 1 internally.
+    Previously: turns 0 and 1 were double-incremented.
+  - score_resonance() -- cultural lineage signals now score as return_to_source.
+    Rakim, Coltrane, Escoffier, Bad Brains, "no omega", "compression", etc.
+  - summarize_person_model() added -- was missing, Guvna v4.1.1 calls it.
+    Returns compact snapshot: name, turns, energy, register, top tags/domains.
+  - logger import added -- was used (buffer pruning) but never imported.
 """
 
+import logging
 import re
 import random
 import time
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
+
+logger = logging.getLogger("conversation_memory")
 
 # The default name. Eleven meanings. One word.
 DEFAULT_NAME = "Mate"
@@ -255,6 +272,28 @@ def score_resonance(
         resonance = max(resonance, 0.7)
         if tag == "ordinary":
             tag = "beauty_humor"
+
+    # =====================================================================
+    # CULTURAL LINEAGE — citing architects scores as return_to_source
+    # Rakim, Escoffier, Coltrane, Bad Brains = going to origin.
+    # Someone who drops these names isn't name-dropping — they're pointing.
+    # =====================================================================
+    _cultural_lineage = [
+        "rakim", "eric b", "public enemy", "chuck d", "krs-one",
+        "big daddy kane", "coltrane", "miles davis", "mingus", "monk",
+        "bad brains", "agnostic front", "minor threat", "fugazi",
+        "escoffier", "auguste escoffier", "phenix", "bourdain",
+        "no omega", "paid in full", "follow the leader",
+        "fear of a black planet", "it takes a nation",
+        # Architectural concepts that signal deep thinking
+        "compression", "reduction as truth", "alpha with no omega",
+        "beginning without end", "infinite", "faisan dore",
+        "mise en place", "brigade de cuisine",
+    ]
+    if any(cl in s for cl in _cultural_lineage):
+        resonance = max(resonance, 0.75)
+        if tag == "ordinary":
+            tag = "return_to_source"
 
     # =====================================================================
     # RETURN TO SOURCE — the pull back. Go deeper. Spiral. Origin.
@@ -1136,6 +1175,24 @@ class ConversationMemory:
             _rx = "negation"
         result["rx_signal"] = _rx
 
+        # RX SIGNAL → BEHAVIORAL DIRECTION
+        # This is where the signal actually DOES something.
+        # Not just logged — acts.
+        # affirmation: boost quality signal so Kitchen runs deeper on next turn
+        # negation: flag for Guvna pivot — don't repeat last path
+        if _rx == "affirmation":
+            # Boost quality passed to record_moment so this turn scores higher
+            # Kitchen will see high quality → deepen / extend
+            quality = min(1.0, quality + 0.15)
+            result["rx_direction"] = "deepen"
+        elif _rx == "negation":
+            # Reduce quality so MEASURESTICK prefers a different path
+            # Guvna sees rx_direction="pivot" and can reroute Kitchen
+            quality = max(0.0, quality - 0.1)
+            result["rx_direction"] = "pivot"
+        else:
+            result["rx_direction"] = "continue"
+
         # --- GRACEFUL BUFFER PRUNING (prevents LIFO collapse) ---
         # When moments buffer exceeds 50, summarize oldest half.
         # Keep all beautiful moments. Compress ordinary ones.
@@ -1174,11 +1231,12 @@ class ConversationMemory:
         result["register_guidance"] = self.register.get_register_guidance()
 
         # --- 1. PRIMER (hardcoded) ---
+        # NOTE: check_primer() manages turn_count internally on turns 0 and 1.
+        # Do NOT increment turn_count here — check_primer already did it.
         primer = self.check_primer(stimulus)
         if primer is not None:
             result["is_primer"] = True
             result["primer_text"] = primer
-            self.turn_count += 1
             return result
 
         # --- 3. GOODBYE ---
@@ -1278,6 +1336,44 @@ class ConversationMemory:
         if len(words) <= max_words:
             return text.strip()
         return " ".join(words[:max_words]) + "..."
+
+    def summarize_person_model(self) -> Dict[str, Any]:
+        """
+        Tier-3 person snapshot — called by Guvna to pass context to DDD.
+        Returns a compact summary of what ConversationMemory knows about the user:
+        - user_name, turn_count, energy, register
+        - top tags and domains from beautiful moments
+        - christening status
+        - rx_direction from last turn (if available)
+
+        Guvna wires this into shape_for_disclosure() and curiosity context.
+        ConversationMemory owns the live buffer; Guvna passes the snapshot down.
+        """
+        beautiful = self.get_beautiful_moments()
+        tag_counts: Dict[str, int] = {}
+        domain_counts: Dict[str, int] = {}
+        for m in beautiful:
+            base_tag = m.tag.replace("_juxtaposed", "")
+            tag_counts[base_tag] = tag_counts.get(base_tag, 0) + 1
+            if m.domain_hit:
+                domain_counts[m.domain_hit] = domain_counts.get(m.domain_hit, 0) + 1
+
+        top_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+        top_domains = sorted(domain_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+
+        return {
+            "user_name": self.user_name or DEFAULT_NAME,
+            "turn_count": self.turn_count,
+            "beautiful_moments": len(beautiful),
+            "total_moments": len(self.moments),
+            "current_energy": self.energy_tracker.current_energy,
+            "energy_trend": self.energy_tracker.trend,
+            "register": self.register.current_register,
+            "top_tags": [t for t, _ in top_tags],
+            "top_domains": [d for d, _ in top_domains],
+            "christening_done": self._christening_done,
+            "photogenic_ratio": len(beautiful) / max(len(self.moments), 1),
+        }
 
     def get_beautiful_moments(self) -> List[Moment]:
         """Return only the moments that passed the photogenic filter."""

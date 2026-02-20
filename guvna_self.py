@@ -21,6 +21,17 @@ BEHAVIORS OWNED HERE:
   4. _handle_clarification()— "what do you mean / say that differently"
   5. _handle_meta_correction()— "forget that / never mind / drop it"
   6. _finalize_response()   — THE WRITER. Every response gets logged here.
+                              Logs RAW result (pre-tone-header). History is clean.
+
+FIXES (this revision):
+  - greet() no longer stamps tone header on greeting text
+    "Hi there!" was getting "Insight focus 💡" prepended. No more.
+  - _finalize_response() now logs RAW result before tone header injection
+    History was storing header-polluted text. Recall/clarification now get
+    clean content, not "Insight focus 💡 Gotcha RILIE when focusing on..."
+  - _handle_recall() and _handle_clarification() stripped of fragile
+    header-strip logic (split("\n\n", 1)[1]) — history is clean now,
+    no stripping needed, legitimate \n\n in responses no longer mangled.
 
 WHY THIS FILE EXISTS:
   guvna.py was doing too many things.
@@ -148,11 +159,13 @@ class GuvnaSelf:
         self.memory.turn_count += 1
 
         tone = detect_tone_from_stimulus(stimulus)
-        result_with_tone = apply_tone_header(greeting_text, tone)
+        # Greeting is always conversational — no tone header on "Hi there!"
+        # apply_tone_header suppresses for "engaged" but greetings need no label at all.
+        # Store raw greeting text. _finalize_response logs raw so recall gets clean text.
 
         response = {
             "stimulus": stimulus,
-            "result": result_with_tone,
+            "result": greeting_text,
             "status": "APERTURE",
             "tone": tone,
             "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS["insightful"]),
@@ -249,10 +262,9 @@ class GuvnaSelf:
             }
 
         # Response replay branch
+        # History stores RAW text (no tone headers) — no stripping needed
         if self._response_history:
             last = self._response_history[-1]
-            if "\n\n" in last:
-                last = last.split("\n\n", 1)[1]
             return {
                 "result": f'I said: "{last}"',
                 "status": "RECALL",
@@ -292,10 +304,9 @@ class GuvnaSelf:
         if not matched:
             return None
 
+        # History stores RAW text (no tone headers) — no stripping needed
         if self._response_history:
             last = self._response_history[-1]
-            if "\n\n" in last:
-                last = last.split("\n\n", 1)[1]
             bridges = [
                 f"What I'm getting at: {last}",
                 f"Put another way — {last}",
@@ -410,8 +421,24 @@ class GuvnaSelf:
         }
 
         # THE LOG — this is what makes recall and clarification work
-        result_text = final.get("result", "")
-        if result_text:
-            self._response_history.append(result_text)
+        # CRITICAL: log RAW result (from raw dict) NOT the dressed plate (final["result"])
+        # final["result"] may have tone headers stamped by guvna.py Step 10.
+        # Recall and clarification should replay what she SAID, not the label she wore.
+        # raw.get("result") is the pre-header text. final["result"] is post-header.
+        # We log raw["result"] here — the actual content.
+        raw_result_text = raw.get("result", "")
+        if raw_result_text:
+            # Strip any tone header that may have already been applied upstream
+            # (greet() used to do this — belt and suspenders)
+            _stripped = raw_result_text
+            if "\n\n" in _stripped:
+                _candidate = _stripped.split("\n\n", 1)[1]
+                # Only strip if the first part looks like a tone label
+                _first = _stripped.split("\n\n", 1)[0]
+                from guvna_tools import TONE_LABELS
+                _tone_labels = set(TONE_LABELS.values())
+                if any(_first.startswith(lbl) for lbl in _tone_labels):
+                    _stripped = _candidate
+            self._response_history.append(_stripped)
 
         return final
