@@ -1043,7 +1043,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     # Greeting on first turn — name intro only, kitchen handles everything else
     if is_first_turn:
-        if display_name != DEFAULT_NAME:
+        if display_name:
             result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? 🍳"
             result["status"] = "GREETING"
 
