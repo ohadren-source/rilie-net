@@ -922,8 +922,12 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
                 if _candidate.lower() not in _BAD_NAMES and len(_candidate) >= 2:
                     _name = _candidate
         _greet_as = _name if _name else "mate"
-        session["display_name"] = _greet_as
-        save_session(session)
+
+        # ✅ THE FIX: Only save if we got a real name. Never lock in "mate".
+        if _name:
+            session["display_name"] = _greet_as
+            save_session(session)
+
         return build_plate({
             "result": "Pleasure to meet you, {}! What's on your mind? 🍳".format(_greet_as),
             "status": "GREETING",
@@ -1023,15 +1027,29 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         record_topics(session, domains_hit, tag)
 
     # Resolve display_name: session → NER/heuristics/Chomsky → bare-name → DEFAULT_NAME
-    # IF name exists → do nothing. GET OUT. MOVE.
-    # IF no name → one shot → success=name, fail=mate. SAVE. GET OUT. MOVE.
-    if not session.get("display_name"):
-        _name = _extract_name_with_chomsky(stimulus)
-        session["display_name"] = _name if _name else "mate"
-        save_session(session)
+    display_name = session.get("display_name") or session.get("name")
 
-    display_name = session["display_name"]
+    if not display_name:
+        display_name = _extract_name_with_chomsky(stimulus)
+
+    # Bare-name fallback: "Ohad" or "Ohad Oren" on first turn
+    # Chomsky requires an intro phrase — this catches bare names without one
+    if not display_name and is_first_turn:
+        words = stimulus.strip().strip('.,!?;:').split()
+        if 1 <= len(words) <= 2 and "?" not in stimulus:
+            candidate = words[0].capitalize()
+            if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
+                display_name = candidate
+
+    display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
+    session["display_name"] = display_name
     result.setdefault("display_name", display_name)
+
+    # Greeting on first turn — name intro only, kitchen handles everything else
+    if is_first_turn:
+        if display_name != DEFAULT_NAME:
+            result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? 🍳"
+            result["status"] = "GREETING"
 
     # Snapshot state + save session
     snapshot_guvna_state(guvna, session)
