@@ -803,6 +803,7 @@ class RILIE:
         from_file: bool = False,
         domain_hints: Optional[List[str]] = None,
         curiosity_context: str = "",
+        meaning: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """
         Public entrypoint.
@@ -819,6 +820,9 @@ class RILIE:
                           Available for future Kitchen weighting. (v4.1.1)
             curiosity_context: pre-resurfaced curiosity from Guvna's Step 3.5.
                                If provided, skips redundant Banks curiosity lookup. (v4.1.1)
+            meaning: MeaningFingerprint pre-computed by Guvna Step 0.5.
+                     If provided, used directly — no re-read. Birth certificate.
+                     Type: Optional[MeaningFingerprint]. Read-only downstream.
 
         Returns dict with:
             stimulus, result, quality_score, priorities_met, anti_beige_score,
@@ -859,9 +863,10 @@ class RILIE:
 
         # ------------------------------------------------------------------
         # MEANING — the substrate. First read. Birth certificate.
+        # If Guvna already read it (Step 0.5), use that — don't read twice.
         # ------------------------------------------------------------------
-        fingerprint = None
-        if MEANING_AVAILABLE:
+        fingerprint = meaning  # use Guvna's read if provided
+        if fingerprint is None and MEANING_AVAILABLE:
             try:
                 fingerprint = read_meaning(original_question)
                 logger.info(
@@ -872,8 +877,8 @@ class RILIE:
                     fingerprint.weight,
                     fingerprint.gap or "—",
                 )
-
                 # Dead input — no pulse, no point cooking
+                # (Guvna already caught this at Step 0.5 — this is belt+suspenders)
                 if not fingerprint.is_alive():
                     self.conversation.record_exchange(original_question, "")
                     return {
@@ -883,6 +888,14 @@ class RILIE:
                     }
             except Exception as e:
                 logger.debug("Meaning fingerprint error: %s", e)
+        elif fingerprint is not None:
+            logger.info(
+                "MEANING: using Guvna fingerprint -- pulse=%.2f act=%s obj=%s weight=%.2f",
+                fingerprint.pulse,
+                fingerprint.act,
+                fingerprint.object,
+                fingerprint.weight,
+            )
 
         # ------------------------------------------------------------------
         # Person Model — passively observe before anything else

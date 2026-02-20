@@ -58,6 +58,10 @@ FIXES (this revision):
 - _response_history now stores RAW result before tone header injection
 - CULTURAL_ANCHORS — artist/cultural figure name recognition
 - _handle_social_glue() gains "for sure" / affirmation-with-content path
+- meaning.py RESTORED as Step 0.5 pre-Kitchen gate (was silently removed)
+  Dead input / light GIVE → social glue, never Kitchen
+  "yep. sure." no longer routes to Kitchen and returns broadcast word salad
+  Meaning fingerprint passed to RILIE.process() as birth certificate
 """
 
 from __future__ import annotations
@@ -96,6 +100,15 @@ from guvna_tools import (
     is_serious_subject_text,
 )
 from guvna_self import GuvnaSelf  # ← Self-governing session awareness
+
+# Meaning fingerprint — reads stimulus BEFORE Kitchen wakes up
+# Without this, Kitchen cooks blind. Every affirmation becomes word salad.
+try:
+    from meaning import read_meaning
+    MEANING_AVAILABLE = True
+except ImportError:
+    MEANING_AVAILABLE = False
+    logger.warning("GUVNA: meaning.py not available — Kitchen will cook blind")
 
 # Curiosity engine — resurface past insights as context
 try:
@@ -523,14 +536,17 @@ class Guvna(GuvnaSelf):
         Orchestrates all 5 Acts: safety -> disclosure -> interpretation -> response -> governance.
 
         TIER 2 changes:
-        - Step 0: APERTURE check                    ← GuvnaSelf.greet()
-        - Step 1: Fast path classifier
-        - Step 2: Self-awareness fast path
-        - Step 3: Baseline lookup
+        - Step 0:   APERTURE check                    ← GuvnaSelf.greet()
+        - Step 0.5: MEANING FINGERPRINT               ← meaning.read_meaning()
+                    Dead input / light GIVE → social glue, never Kitchen
+                    GET with substance → Kitchen gets the fingerprint too
+        - Step 1:   Fast path classifier
+        - Step 2:   Self-awareness fast path
+        - Step 3:   Baseline lookup
         - Step 3.5: Curiosity resurface
-        - Step 4: Domain lenses → RILIE
-        - Step 5: wilden_swift_modulate
-        - Step 6: Memory + YELLOW GATE
+        - Step 4:   Domain lenses → RILIE
+        - Step 5:   wilden_swift_modulate
+        - Step 6:   Memory + YELLOW GATE
 
         kwargs accepted:
         - reference_context: Optional[Dict] from session.resolve_reference()
@@ -544,6 +560,75 @@ class Guvna(GuvnaSelf):
             greeting = self.greet(stimulus)
             if greeting:
                 return greeting
+
+        # STEP 0.5: MEANING FINGERPRINT — read before Kitchen wakes up
+        # This is the gate that was removed. Putting it back.
+        #
+        # Without this: "yep. sure." → Kitchen → word salad about broadcast metaphors
+        # With this:    "yep. sure." → pulse=low, act=GIVE → social glue → done
+        #
+        # The fingerprint is the stimulus's birth certificate.
+        # Kitchen reads it. Nothing modifies it.
+        _meaning = None
+        if MEANING_AVAILABLE:
+            try:
+                _meaning = read_meaning(stimulus)
+                raw["meaning"] = _meaning.to_dict()
+
+                # DEAD INPUT — pulse too low to cook
+                # "yep", "sure", "ok", "cool", one-word filler → social glue
+                if not _meaning.is_alive():
+                    logger.info(
+                        "GUVNA: Dead input (pulse=%.2f) → social glue path",
+                        _meaning.pulse,
+                    )
+                    social_fallback = self._handle_social_glue(stimulus.strip(), stimulus.strip().lower())
+                    if social_fallback:
+                        social_fallback["stimulus"] = stimulus
+                        social_fallback["meaning"] = raw.get("meaning")
+                        return self._finalize_response(social_fallback)
+                    # If no social glue match, build a minimal acknowledgment
+                    raw["result"] = "got it."
+                    raw["status"] = "DEAD_INPUT"
+                    raw["tone"] = "engaged"
+                    return self._finalize_response(raw)
+
+                # GIVE with no weight and no question mark
+                # "yep. sure." / "ok" / "that's me" / one-word affirmations
+                # These are GIVE signals, not GET signals — don't cook them
+                if (
+                    _meaning.act == "GIVE"
+                    and _meaning.act2 is None
+                    and not _meaning.is_heavy()
+                    and "?" not in stimulus
+                    and _meaning.weight < 0.25
+                ):
+                    logger.info(
+                        "GUVNA: Light GIVE (weight=%.2f, no ?) → fast path",
+                        _meaning.weight,
+                    )
+                    social_fallback = self._handle_social_glue(stimulus.strip(), stimulus.strip().lower())
+                    if social_fallback:
+                        social_fallback["stimulus"] = stimulus
+                        social_fallback["meaning"] = raw.get("meaning")
+                        return self._finalize_response(social_fallback)
+                    # Affirmation with no social glue match — brief acknowledgment
+                    raw["result"] = "with you."
+                    raw["status"] = "LIGHT_GIVE"
+                    raw["tone"] = "engaged"
+                    return self._finalize_response(raw)
+
+                # Log what we read — useful for debugging
+                logger.info(
+                    "GUVNA: Meaning → pulse=%.2f act=%s weight=%.2f gap=%s",
+                    _meaning.pulse,
+                    _meaning.act + (f"+{_meaning.act2}" if _meaning.act2 else ""),
+                    _meaning.weight,
+                    _meaning.gap or "none",
+                )
+
+            except Exception as e:
+                logger.warning("GUVNA: meaning.py read failed (non-fatal): %s", e)
 
         # STEP 1: FAST PATH CLASSIFIER
         fast = self._classify_stimulus(stimulus)
@@ -608,6 +693,7 @@ class Guvna(GuvnaSelf):
             baseline_text=baseline_text,
             domain_hints=soi_domain_names,
             curiosity_context=curiosity_context,
+            meaning=_meaning,  # birth certificate — Kitchen reads, never modifies
         )
         if not rilie_result:
             rilie_result = {}
