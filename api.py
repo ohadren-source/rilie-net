@@ -927,164 +927,38 @@ def hello(req: HelloRequest) -> Dict[str, str]:
 @app.post("/v1/rilie")
 def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
-    Main RILIE endpoint — SESSION-AWARE, with a single greeting pass.
+    Ultra-simple mode:
+    - No sessions
+    - No turn counting
+    - No Guvna
+    - Every call: greet once and return.
     """
     stimulus = (req.stimulus or "").strip()
-    if not stimulus:
-        return {
-            "stimulus": "",
-            "result": "Drop something in. A question, a thought, a vibe. Then hit Go.",
-            "quality_score": 0.0,
-            "priorities_met": 0,
-            "anti_beige_score": 0.0,
-            "status": "EMPTY",
-            "depth": 0,
-            "pass": 0,
-            "display_name": None,
-        }
 
-    client_ip = get_client_ip(request)
-    session = load_session(client_ip)
+    # Try to pull a name from whatever they typed
+    _name = _extract_name_with_chomsky(stimulus)
 
-    # ------------------------------------------------------------------
-    # BASIC: First-ever turn only, one shot, then NEVER again.
-    # ------------------------------------------------------------------
-    turn_count = int(session.get("turn_count", 0) or 0)
-    if turn_count == 0:
-        # Try to get a real name once
-        _name = _extract_name_with_chomsky(stimulus)
+    if not _name:
+        _words = stimulus.strip().strip(".,!?;:'").split()
+        if 1 <= len(_words) <= 3 and "?" not in stimulus:
+            _candidate = _words[0].capitalize()
+            if _candidate.lower() not in _BAD_NAMES and len(_candidate) >= 2:
+                _name = _candidate
 
-        if not _name:
-            _words = stimulus.strip().strip(".,!?;:'").split()
-            if 1 <= len(_words) <= 3 and "?" not in stimulus:
-                _candidate = _words[0].capitalize()
-                if _candidate.lower() not in _BAD_NAMES and len(_candidate) >= 2:
-                    _name = _candidate
+    _greet_as = _name if _name else "mate"
 
-        _greet_as = _name if _name else "mate"
-
-        # Only lock in a real name; "mate" is never stored
-        if _name:
-            session["display_name"] = _greet_as
-
-        session["turn_count"] = 1
-        save_session(session)
-
-        return build_plate(
-            {
-                "result": f"Pleasure to meet you, {_greet_as}! What's on your mind? 🧠",
-                "status": "GREETING",
-                "display_name": _greet_as,
-                "quality_score": 1.0,
-                "priorities_met": 1,
-            }
-        )
-
-    # ------------------------------------------------------------------
-    # Past first turn: NO MORE GREETINGS, NO MORE NAME GUESSING.
-    # ------------------------------------------------------------------
-
-    restore_guvna_state(guvna, session)
-    restore_talk_memory(talk_memory, session)
-
-    # Detect user multi-question requests before Guvna
-    def _detect_multi_question(s: str) -> Optional[List[str]]:
-        import re as _re
-
-        if not _re.search(
-            r"\b(1\.|2\.|3\.|question|each|order|following)\b", s, _re.IGNORECASE
-        ):
-            return None
-
-        parts = _re.split(
-            r"(?<=[?!])\s+(?=[A-Z])|(?=\b[1-9]\.\s)", s
-        )
-        parts = [p.strip() for p in parts if p.strip() and len(p.strip()) > 8]
-        return parts if len(parts) > 1 else None
-
-    pre_parts = _detect_multi_question(stimulus)
-    if pre_parts:
-        logger.info("PRE-SPLIT multi-question: %d parts", len(pre_parts))
-        multi = process_multi_question_parts(
-            pre_parts, guvna_instance=guvna, max_pass=req.max_pass, session=session
-        )
-        result: Dict[str, Any] = {
-            "result": multi["combined_result"],
-            "status": "MULTI_QUESTION_PROCESSED",
-            "is_multi_question": True,
-            "part_count": multi["part_count"],
-            "parts": multi["parts"],
-            "all_parts_passed": multi["all_passed"],
-            "quality_score": multi["quality_score"],
-        }
-    else:
-        reference_ctx = resolve_reference(session, stimulus)
-        result = guvna.process(
-            stimulus, maxpass=req.max_pass, reference_context=reference_ctx
-        )
-
-        if is_multi_question_response(result):
-            logger.info("MULTIQUESTION detected: %s...", stimulus[:120])
-            parts = extract_question_parts(result)
-            if parts:
-                multi = process_multi_question_parts(
-                    parts,
-                    guvna_instance=guvna,
-                    max_pass=req.max_pass,
-                    session=session,
-                )
-                result = {
-                    "result": multi["combined_result"],
-                    "status": "MULTI_QUESTION_PROCESSED",
-                    "is_multi_question": True,
-                    "part_count": multi["part_count"],
-                    "parts": multi["parts"],
-                    "all_parts_passed": multi["all_passed"],
-                    "quality_score": multi["quality_score"],
-                }
-
-    # Memory behaviors
-    domains_hit = result.get("domains_hit", [])
-    quality = result.get("quality_score", 0.0)
-    tone = result.get("tone", "insightful")
-
-    mem_result = guvna.memory.process_turn(
-        stimulus=stimulus,
-        domains_hit=domains_hit,
-        quality=quality,
-        tone=tone,
-        topics=session.get("topics", []),
-    )
-
-    # Christening → explicit, future-safe name updates only
-    if mem_result.get("christening"):
-        result["christening"] = mem_result["christening"]
-        update_name(
-            session,
-            mem_result["christening"].get("nickname"),
-            christened=True,
-        )
-
-    # Topic tracking
-    if mem_result.get("moment"):
-        moment = mem_result["moment"]
-        tag = getattr(moment, "tag", None)
-        record_topics(session, domains_hit, tag)
-
-    # Resolve display_name: trust whatever is on the session (or DEFAULT_NAME).
-    display_name = session.get("display_name") or session.get("name") or DEFAULT_NAME
-    result.setdefault("display_name", display_name)
-
-    # Bump turn_count, snapshot, save
-    session["turn_count"] = int(session.get("turn_count", 0) or 0) + 1
-    snapshot_guvna_state(guvna, session)
-    snapshot_talk_memory(talk_memory, session)
-    save_session(session)
+    envelope = {
+        "result": f"Pleasure to meet you, {_greet_as}! What's on your mind? 🧠",
+        "status": "GREETING",
+        "display_name": _greet_as,
+        "quality_score": 1.0,
+        "priorities_met": 1,
+    }
 
     if req.chef_mode:
-        return result
+        return envelope
 
-    return build_plate(result)
+    return build_plate(envelope)
 
 
 @app.post("/v1/rilie-upload")
@@ -1162,7 +1036,6 @@ async def run_rilie_upload(
     else:
         combined = stimulus
 
-    # run_rilie is sync — run_in_threadpool is correct here
     from starlette.concurrency import run_in_threadpool
 
     req_obj = RilieRequest(stimulus=combined, max_pass=max_pass, chef_mode=False)
