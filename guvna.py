@@ -937,6 +937,8 @@ class Guvna(GuvnaSelf):
         is_entity_question = not any(p in stimulus_lower for p in known_patterns)
         should_force_google = is_entity_question or len(stimulus) < 30
         try:
+            logger.info("GUVNA: search_fn=%s BRAVE_KEY=%s",
+                bool(self.search_fn), bool(__import__('os').getenv("BRAVE_API_KEY")))
             if self.search_fn:
                 # Compress long conversational queries to clean search terms
                 # "I wanted to talk about NYHC..." → "New York Hardcore NYHC scene"
