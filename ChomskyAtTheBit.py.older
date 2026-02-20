@@ -118,10 +118,6 @@ def resolve_identity(stimulus: str) -> Dict[str, Any]:
             # Reject if it's a single bad token
             if len(words) == 1 and words[0].lower() in _BAD_NAME_TOKENS:
                 candidate = None
-            # Guard: if pattern is "i'm", only accept first word (strict)
-            # This prevents pulling multi-word fallbacks or continuations
-            if "i'm" in pat.lower() and candidate and len(words) > 1:
-                candidate = words[0]  # Take only first word after "i'm"
             if candidate and len(candidate) >= 2:
                 customer_name = candidate.title()
                 break
