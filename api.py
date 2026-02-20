@@ -1,5 +1,5 @@
 """
-api.py — RILIE API v0.9.0 + Chomsky name tap (Fixed & Merged)
+api.py â€” RILIE API v0.9.0 + Chomsky name tap (Fixed & Merged)
 
 Session persistence wired in. She remembers who you are between visits.
 
@@ -60,7 +60,7 @@ from session import (
 
 from talk import talk, TalkMemory
 
-# ✅ MEANING INTEGRATION — For logging and API responses
+# âœ… MEANING INTEGRATION â€” For logging and API responses
 # from guvna.meaning import MeaningFingerprint
 
 # Chomsky integration for name extraction, identity resolution, NER
@@ -143,13 +143,13 @@ def load_roux() -> Dict[str, Dict[str, Any]]:
 GENERATED_DIR.mkdir(exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Library index (Catch‑44 domain engines)
+# Library index (Catchâ€‘44 domain engines)
 # ---------------------------------------------------------------------------
 
 
 def build_library_index() -> LibraryIndex:
     """
-    One-time study pass for RILIE. Import each Catch‑44 domain module.
+    One-time study pass for RILIE. Import each Catchâ€‘44 domain module.
     """
     import importlib
     import importlib.util
@@ -281,7 +281,7 @@ def build_library_index() -> LibraryIndex:
     )
 
     # ... keep all other safe_import calls from your original v0.9.0 here ...
-    # SOi sauce, SOiOS, networktheory, bigbang, etc. – unchanged.
+    # SOi sauce, SOiOS, networktheory, bigbang, etc. â€“ unchanged.
 
     logger.info("Library index complete (%d domain engines loaded)", len(index))
     return index
@@ -462,7 +462,7 @@ curiosity_engine = CuriosityEngine(
 talk_memory = TalkMemory()
 
 logger.info(
-    "RILIE API v0.9.0 booted — Roux %d tracks, Library %d engines, "
+    "RILIE API v0.9.0 booted â€” Roux %d tracks, Library %d engines, "
     "Brave %s, Vision %s, Manifesto %s, Sessions ON",
     len(roux_seeds),
     len(library_index),
@@ -658,12 +658,12 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
     return plate
 
 # ---------------------------------------------------------------------------
-# Name extraction — one function, one regex, one job
+# Name extraction â€” one function, one regex, one job
 # ---------------------------------------------------------------------------
 
 def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
-    Extract customer name — ONLY from intro stimuli.
+    Extract customer name â€” ONLY from intro stimuli.
     Regex captures full name after any intro phrase, through trailing noise.
     NER fallback for natural intros without a pattern.
     """
@@ -881,13 +881,13 @@ def hello(req: HelloRequest) -> Dict[str, str]:
 @app.post("/v1/rilie")
 def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
-    Main RILIE endpoint — SESSION-AWARE:
+    Main RILIE endpoint â€” SESSION-AWARE:
 
     1. Load session from Postgres by IP
     2. Restore Guvna + TalkMemory state
     3. Process stimulus (with multi-question support)
     4. Run conversation memory behaviors (incl. Christening)
-    5. Resolve display_name via NER → heuristics → Chomsky (with bad-name guard)
+    5. Resolve display_name via NER â†’ heuristics â†’ Chomsky (with bad-name guard)
     6. Handle first-turn greeting with intro loop exit safeguard
     7. Snapshot state back to session
     8. Save session to Postgres
@@ -923,13 +923,13 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
                     _name = _candidate
         _greet_as = _name if _name else "mate"
 
-        # ✅ THE FIX: Only save if we got a real name. Never lock in "mate".
+        # âœ… THE FIX: Only save if we got a real name. Never lock in "mate".
         if _name:
             session["display_name"] = _greet_as
             save_session(session)
 
         return build_plate({
-            "result": "Pleasure to meet you, {}! What's on your mind? 🍳".format(_greet_as),
+            "result": "Pleasure to meet you, {}! What's on your mind? ðŸ³".format(_greet_as),
             "status": "GREETING",
             "display_name": _greet_as,
             "quality_score": 1.0,
@@ -975,7 +975,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             "quality_score": multi["quality_score"],
         }
     else:
-        # Resolve "when you said X…" references against prior RILIE answers
+        # Resolve "when you said Xâ€¦" references against prior RILIE answers
         reference_ctx = resolve_reference(session, stimulus)
         # Core Guvna call with optional reference context
         result = guvna.process(stimulus, maxpass=req.max_pass, reference_context=reference_ctx)
@@ -1011,7 +1011,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         topics=session.get("topics", []),
     )
 
-    # Christening → updates display_name via update_name
+    # Christening â†’ updates display_name via update_name
     if mem_result.get("christening"):
         result["christening"] = mem_result["christening"]
         update_name(
@@ -1026,14 +1026,14 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         tag = getattr(moment, "tag", None)
         record_topics(session, domains_hit, tag)
 
-    # Resolve display_name: session → NER/heuristics/Chomsky → bare-name → DEFAULT_NAME
+    # Resolve display_name: session â†’ NER/heuristics/Chomsky â†’ bare-name â†’ DEFAULT_NAME
     display_name = session.get("display_name") or session.get("name")
 
     if not display_name:
         display_name = _extract_name_with_chomsky(stimulus)
 
     # Bare-name fallback: "Ohad" or "Ohad Oren" on first turn
-    # Chomsky requires an intro phrase — this catches bare names without one
+    # Chomsky requires an intro phrase â€” this catches bare names without one
     if not display_name and is_first_turn:
         words = stimulus.strip().strip('.,!?;:').split()
         if 1 <= len(words) <= 2 and "?" not in stimulus:
@@ -1045,10 +1045,10 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session["display_name"] = display_name
     result.setdefault("display_name", display_name)
 
-    # Greeting on first turn — name intro only, kitchen handles everything else
+    # Greeting on first turn â€” name intro only, kitchen handles everything else
     if is_first_turn:
         if display_name != DEFAULT_NAME:
-            result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? 🍳"
+            result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? ðŸ³"
             result["status"] = "GREETING"
 
     # Snapshot state + save session
@@ -1139,7 +1139,7 @@ async def run_rilie_upload(
     else:
         combined = stimulus
 
-    # run_rilie is sync — run_in_threadpool is correct here
+    # run_rilie is sync â€” run_in_threadpool is correct here
     from starlette.concurrency import run_in_threadpool
     req = RilieRequest(stimulus=combined, max_pass=max_pass, chef_mode=False)
     return await run_in_threadpool(run_rilie, req, request)
