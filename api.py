@@ -911,19 +911,18 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session = load_session(client_ip)
 
     # ------------------------------------------------------------------
-    # BASIC. Is there a name? Say it. If not: mate.
+    # BASIC. No display_name = greet. That's it. No dependencies.
     # ------------------------------------------------------------------
-    _name = _extract_name_with_chomsky(stimulus)
-    if not _name:
-        _words = stimulus.strip().strip(".,!?;:'").split()
-        if 1 <= len(_words) <= 3 and "?" not in stimulus:
-            _candidate = _words[0].capitalize()
-            if _candidate.lower() not in _BAD_NAMES and len(_candidate) >= 2:
-                _name = _candidate
-    _greet_as = _name if _name else "mate"
-    if not session.get("greeted"):
+    if not session.get("display_name"):
+        _name = _extract_name_with_chomsky(stimulus)
+        if not _name:
+            _words = stimulus.strip().strip(".,!?;:'").split()
+            if 1 <= len(_words) <= 3 and "?" not in stimulus:
+                _candidate = _words[0].capitalize()
+                if _candidate.lower() not in _BAD_NAMES and len(_candidate) >= 2:
+                    _name = _candidate
+        _greet_as = _name if _name else "mate"
         session["display_name"] = _greet_as
-        session["greeted"] = True
         save_session(session)
         return build_plate({
             "result": "Pleasure to meet you, {}! What's on your mind? 🍳".format(_greet_as),
