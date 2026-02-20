@@ -658,47 +658,54 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
     return plate
 
 # ---------------------------------------------------------------------------
-# Name extraction — one function, one regex, one job
+# Name extraction — one shot, everything we have
 # ---------------------------------------------------------------------------
 
 def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
-    Extract customer name — ONLY from intro stimuli.
-    Regex captures full name after any intro phrase, through trailing noise.
-    NER fallback for natural intros without a pattern.
+    One shot. Try everything. Return name or None.
+    Pass 1 — Regex: all common intro patterns including i'm and i am.
+    Pass 2 — spaCy NER PERSON entity.
+    Pass 3 — Bare name: 1-3 words, no question mark, not a bad name.
     """
     s = (stimulus or "").strip()
-    INTRO_SIGNALS = ["my name is", "i am called", "i'm called", "call me",
-                     "introduce myself", "they call me"]
-    if not any(sig in s.lower() for sig in INTRO_SIGNALS):
+    if not s:
         return None
 
-    # Regex: capture everything after intro phrase until punctuation or known noise
+    # Pass 1 — Regex
     m = re.search(
-        r"(?:my name is|i am called|i'm called|call me|i am|i'm|"
-        r"they call me|introduce myself(?: as)?)\s+"
+        r"(?:my name is|i am called|i'm called|call me|they call me"
+        r"|i am|i'm|introduce myself(?:\s+as)?)\s+"
         r"([A-Za-z][A-Za-z\s'\-]{1,50}?)"
-        r"(?:\s*[.,!?]|\s+[Aa] |\s*$)",
+        r"(?:\s*[.,!?]|\s+[Aa]\s|\s*$)",
         s, re.IGNORECASE
     )
     if m:
-        name = m.group(1).strip()
-        if name and name.lower() not in _BAD_NAMES and len(name) >= 2:
-            return name.title()
+        name = m.group(1).strip().split()[0].capitalize()
+        if name.lower() not in _BAD_NAMES and len(name) >= 2:
+            return name
 
-    # NER fallback
+    # Pass 2 — spaCy NER
     try:
         nlp = _get_nlp()
         doc = nlp(s)
         persons = [e.text.strip() for e in doc.ents if e.label_ == "PERSON"]
         if persons:
-            best = max(persons, key=len)
+            best = max(persons, key=len).split()[0].capitalize()
             if best.lower() not in _BAD_NAMES and len(best) >= 2:
                 return best
     except Exception:
         pass
 
+    # Pass 3 — Bare name fallback
+    words = s.strip().strip(".,!?;:'").split()
+    if 1 <= len(words) <= 3 and "?" not in s:
+        candidate = words[-1].capitalize()
+        if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
+            return candidate
+
     return None
+
 
 
 
