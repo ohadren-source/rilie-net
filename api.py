@@ -54,7 +54,6 @@ from session import (
     DEFAULT_NAME,
     logger,
     update_name,
-    resolve_reference,
 )
 
 from talk import talk, TalkMemory
@@ -318,8 +317,8 @@ async def brave_web_search(query: str, num_results: int = 5) -> List[Dict[str, s
         "count": max(1, min(num_results, 10)),
     }
 
-    with httpx.Client(timeout=10) as client:
-        resp = client.get(BRAVE_SEARCH_URL, headers=headers, params=params)
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get(BRAVE_SEARCH_URL, headers=headers, params=params)
         resp.raise_for_status()
         data = resp.json()
 
@@ -673,6 +672,38 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+_BAD_NAMES = {
+    "introduce",
+    "called",
+    "myself",
+    "allow",
+    "please",
+    "i",
+    "hi",
+    "hello",
+    "hey",
+    "sup",
+    "yo",
+    "ok",
+    "okay",
+    "no",
+    "yes",
+    "yeah",
+    "nah",
+    "nothing",
+    "idk",
+    "skip",
+    "nope",
+    "what",
+    "who",
+    "why",
+    "how",
+    "huh",
+    "lol",
+    "haha",
+}
+
+
 def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
     Extract customer name — ONLY from intro stimuli.
@@ -720,6 +751,15 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
         pass
 
     return None
+
+
+def _sanitize_display_name(name: Optional[str]) -> Optional[str]:
+    """Return None if name is a known bad parse or too short."""
+    if not name:
+        return None
+    if name.lower() in _BAD_NAMES or len(name) < 2:
+        return None
+    return name
 
 
 # ---------------------------------------------------------------------------
@@ -838,51 +878,6 @@ def process_multi_question_parts(
 
 
 # ---------------------------------------------------------------------------
-# Bad-name safeguard
-# ---------------------------------------------------------------------------
-
-_BAD_NAMES = {
-    "introduce",
-    "called",
-    "myself",
-    "allow",
-    "please",
-    "i",
-    "hi",
-    "hello",
-    "hey",
-    "sup",
-    "yo",
-    "ok",
-    "okay",
-    "no",
-    "yes",
-    "yeah",
-    "nah",
-    "nothing",
-    "idk",
-    "skip",
-    "nope",
-    "what",
-    "who",
-    "why",
-    "how",
-    "huh",
-    "lol",
-    "haha",
-}
-
-
-def _sanitize_display_name(name: Optional[str]) -> Optional[str]:
-    """Return None if name is a known bad parse or too short."""
-    if not name:
-        return None
-    if name.lower() in _BAD_NAMES or len(name) < 2:
-        return None
-    return name
-
-
-# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -924,50 +919,133 @@ def hello(req: HelloRequest) -> Dict[str, str]:
     return {"name": name or "mate"}
 
 
-def greet_once(stimulus: str) -> Dict[str, Any]:
-    """
-    BASIC:
-    1) process name
-    2) say name or mate
-    3) move on
-    """
-    stimulus = (stimulus or "").strip()
-
-    # 1) process name
-    name = _extract_name_with_chomsky(stimulus)
-    if not name:
-        words = stimulus.strip().strip(".,!?;:'").split()
-        if 1 <= len(words) <= 3 and "?" not in stimulus:
-            candidate = words[0].capitalize()
-            if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
-                name = candidate
-
-    # 2) say name or mate
-    greet_as = name if name else "mate"
-
-    # 3) move on (no state, no memory)
-    return {
-        "result": f"Pleasure to meet you, {greet_as}! What's on your mind? 🧠",
-        "status": "GREETING",
-        "display_name": greet_as,
-        "quality_score": 1.0,
-        "priorities_met": 1,
-    }
-
-
 @app.post("/v1/rilie")
 def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
-    Stateless greeting endpoint:
-    - No sessions
-    - No turn counting
-    - No Guvna
-    - Every call: BASIC greet_once(stimulus)
+    Main RILIE endpoint — BASIC greeting once per session, then move on.
     """
-    envelope = greet_once(req.stimulus)
+    stimulus = (req.stimulus or "").strip()
+    if not stimulus:
+        return {
+            "stimulus": "",
+            "result": "Drop something in. A question, a thought, a vibe. Then hit Go.",
+            "quality_score": 0.0,
+            "priorities_met": 0,
+            "anti_beige_score": 0.0,
+            "status": "EMPTY",
+            "depth": 0,
+            "pass": 0,
+            "display_name": None,
+        }
+
+    client_ip = get_client_ip(request)
+    session = load_session(client_ip)
+
+    # ---------------------------------------------------------------
+    # BASIC. No display_name = greet once, then never again.
+    # ---------------------------------------------------------------
+    if not session.get("display_name"):
+        name = _extract_name_with_chomsky(stimulus)
+        if not name:
+            words = stimulus.strip().strip(".,!?;:'").split()
+            if 1 <= len(words) <= 3 and "?" not in stimulus:
+                candidate = words[0].capitalize()
+                if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
+                    name = candidate
+
+        greet_as = name if name else "mate"
+
+        if name:
+            session["display_name"] = greet_as
+            save_session(session)
+
+        envelope = {
+            "result": f"Pleasure to meet you, {greet_as}! What's on your mind? 🧠",
+            "status": "GREETING",
+            "display_name": greet_as,
+            "quality_score": 1.0,
+            "priorities_met": 1,
+        }
+
+        if req.chef_mode:
+            return envelope
+
+        return build_plate(envelope)
+
+    # ---------------------------------------------------------------
+    # Already greeted: run full Guvna pipeline, no more BASIC.
+    # ---------------------------------------------------------------
+    restore_guvna_state(guvna, session)
+    restore_talk_memory(talk_memory, session)
+
+    def _detect_multi_question(s: str):
+        """Split stimulus into parts if user explicitly requested numbered answers."""
+        import re
+
+        if not re.search(
+            r"\b(1\.|2\.|3\.|question|each|order|following)\b", s, re.IGNORECASE
+        ):
+            return None
+
+        parts = re.split(r"(?<=[?!])\s+(?=[A-Z])|(?=\b[1-9]\.\s)", s)
+        parts = [p.strip() for p in parts if p.strip() and len(p.strip()) > 8]
+        return parts if len(parts) > 1 else None
+
+    pre_parts = _detect_multi_question(stimulus)
+    if pre_parts:
+        logger.info("PRE-SPLIT multi-question: %d parts", len(pre_parts))
+        multi = process_multi_question_parts(
+            pre_parts, guvna_instance=guvna, max_pass=req.max_pass, session=session
+        )
+        result: Dict[str, Any] = {
+            "result": multi["combined_result"],
+            "status": "MULTI_QUESTION_PROCESSED",
+            "is_multi_question": True,
+            "part_count": multi["part_count"],
+            "parts": multi["parts"],
+            "all_parts_passed": multi["all_passed"],
+            "quality_score": multi["quality_score"],
+        }
+    else:
+        result = guvna.process(stimulus, maxpass=req.max_pass)
+
+    # Optional: memory behaviors / christening
+    domains_hit = result.get("domains_hit", [])
+    quality = result.get("quality_score", 0.0)
+    tone = result.get("tone", "insightful")
+
+    mem_result = guvna.memory.process_turn(
+        stimulus=stimulus,
+        domains_hit=domains_hit,
+        quality=quality,
+        tone=tone,
+        topics=session.get("topics", []),
+    )
+
+    if mem_result.get("christening"):
+        result["christening"] = mem_result["christening"]
+        update_name(
+            session,
+            mem_result["christening"].get("nickname"),
+            christened=True,
+        )
+
+    if mem_result.get("moment"):
+        moment = mem_result["moment"]
+        tag = getattr(moment, "tag", None)
+        record_topics(session, domains_hit, tag)
+
+    display_name = session.get("display_name") or DEFAULT_NAME
+    result.setdefault("display_name", display_name)
+
+    snapshot_guvna_state(guvna, session)
+    snapshot_talk_memory(talk_memory, session)
+    save_session(session)
+
     if req.chef_mode:
-        return envelope
-    return build_plate(envelope)
+        return result
+
+    return build_plate(result)
 
 
 @app.post("/v1/rilie-upload")
