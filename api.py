@@ -658,54 +658,47 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
     return plate
 
 # ---------------------------------------------------------------------------
-# Name extraction — one shot, everything we have
+# Name extraction — one function, one regex, one job
 # ---------------------------------------------------------------------------
 
 def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
-    One shot. Try everything. Return name or None.
-    Pass 1 — Regex: all common intro patterns including i'm and i am.
-    Pass 2 — spaCy NER PERSON entity.
-    Pass 3 — Bare name: 1-3 words, no question mark, not a bad name.
+    Extract customer name — ONLY from intro stimuli.
+    Regex captures full name after any intro phrase, through trailing noise.
+    NER fallback for natural intros without a pattern.
     """
     s = (stimulus or "").strip()
-    if not s:
+    INTRO_SIGNALS = ["my name is", "i am called", "i'm called", "call me",
+                     "introduce myself", "they call me"]
+    if not any(sig in s.lower() for sig in INTRO_SIGNALS):
         return None
 
-    # Pass 1 — Regex
+    # Regex: capture everything after intro phrase until punctuation or known noise
     m = re.search(
-        r"(?:my name is|i am called|i'm called|call me|they call me"
-        r"|i am|i'm|introduce myself(?:\s+as)?)\s+"
+        r"(?:my name is|i am called|i'm called|call me|i am|i'm|"
+        r"they call me|introduce myself(?: as)?)\s+"
         r"([A-Za-z][A-Za-z\s'\-]{1,50}?)"
-        r"(?:\s*[.,!?]|\s+[Aa]\s|\s*$)",
+        r"(?:\s*[.,!?]|\s+[Aa] |\s*$)",
         s, re.IGNORECASE
     )
     if m:
-        name = m.group(1).strip().split()[0].capitalize()
-        if name.lower() not in _BAD_NAMES and len(name) >= 2:
-            return name
+        name = m.group(1).strip()
+        if name and name.lower() not in _BAD_NAMES and len(name) >= 2:
+            return name.title()
 
-    # Pass 2 — spaCy NER
+    # NER fallback
     try:
         nlp = _get_nlp()
         doc = nlp(s)
         persons = [e.text.strip() for e in doc.ents if e.label_ == "PERSON"]
         if persons:
-            best = max(persons, key=len).split()[0].capitalize()
+            best = max(persons, key=len)
             if best.lower() not in _BAD_NAMES and len(best) >= 2:
                 return best
     except Exception:
         pass
 
-    # Pass 3 — Bare name fallback
-    words = s.strip().strip(".,!?;:'").split()
-    if 1 <= len(words) <= 3 and "?" not in s:
-        candidate = words[-1].capitalize()
-        if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
-            return candidate
-
     return None
-
 
 
 
@@ -1030,29 +1023,15 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         record_topics(session, domains_hit, tag)
 
     # Resolve display_name: session → NER/heuristics/Chomsky → bare-name → DEFAULT_NAME
-    display_name = session.get("display_name") or session.get("name")
+    # IF name exists → do nothing. GET OUT. MOVE.
+    # IF no name → one shot → success=name, fail=mate. SAVE. GET OUT. MOVE.
+    if not session.get("display_name"):
+        _name = _extract_name_with_chomsky(stimulus)
+        session["display_name"] = _name if _name else "mate"
+        save_session(session)
 
-    if not display_name:
-        display_name = _extract_name_with_chomsky(stimulus)
-
-    # Bare-name fallback: "Ohad" or "Ohad Oren" on first turn
-    # Chomsky requires an intro phrase — this catches bare names without one
-    if not display_name and is_first_turn:
-        words = stimulus.strip().strip('.,!?;:').split()
-        if 1 <= len(words) <= 2 and "?" not in stimulus:
-            candidate = words[0].capitalize()
-            if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
-                display_name = candidate
-
-    display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
-    session["display_name"] = display_name
+    display_name = session["display_name"]
     result.setdefault("display_name", display_name)
-
-    # Greeting on first turn — name intro only, kitchen handles everything else
-    if is_first_turn:
-        if display_name != DEFAULT_NAME:
-            result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? 🍳"
-            result["status"] = "GREETING"
 
     # Snapshot state + save session
     snapshot_guvna_state(guvna, session)
