@@ -53,7 +53,10 @@ _CUSTOMER_PRONOUNS = {"i", "me", "my", "mine", "myself"}
 
 # Phrases that are name-introduction patterns — used to extract customer name
 _NAME_INTRO_PATTERNS = [
-    r"(?:my name is|i am called|i'm called|call me|i am|i'm|they call me|introduce myself(?: as)?)\s+([A-Za-z][A-Za-z\s'\-]{1,40}?)(?:\s*[.,!?]|\.?\s*[Aa] man|\s*$)",
+    # STRICT: i am / i'm patterns — capture ONLY first word (no spaces)
+    r"(?:i am|i'm)\s+([A-Za-z][A-Za-z'\-]*?)(?:\s|[.,!?]|$)",
+    # LOOSE: explicit name intro patterns — allow multi-word names
+    r"(?:my name is|i am called|i'm called|call me|they call me|introduce myself(?: as)?)\s+([A-Za-z][A-Za-z\s'\-]{1,40}?)(?:\s*[.,!?]|\.?\s*[Aa] man|\s*$)",
 ]
 
 # Bad parse guard — words that are verbs/function words, not names
@@ -118,15 +121,6 @@ def resolve_identity(stimulus: str) -> Dict[str, Any]:
             # Reject if it's a single bad token
             if len(words) == 1 and words[0].lower() in _BAD_NAME_TOKENS:
                 candidate = None
-            # Guard: for "i'm" patterns specifically, be strict — only first word if multiple captured
-            # This prevents "i'm ohad by my friends" from becoming "Ohad By My Friends"
-            elif "i'm" in pat.lower() and candidate and len(words) > 1:
-                # Take only the first word, but validate it's not a bad token
-                first_word = words[0]
-                if first_word.lower() not in _BAD_NAME_TOKENS and len(first_word) >= 2:
-                    candidate = first_word
-                else:
-                    candidate = None
             if candidate and len(candidate) >= 2:
                 customer_name = candidate.title()
                 break
