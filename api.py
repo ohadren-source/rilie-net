@@ -85,7 +85,6 @@ def load_env_file(path: Path) -> None:
     """
     if not path.exists():
         return
-
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -671,7 +670,6 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
 # Name extraction — one function, one regex, one job
 # ---------------------------------------------------------------------------
 
-
 _BAD_NAMES = {
     "introduce",
     "called",
@@ -707,7 +705,6 @@ _BAD_NAMES = {
 def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
     Extract customer name — ONLY from intro stimuli.
-
     Regex captures full name after any intro phrase, through trailing noise.
     NER fallback for natural intros without a pattern.
     """
@@ -1007,9 +1004,28 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             "quality_score": multi["quality_score"],
         }
     else:
+        # Core Guvna call
         result = guvna.process(stimulus, maxpass=req.max_pass)
 
-    # Optional: memory behaviors / christening
+    # Multi-question handling if Guvna itself returns split
+    if is_multi_question_response(result):
+        logger.info("MULTI-QUESTION detected %s...", stimulus[:120])
+        parts = extract_question_parts(result)
+        if parts:
+            multi = process_multi_question_parts(
+                parts, guvna_instance=guvna, max_pass=req.max_pass, session=session
+            )
+            result = {
+                "result": multi["combined_result"],
+                "status": "MULTI_QUESTION_PROCESSED",
+                "is_multi_question": True,
+                "part_count": multi["part_count"],
+                "parts": multi["parts"],
+                "all_parts_passed": multi["all_passed"],
+                "quality_score": multi["quality_score"],
+            }
+
+    # Memory behaviors / christening
     domains_hit = result.get("domains_hit", [])
     quality = result.get("quality_score", 0.0)
     tone = result.get("tone", "insightful")
