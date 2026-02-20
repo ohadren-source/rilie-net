@@ -24,6 +24,7 @@ Migration V006 in the BANKS family.
 import json
 import logging
 import re
+from collections import deque
 from typing import Dict, Any, Optional, List, Tuple
 
 from banks import get_db_conn
@@ -443,7 +444,7 @@ def restore_guvna_state(guvna, session: Dict[str, Any]) -> None:
     guvna.user_name = session.get("user_name", DEFAULT_NAME)
     guvna.whosonfirst = session.get("whosonfirst", True)
     guvna._awaiting_name = session.get("awaiting_name", False)
-    guvna._response_history = list(session.get("response_history", []))
+    guvna._response_history = deque(session.get("response_history", []), maxlen=20)
 
     social = session.get("social_state", {})
     if social:

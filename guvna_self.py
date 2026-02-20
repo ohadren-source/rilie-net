@@ -115,6 +115,21 @@ class GuvnaSelf:
                         known_name = name.capitalize()
                         break
 
+            # Fallback: if stimulus is 1-2 words, no question mark, no verb
+            # treat it as a bare name ("Ohad", "Ohad Oren")
+            if not known_name:
+                words = stimulus.strip().strip(".,!?;:'\"").split()
+                _bad_names = {
+                    "yes", "no", "ok", "okay", "sure", "hey", "hi", "hello",
+                    "thanks", "nah", "idk", "what", "huh", "nothing", "nevermind",
+                    "good", "fine", "great", "cool", "nice", "well", "help",
+                    "start", "begin", "go", "ready",
+                }
+                if (1 <= len(words) <= 2
+                        and "?" not in stimulus
+                        and words[0].lower() not in _bad_names):
+                    known_name = words[0].capitalize()
+
         if known_name:
             self.user_name = known_name
 
