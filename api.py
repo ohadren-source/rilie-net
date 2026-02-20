@@ -288,7 +288,6 @@ def build_library_index() -> LibraryIndex:
     )
 
     # ... keep all other safe_import calls from your original v0.9.0 here ...
-    # SOi sauce, SOiOS, networktheory, bigbang, etc. – unchanged.
 
     logger.info("Library index complete (%d domain engines loaded)", len(index))
     return index
@@ -928,18 +927,9 @@ def hello(req: HelloRequest) -> Dict[str, str]:
 @app.post("/v1/rilie")
 def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
-    Main RILIE endpoint — SESSION-AWARE:
-
-    1. Load session from Postgres by IP
-    2. Restore Guvna + TalkMemory state
-    3. Process stimulus (with multi-question support)
-    4. Run conversation memory behaviors (incl. Christening)
-    5. Resolve display_name via BASIC greeting (one shot)
-    6. Snapshot state back to session
-    7. Save session to Postgres
-    8. Return plate
+    Main RILIE endpoint — SESSION-AWARE, with a single greeting pass.
     """
-    stimulus = req.stimulus.strip()
+    stimulus = (req.stimulus or "").strip()
     if not stimulus:
         return {
             "stimulus": "",
@@ -957,9 +947,11 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session = load_session(client_ip)
 
     # ------------------------------------------------------------------
-    # BASIC. No display_name = greet. That's it. No dependencies.
+    # BASIC: First-ever turn only, one shot, then NEVER again.
     # ------------------------------------------------------------------
-    if not session.get("display_name"):
+    turn_count = int(session.get("turn_count", 0) or 0)
+    if turn_count == 0:
+        # Try to get a real name once
         _name = _extract_name_with_chomsky(stimulus)
 
         if not _name:
@@ -971,16 +963,16 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
         _greet_as = _name if _name else "mate"
 
-        # ✅ THE FIX: Only save if we got a real name. Never lock in "mate".
+        # Only lock in a real name; "mate" is never stored
         if _name:
             session["display_name"] = _greet_as
-            save_session(session)
+
+        session["turn_count"] = 1
+        save_session(session)
 
         return build_plate(
             {
-                "result": "Pleasure to meet you, {}! What's on your mind? 🧠".format(
-                    _greet_as
-                ),
+                "result": f"Pleasure to meet you, {_greet_as}! What's on your mind? 🧠",
                 "status": "GREETING",
                 "display_name": _greet_as,
                 "quality_score": 1.0,
@@ -988,38 +980,27 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             }
         )
 
-    # Restore state
+    # ------------------------------------------------------------------
+    # Past first turn: NO MORE GREETINGS, NO MORE NAME GUESSING.
+    # ------------------------------------------------------------------
+
     restore_guvna_state(guvna, session)
     restore_talk_memory(talk_memory, session)
 
-    # Capture is_first_turn (for any other logic that might care)
-    is_first_turn = session.get("turn_count", 0) == 0  # noqa: F841 (kept for future)
-
-    # Pre-split: detect multiple questions BEFORE guvna
-    def _detect_multi_question(s: str):
-        """Split stimulus into parts if user explicitly requested numbered answers."""
+    # Detect user multi-question requests before Guvna
+    def _detect_multi_question(s: str) -> Optional[List[str]]:
         import re as _re
 
-        # Only trigger if they asked for numbered format explicitly
         if not _re.search(
             r"\b(1\.|2\.|3\.|question|each|order|following)\b", s, _re.IGNORECASE
         ):
             return None
 
-        # Split on question marks, numbered patterns, or explicit question boundaries
-        parts_local = _re.split(
+        parts = _re.split(
             r"(?<=[?!])\s+(?=[A-Z])|(?=\b[1-9]\.\s)", s
         )
-
-        # Clean and filter
-        parts_local = [
-            p.strip() for p in parts_local if p.strip() and len(p.strip()) > 8
-        ]
-
-        # Only split if we found more than 1 real question
-        if len(parts_local) > 1:
-            return parts_local
-        return None
+        parts = [p.strip() for p in parts if p.strip() and len(p.strip()) > 8]
+        return parts if len(parts) > 1 else None
 
     pre_parts = _detect_multi_question(stimulus)
     if pre_parts:
@@ -1037,21 +1018,20 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             "quality_score": multi["quality_score"],
         }
     else:
-        # Resolve "when you said X…" references against prior RILIE answers
         reference_ctx = resolve_reference(session, stimulus)
-
-        # Core Guvna call with optional reference context
         result = guvna.process(
             stimulus, maxpass=req.max_pass, reference_context=reference_ctx
         )
 
-        # Multi-question handling
         if is_multi_question_response(result):
             logger.info("MULTIQUESTION detected: %s...", stimulus[:120])
             parts = extract_question_parts(result)
             if parts:
                 multi = process_multi_question_parts(
-                    parts, guvna_instance=guvna, max_pass=req.max_pass, session=session
+                    parts,
+                    guvna_instance=guvna,
+                    max_pass=req.max_pass,
+                    session=session,
                 )
                 result = {
                     "result": multi["combined_result"],
@@ -1085,17 +1065,18 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             christened=True,
         )
 
-    # Topic tracking (Moment is an object, not a dict)
+    # Topic tracking
     if mem_result.get("moment"):
         moment = mem_result["moment"]
         tag = getattr(moment, "tag", None)
         record_topics(session, domains_hit, tag)
 
-    # Resolve display_name: trust BASIC greeting. No midstream renames.
+    # Resolve display_name: trust whatever is on the session (or DEFAULT_NAME).
     display_name = session.get("display_name") or session.get("name") or DEFAULT_NAME
     result.setdefault("display_name", display_name)
 
-    # Snapshot state + save session
+    # Bump turn_count, snapshot, save
+    session["turn_count"] = int(session.get("turn_count", 0) or 0) + 1
     snapshot_guvna_state(guvna, session)
     snapshot_talk_memory(talk_memory, session)
     save_session(session)
