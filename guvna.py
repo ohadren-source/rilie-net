@@ -581,7 +581,7 @@ class Guvna(GuvnaSelf):
             ]
         )
 
-        )
+        
         if has_question:
             return None
 
