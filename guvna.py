@@ -577,9 +577,10 @@ class Guvna(GuvnaSelf):
         has_question = "?" in s or any(
             sl.startswith(p) for p in [
                 "what", "why", "how", "when", "where", "who",
-                "can ", "do ", "does ", "is ", "are ", "tell me",
-                "explain", "describe",
+                "can ", "do ", "does ", "is ", "are ",
             ]
+        )
+
         )
         if has_question:
             return None
