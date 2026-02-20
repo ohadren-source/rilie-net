@@ -924,40 +924,49 @@ def hello(req: HelloRequest) -> Dict[str, str]:
     return {"name": name or "mate"}
 
 
-@app.post("/v1/rilie")
-def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
+def greet_once(stimulus: str) -> Dict[str, Any]:
     """
-    Ultra-simple mode:
-    - No sessions
-    - No turn counting
-    - No Guvna
-    - Every call: greet once and return.
+    BASIC:
+    1) process name
+    2) say name or mate
+    3) move on
     """
-    stimulus = (req.stimulus or "").strip()
+    stimulus = (stimulus or "").strip()
 
-    # Try to pull a name from whatever they typed
-    _name = _extract_name_with_chomsky(stimulus)
+    # 1) process name
+    name = _extract_name_with_chomsky(stimulus)
+    if not name:
+        words = stimulus.strip().strip(".,!?;:'").split()
+        if 1 <= len(words) <= 3 and "?" not in stimulus:
+            candidate = words[0].capitalize()
+            if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
+                name = candidate
 
-    if not _name:
-        _words = stimulus.strip().strip(".,!?;:'").split()
-        if 1 <= len(_words) <= 3 and "?" not in stimulus:
-            _candidate = _words[0].capitalize()
-            if _candidate.lower() not in _BAD_NAMES and len(_candidate) >= 2:
-                _name = _candidate
+    # 2) say name or mate
+    greet_as = name if name else "mate"
 
-    _greet_as = _name if _name else "mate"
-
-    envelope = {
-        "result": f"Pleasure to meet you, {_greet_as}! What's on your mind? 🧠",
+    # 3) move on (no state, no memory)
+    return {
+        "result": f"Pleasure to meet you, {greet_as}! What's on your mind? 🧠",
         "status": "GREETING",
-        "display_name": _greet_as,
+        "display_name": greet_as,
         "quality_score": 1.0,
         "priorities_met": 1,
     }
 
+
+@app.post("/v1/rilie")
+def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
+    """
+    Stateless greeting endpoint:
+    - No sessions
+    - No turn counting
+    - No Guvna
+    - Every call: BASIC greet_once(stimulus)
+    """
+    envelope = greet_once(req.stimulus)
     if req.chef_mode:
         return envelope
-
     return build_plate(envelope)
 
 
