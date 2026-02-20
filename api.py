@@ -997,11 +997,20 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         tag = getattr(moment, "tag", None)
         record_topics(session, domains_hit, tag)
 
-    # Resolve display_name: session → NER/heuristics/Chomsky → DEFAULT_NAME
+    # Resolve display_name: session → NER/heuristics/Chomsky → bare-name → DEFAULT_NAME
     display_name = session.get("display_name") or session.get("name")
 
     if not display_name:
         display_name = _extract_name_with_chomsky(stimulus)
+
+    # Bare-name fallback: "Ohad" or "Ohad Oren" on first turn
+    # Chomsky requires an intro phrase — this catches bare names without one
+    if not display_name and not session.get("has_spoken"):
+        words = stimulus.strip().strip(".,!?;:'\"").split()
+        if 1 <= len(words) <= 2 and "?" not in stimulus:
+            candidate = words[0].capitalize()
+            if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
+                display_name = candidate
 
     display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
     session["display_name"] = display_name
