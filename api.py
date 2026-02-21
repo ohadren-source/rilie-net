@@ -899,6 +899,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # Once she greets, session["greeting_locked"] = True. She never returns.
     # ---------------------------------------------------------------
     is_first_turn = not req.greeted and not session.get("greeting_locked")
+    logger.info("GATE: greeted=%s locked=%s → first_turn=%s", req.greeted, session.get("greeting_locked"), is_first_turn)
 
     if is_first_turn:
         name = _extract_name_with_chomsky(stimulus)
