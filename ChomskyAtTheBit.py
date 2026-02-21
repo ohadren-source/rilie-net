@@ -54,9 +54,9 @@ _CUSTOMER_PRONOUNS = {"i", "me", "my", "mine", "myself"}
 # Phrases that are name-introduction patterns — used to extract customer name
 _NAME_INTRO_PATTERNS = [
     # STRICT: i am / i'm patterns — capture ONLY first word (no spaces)
-    r"(?:i am|i'm)\s+([A-Za-z][A-Za-z'\-]*?)(?:\s|[.,!?]|$)",
+    r"(?:i am|i'm|im)\s+([A-Za-z][A-Za-z'\-]*?)(?:\s|[.,!?]|$)",
     # LOOSE: explicit name intro patterns — allow multi-word names
-    r"(?:my name is|i am called|i'm called|call me|they call me|introduce myself(?: as)?)\s+([A-Za-z][A-Za-z\s'\-]{1,40}?)(?:\s*[.,!?]|\.?\s*[Aa] man|\s*$)",
+    r"(?:my name is|i am called|i'm called|call me|they call me|introduce myself(?: as)?)\\s+([A-Za-z][A-Za-z\\s'\\-]{1,30}?)(?:\\s*[.,!?]|\\.?\\s*[Aa] man|\\s+(?:sometimes|usually|often|now|please|ok|okay|actually|just|btw|lol|right|though|too|also)|\\s*$)",
 ]
 
 # Bad parse guard — words that are verbs/function words, not names
