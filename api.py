@@ -4,25 +4,17 @@ api.py — RILIE API v0.9.0 + Chomsky name tap (Fixed & Merged)
 Session persistence wired in. She remembers who you are between visits.
 
 Extracts a likely name anchor from stimulus via ChomskyAtTheBit,
-
 and uses it as a canonical `display_name` across the conversation.
 
 Fixes applied:
 
 - Enhanced name extraction with spaCy NER priority for PERSON entities.
-
 - Expanded regex heuristics for common intro patterns ("I am called", etc.).
-
 - Safeguard against bad/verb-based names like "introduce" or "called".
-
 - Added intro_attempts session counter to detect and exit greeting loops.
-
 - Pivot to "What's on your mind?" after 1 failed intro, using fallback name "friend".
-
 - Fixed `global talk_memory` declaration in get_guvna() (was silently staying None).
-
 - Fixed async/sync contradiction: run_rilie is sync; run_rilie_upload uses run_in_threadpool correctly.
-
 - Removed duplicate block that was copy-pasted during block-by-block generation.
 """
 
@@ -676,6 +668,7 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
 
 # ---------------------------------------------------------------------------
 # Name extraction — one function, one regex, one job
+# (kept exactly as in your current version)
 # ---------------------------------------------------------------------------
 
 _BAD_NAMES = {
@@ -735,7 +728,6 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     if not any(sig in s.lower() for sig in INTRO_SIGNALS):
         return None
 
-    # Regex: capture everything after intro phrase until punctuation or known noise
     m = re.search(
         r"(?:my name is|i am called|i'm called|call me|i am|i'm|"
         r"they call me|introduce myself(?: as)?)\s+"
@@ -749,7 +741,6 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
         if name and name.lower() not in _BAD_NAMES and len(name) >= 2:
             return name.title()
 
-    # NER fallback
     try:
         nlp = _get_nlp()
         doc = nlp(s)
@@ -775,6 +766,7 @@ def _sanitize_display_name(name: Optional[str]) -> Optional[str]:
 
 # ---------------------------------------------------------------------------
 # Multi-question helpers
+# (unchanged from your current version)
 # ---------------------------------------------------------------------------
 
 
@@ -958,9 +950,8 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     name_source = session.get("name_source", "default")
 
-    # First turn only if this tab has not greeted AND we have no name yet.
-    # - HTML client: uses greeted flag per tab
-    # - Raw API clients: fall back to session name_source
+    # GUEST MODE: first non-empty request in this tab always goes through BASIC once.
+    # Require both: tab not greeted AND session has no name yet.
     is_first_turn = (not req.greeted) and (name_source == "default")
 
     if is_first_turn:
