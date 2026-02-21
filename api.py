@@ -11,21 +11,13 @@ and uses it as a canonical `display_name` across the conversation.
 Fixes applied:
 
 - Enhanced name extraction with spaCy NER priority for PERSON entities.
-
 - Expanded regex heuristics for common intro patterns ("I am called", etc.).
-
 - Safeguard against bad/verb-based names like "introduce" or "called".
-
 - Added intro_attempts session counter to detect and exit greeting loops.
-
 - Pivot to "What's on your mind?" after 1 failed intro, using fallback name "friend".
-
 - Fixed `global talk_memory` declaration in get_guvna() (was silently staying None).
-
 - Fixed async/sync contradiction: run_rilie is sync; run_rilie_upload uses run_in_threadpool correctly.
-
 - Removed duplicate block that was copy-pasted during block-by-block generation.
-
 """
 
 import os
@@ -925,8 +917,8 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # BASIC. One hostess pass per session. Kitchen never sees turn 1.
     # ---------------------------------------------------------------
-    # Minimal, session-based first-turn gate:
-    is_first_turn = not bool(session.get("user_name"))
+    # Air‑tight fuse: once has_greeted is True, BASIC can never run again.
+    is_first_turn = not bool(session.get("has_greeted"))
 
     if is_first_turn:
         name = _extract_name_with_chomsky(stimulus)
@@ -941,6 +933,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         session["user_name"] = greet_as
         session["display_name"] = greet_as
         session["name_source"] = "given"
+        session["has_greeted"] = True  # one‑and‑done greeting fuse
         save_session(session)
 
         return build_plate(
