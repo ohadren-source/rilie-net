@@ -1,6 +1,8 @@
 """
 api.py — RILIE API v1.0.0
+
 Béton brut. Honest. One check. One greeting. Kitchen never sees turn 1.
+
 """
 
 import os
@@ -38,8 +40,6 @@ from session import (
     update_name,
 )
 from talk import TalkMemory
-
-# Chomsky integration — name extraction, identity resolution, NER
 from ChomskyAtTheBit import (
     classify_stimulus,
     parse_question,
@@ -49,6 +49,11 @@ from ChomskyAtTheBit import (
     RILIE_SELF_NAME,
     RILIE_MADE_BY,
 )
+
+# ---------------------------------------------------------------------------
+# GREETING STATE — assigned once on first request, never again
+# ---------------------------------------------------------------------------
+GREETED = None
 
 # ---------------------------------------------------------------------------
 # Base dir and .env loader
@@ -138,7 +143,6 @@ def build_library_index() -> LibraryIndex:
     safe_import("thermodynamics", "thermodynamics", ["harm","repair","irreversibility","cost","entropy","heat","energy","equilibrium","damage","restore"])
     safe_import("DuckSauce", "ducksauce", ["cosmology","simulation","universe","boolean","reality","existence","origin","creation"])
     safe_import("ChomskyAtTheBit", "chomsky", ["language","parsing","nlp","grammar","syntax","semantics","chomsky","linguistics","tokenize"])
-    # ... keep all other safe_import calls from your original v0.9.0 here ...
 
     logger.info("Library index complete (%d domain engines loaded)", len(index))
     return index
@@ -305,7 +309,6 @@ class RilieRequest(BaseModel):
     stimulus: str
     max_pass: int = 3
     chef_mode: bool = False
-    greeted: bool = False  # GUEST MODE — HTML flips True after turn 1
 
 class SearchRequest(BaseModel):
     query: str
@@ -488,7 +491,6 @@ def hello(req: HelloRequest) -> Dict[str, str]:
         return {"name": DEFAULT_NAME}
     name = extract_customer_name(text)
     if not name:
-        # bare first-word fallback
         words = text.rstrip("!?.").strip().split()
         if 1 <= len(words) <= 2:
             candidate = words[0].capitalize()
@@ -500,10 +502,14 @@ def hello(req: HelloRequest) -> Dict[str, str]:
 def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
     Main RILIE endpoint.
-    First turn: extract name via Chomsky, greet, save session, return. Kitchen never wakes up.
-    All subsequent turns: Kitchen processes normally.
-    Béton brut. One check. One greeting. Done.
+
+    First request: GREETED is None → assign True, greet, save session, return.
+    All subsequent requests: GREETED has a value → Kitchen processes normally.
+
+    One assignment. Never again.
     """
+    global GREETED
+
     stimulus = (req.stimulus or "").strip()
     if not stimulus:
         return {
@@ -516,9 +522,10 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session = load_session(client_ip)
 
     # ---------------------------------------------------------------
-    # FIRST TURN: Greet once. Early exit. Kitchen never sees this.
+    # FIRST REQUEST: GREETED is None. Assign once. Never again.
     # ---------------------------------------------------------------
-    if not req.greeted:
+    if GREETED is None:
+        GREETED = True
         name = extract_customer_name(stimulus)
         if not name:
             words = stimulus.strip().strip(".,!?;:'").split()
@@ -540,7 +547,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         })
 
     # ---------------------------------------------------------------
-    # ALL SUBSEQUENT TURNS: Kitchen processes normally.
+    # ALL SUBSEQUENT REQUESTS: Kitchen processes normally.
     # ---------------------------------------------------------------
     restore_guvna_state(guvna, session)
     restore_talk_memory(talk_memory, session)
@@ -576,7 +583,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
                     "quality_score": multi["quality_score"],
                 }
 
-    # Memory / christening
     domains_hit = result.get("domains_hit", [])
     quality = result.get("quality_score", 0.0)
     tone = result.get("tone", "insightful")
@@ -584,6 +590,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         stimulus=stimulus, domains_hit=domains_hit,
         quality=quality, tone=tone, topics=session.get("topics", {}),
     )
+
     if mem_result.get("christening"):
         result["christening"] = mem_result["christening"]
     if mem_result.get("moment"):
@@ -591,7 +598,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         tag = getattr(moment, "tag", None)
         record_topics(session, domains_hit, [tag] if tag else [])
 
-    # Carry display_name forward from session
     display_name = session.get("user_name") or session.get("display_name") or DEFAULT_NAME
     result.setdefault("display_name", display_name)
 
