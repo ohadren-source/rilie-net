@@ -792,6 +792,9 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
         "call me",
         "introduce myself",
         "they call me",
+        "i am ",
+        "i'm ",
+        "im ",
     ]
 
     if not any(sig in s.lower() for sig in INTRO_SIGNALS):
