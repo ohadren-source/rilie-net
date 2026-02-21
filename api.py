@@ -1,9 +1,9 @@
 """
-api.py — RILIE API v0.9.1 — HARD GREET-ONCE FUSE
+api.py — RILIE API v0.9.2 — GREET-ONCE, THEN KITCHEN
 
-- One BASIC hostess pass per session, then permanent promotion to Kitchen.
-- Greeting truth is ONLY session["has_greeted"].
-- No dependence on req.greeted or any HTML flags.
+- One BASIC hostess pass per browser tab / session, then permanent promotion to Kitchen.
+- Primary gate: per-request greeted flag (tab-level).
+- Secondary fuse: session["has_greeted"] (best-effort DB/session).
 """
 
 import os
@@ -15,7 +15,6 @@ import logging
 import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
-
 import urllib.parse
 import urllib.request
 
@@ -43,6 +42,7 @@ from session import (
     logger,
     update_name,
 )
+
 from talk import TalkMemory
 
 # Chomsky integration
@@ -178,6 +178,7 @@ def build_library_index() -> LibraryIndex:
             "relativity",
         ],
     )
+
     safe_import(
         "life",
         "life",
@@ -194,6 +195,7 @@ def build_library_index() -> LibraryIndex:
             "organism",
         ],
     )
+
     safe_import(
         "games",
         "games",
@@ -210,6 +212,7 @@ def build_library_index() -> LibraryIndex:
             "prisoner",
         ],
     )
+
     safe_import(
         "thermodynamics",
         "thermodynamics",
@@ -226,6 +229,7 @@ def build_library_index() -> LibraryIndex:
             "restore",
         ],
     )
+
     safe_import(
         "DuckSauce",
         "ducksauce",
@@ -240,6 +244,7 @@ def build_library_index() -> LibraryIndex:
             "creation",
         ],
     )
+
     safe_import(
         "ChomskyAtTheBit",
         "chomsky",
@@ -257,7 +262,6 @@ def build_library_index() -> LibraryIndex:
     )
 
     # ... keep all other safe_import calls from your original index ...
-
     logger.info("Library index complete (%d domain engines loaded)", len(index))
     return index
 
@@ -287,8 +291,8 @@ async def brave_web_search(query: str, num_results: int = 5) -> List[Dict[str, s
 
     with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(BRAVE_SEARCH_URL, headers=headers, params=params)
-    resp.raise_for_status()
-    data = resp.json()
+        resp.raise_for_status()
+        data = resp.json()
 
     items: List[Dict[str, str]] = []
     for item in data.get("web", {}).get("results", []):
@@ -318,8 +322,8 @@ def brave_search_sync(query: str, num_results: int = 5) -> List[Dict[str, str]]:
 
     with httpx.Client(timeout=10) as client:
         resp = client.get(BRAVE_SEARCH_URL, headers=headers, params=params)
-    resp.raise_for_status()
-    data = resp.json()
+        resp.raise_for_status()
+        data = resp.json()
 
     items: List[Dict[str, str]] = []
     for item in data.get("web", {}).get("results", []):
@@ -359,6 +363,7 @@ def google_ocr(image_bytes: bytes) -> str:
     }
     url = VISION_URL + "?key=" + urllib.parse.quote(GOOGLE_VISION_API_KEY)
     data = json.dumps(payload).encode("utf-8")
+
     req = urllib.request.Request(
         url,
         data=data,
@@ -376,6 +381,7 @@ def google_ocr(image_bytes: bytes) -> str:
     text = full.get("text")
     if text:
         return text
+
     ann = res0.get("textAnnotations", [])
     if not ann:
         return ""
@@ -395,7 +401,7 @@ BANKS_URL = os.getenv("BANKS_URL", "http://127.0.0.1:8001")
 # FastAPI app
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="RILIE API", version="0.9.1")
+app = FastAPI(title="RILIE API", version="0.9.2")
 
 app.add_middleware(
     CORSMiddleware,
@@ -429,7 +435,7 @@ curiosity_engine = CuriosityEngine(
 talk_memory = TalkMemory()
 
 logger.info(
-    "RILIE API v0.9.1 booted — Roux %d tracks, Library %d engines, "
+    "RILIE API v0.9.2 booted — Roux %d tracks, Library %d engines, "
     "Brave %s, Vision %s, Manifesto %s, Sessions ON",
     len(roux_seeds),
     len(library_index),
@@ -454,10 +460,10 @@ def serve_client():
         raise HTTPException(status_code=404, detail="Client HTML not found")
     return FileResponse(client_path, media_type="text/html")
 
+
 # ---------------------------------------------------------------------------
 # Startup / Shutdown
 # ---------------------------------------------------------------------------
-
 
 @app.on_event("startup")
 def on_startup() -> None:
@@ -467,6 +473,7 @@ def on_startup() -> None:
         logger.info("Banks curiosity table ready.")
     except Exception as e:
         logger.warning("Could not ensure curiosity table on startup: %s", e)
+
     try:
         ensure_session_table()
         logger.info("Banks sessions table ready.")
@@ -486,16 +493,16 @@ def on_shutdown() -> None:
     curiosity_engine.stop_background()
     logger.info("Curiosity engine stopped.")
 
+
 # ---------------------------------------------------------------------------
 # Pydantic models
 # ---------------------------------------------------------------------------
-
 
 class RilieRequest(BaseModel):
     stimulus: str
     max_pass: int = 3
     chef_mode: bool = False
-    greeted: bool = False  # kept for compatibility, not used in gating
+    greeted: bool = False  # per-tab greet flag (front-end echoes this)
 
 
 class SearchRequest(BaseModel):
@@ -545,6 +552,7 @@ class CuriosityQueueRequest(BaseModel):
 class HelloRequest(BaseModel):
     text: str
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -573,8 +581,8 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
     """Format the Guvna's output into a clean plate for the client."""
     result_text = raw_envelope.get("result", "")
     priorities_met = int(raw_envelope.get("priorities_met", 0) or 0)
-    qs = raw_envelope.get("quality_scores")
 
+    qs = raw_envelope.get("quality_scores")
     if qs:
         vibe = {
             p: qs.get(p, 0.3)
@@ -622,6 +630,7 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
 
     return plate
 
+
 # ---------------------------------------------------------------------------
 # Name extraction helpers
 # ---------------------------------------------------------------------------
@@ -667,7 +676,6 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     NER fallback for natural intros without a pattern.
     """
     s = (stimulus or "").strip()
-
     INTRO_SIGNALS = [
         "my name is",
         "i am called",
@@ -679,7 +687,6 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
         "i'm ",
         "im ",
     ]
-
     if not any(sig in s.lower() for sig in INTRO_SIGNALS):
         return None
 
@@ -718,10 +725,10 @@ def _sanitize_display_name(name: Optional[str]) -> Optional[str]:
         return None
     return name
 
+
 # ---------------------------------------------------------------------------
 # Multi-question helpers
 # ---------------------------------------------------------------------------
-
 
 def is_multi_question_response(result: Dict[str, Any]) -> bool:
     """Check if the Kitchen/Guvna returned a multi-question response."""
@@ -743,7 +750,6 @@ def is_multi_question_response(result: Dict[str, Any]) -> bool:
     result_text = str(result.get("result", "")).lower()
     if "noticed" in result_text and "questions" in result_text:
         return True
-
     return False
 
 
@@ -823,10 +829,10 @@ def process_multi_question_parts(
         "quality_score": combined_q,
     }
 
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
-
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
@@ -870,7 +876,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
     Main RILIE endpoint — greet once on first turn, then move on.
     """
-
     stimulus = (req.stimulus or "").strip()
     if not stimulus:
         return {
@@ -889,15 +894,16 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session = load_session(client_ip)
 
     # ---------------------------------------------------------------
-    # BASIC. One hostess pass per session. Kitchen never sees turn 1.
+    # BASIC. One hostess pass per browser tab / session.
+    # Primary gate: req.greeted (front-end per-tab flag).
+    # Secondary fuse: session["has_greeted"] (best-effort persistence).
     # ---------------------------------------------------------------
-
-    has_greeted = bool(session.get("has_greeted"))
-    is_first_turn = not has_greeted
+    has_greeted_session = bool(session.get("has_greeted"))
+    has_greeted_tab = bool(req.greeted)
+    is_first_turn = not (has_greeted_tab or has_greeted_session)
 
     if is_first_turn:
         name = _extract_name_with_chomsky(stimulus)
-
         if not name:
             words = stimulus.strip().strip(".,!?;:'").split()
             if 1 <= len(words) <= 2 and "?" not in stimulus:
@@ -911,10 +917,11 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         session["display_name"] = greet_as
         session["name_source"] = "given"
 
-        # HARD FUSE: once set, BASIC can never run again this session
+        # Fuses: mark greeted both in session and per-tab
         session["has_greeted"] = True
-
         save_session(session)
+
+        req.greeted = True
 
         return build_plate(
             {
@@ -929,10 +936,10 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # Core Guvna pipeline — pure Kitchen from here on out.
     # ---------------------------------------------------------------
-
     restore_guvna_state(guvna, session)
     guvna.whosonfirst = False  # api.py owns greeting
     guvna.memory.whosonfirst = False  # api.py owns greeting
+
     restore_talk_memory(talk_memory, session)
 
     def _detect_multi_question(s: str):
@@ -986,7 +993,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # Memory behaviors / christening
     # ---------------------------------------------------------------
-
     domains_hit = result.get("domains_hit", [])
     quality = result.get("quality_score", 0.0)
     tone = result.get("tone", "insightful")
@@ -1010,7 +1016,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # Name + display_name resolution for later turns
     # ---------------------------------------------------------------
-
     display_name = (
         session.get("user_name")
         or session.get("display_name")
@@ -1030,7 +1035,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # Snapshot + response
     # ---------------------------------------------------------------
-
     snapshot_guvna_state(guvna, session)
     snapshot_talk_memory(talk_memory, session)
     save_session(session)
@@ -1074,6 +1078,7 @@ async def run_rilie_upload(
                     file_context_parts.append(
                         f"[Image {f.filename}] OCR failed: {e}"
                     )
+
             elif contenttype.startswith("text") or f.filename.endswith(
                 (".txt", ".md", ".csv", ".json", ".py", ".js", ".html")
             ):
@@ -1084,6 +1089,7 @@ async def run_rilie_upload(
                     file_context_parts.append(
                         f"[File {f.filename}] (could not decode as UTF-8)"
                     )
+
             elif f.filename.endswith(".docx"):
                 try:
                     import io
@@ -1105,10 +1111,12 @@ async def run_rilie_upload(
                     file_context_parts.append(
                         f"[Document {f.filename}] parse failed: {e}"
                     )
+
             else:
                 file_context_parts.append(
                     f"[File {f.filename}] unsupported type: {contenttype}"
                 )
+
         except Exception as e:
             file_context_parts.append(f"[File {f.filename}] error: {e}")
 
