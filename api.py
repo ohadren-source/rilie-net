@@ -895,14 +895,16 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     # ---------------------------------------------------------------
     # BASIC. One hostess pass per browser tab / session.
-    # Primary gate: req.greeted (front-end per-tab flag).
-    # Secondary fuse: session["has_greeted"] (best-effort persistence).
+    # Single source of truth: session["has_greeted"] (persistence).
     # ---------------------------------------------------------------
     has_greeted_session = bool(session.get("has_greeted"))
-    has_greeted_tab = bool(req.greeted)
-    is_first_turn = not (has_greeted_tab or has_greeted_session)
+    logger.info(
+        "HOSTESS CHECK (turn=%s): has_greeted_session=%s",
+        "first" if not has_greeted_session else "later",
+        has_greeted_session,
+    )
 
-    if is_first_turn:
+    if not has_greeted_session:
         name = _extract_name_with_chomsky(stimulus)
         if not name:
             words = stimulus.strip().strip(".,!?;:'").split()
@@ -917,11 +919,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         session["display_name"] = greet_as
         session["name_source"] = "given"
 
-        # Fuses: mark greeted both in session and per-tab
+        # Fuses: mark greeted in session (Database of Truth)
         session["has_greeted"] = True
         save_session(session)
-
-        req.greeted = True
 
         return build_plate(
             {
