@@ -1,16 +1,14 @@
 """
-api.py — RILIE API v1.0 — GREETING AT BOOT, KITCHEN ALWAYS
+api.py — RILIE API v1.0 — GREETING ON FIRST REQUEST
 
-Module-level greeting fires once when server starts.
-No per-request greeting logic.
-No session persistence.
-No dual-gates.
-No sprawl.
-
-Simple contract:
-1. Server boots → greeting happens (module-level)
-2. Request arrives → extract name from opening → say name → Kitchen
-3. All subsequent requests → Kitchen owns it
+Timeline:
+1. Imports
+2. GREETED = False (first thing, module-level)
+3. App setup
+4. Routes defined
+5. Server boots
+6. First request arrives → greeting fires → GREETED = True
+7. All subsequent requests → Kitchen
 
 Béton brut. Honest. One line. One check.
 """
@@ -36,18 +34,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 # ============================================================================
-# IMPORTS COMPLETE. NOW MODULE-LEVEL GREETING.
+# FIRST REAL CODE AFTER IMPORTS: GREETING FLAG
 # ============================================================================
 
 GREETED = False
-
-if not GREETED:
-    print("\n" + "=" * 60)
-    print("RILIE BOOTING...")
-    print("Hi there! What's your name?")
-    print("You can call me RILIE if you so please... :)")
-    print("=" * 60 + "\n")
-    GREETED = True
 
 # ============================================================================
 # APP SETUP
@@ -145,16 +135,15 @@ def brave_search_sync(query: str, num_results: int = 5) -> List[Dict[str, str]]:
 HAS_BRAVE = bool(BRAVE_API_KEY)
 
 # ============================================================================
-# NAME EXTRACTION (STUB - replace with actual Chomsky)
+# NAME EXTRACTION
 # ============================================================================
 
 def extract_name_from_opening(opening: str) -> Optional[str]:
     """
-    Extract name from opening stimulus using Chomsky or regex.
+    Extract name from opening stimulus using regex.
     Returns name or None.
+    TODO: Replace with actual _extract_name_with_chomsky()
     """
-    # STUB: Replace with actual _extract_name_with_chomsky()
-    # For now, simple regex
     patterns = [
         r"(?:i'm|i am)\s+([A-Za-z][A-Za-z'\-]*)",
         r"(?:my name is|call me|they call me)\s+([A-Za-z][A-Za-z\s'\-]*?)(?:\.|,|!|\?|$)",
@@ -211,9 +200,11 @@ def run_rilie(req: RilieRequest) -> Dict[str, Any]:
     """
     Main RILIE endpoint.
     
-    Turn 1: Extract name from opening, greet, return.
-    Turn 2+: Kitchen processes normally.
+    First request: Extract name, greet, set GREETED flag, return.
+    Subsequent requests: Kitchen processes normally.
     """
+    global GREETED
+    
     stimulus = (req.stimulus or "").strip()
     
     if not stimulus:
@@ -224,17 +215,30 @@ def run_rilie(req: RilieRequest) -> Dict[str, Any]:
             "status": "EMPTY",
         }
     
-    # Turn 1: Extract name and greet
-    opening = stimulus
-    name = extract_name_from_opening(opening)
-    display_name = sanitize_name(name)
+    # FIRST REQUEST: Greet
+    if not GREETED:
+        GREETED = True
+        
+        # Extract name from opening stimulus
+        opening = stimulus
+        name = extract_name_from_opening(opening)
+        display_name = sanitize_name(name)
+        
+        return {
+            "stimulus": stimulus,
+            "result": f"Pleasure to meet you, {display_name}! What's on your mind? 🍳",
+            "status": "GREETING",
+            "quality_score": 1.0,
+            "display_name": display_name,
+        }
     
+    # SUBSEQUENT REQUESTS: Kitchen processes normally
+    # TODO: Wire in guvna.process() here
     return {
         "stimulus": stimulus,
-        "result": f"Pleasure to meet you, {display_name}! What's on your mind? 🍳",
-        "status": "GREETING",
-        "quality_score": 1.0,
-        "display_name": display_name,
+        "result": "Kitchen not yet wired in. This is turn 2+.",
+        "status": "KITCHEN",
+        "quality_score": 0.5,
     }
 
 # ============================================================================
