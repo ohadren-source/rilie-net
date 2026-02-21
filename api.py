@@ -4,17 +4,25 @@ api.py — RILIE API v0.9.0 + Chomsky name tap (Fixed & Merged)
 Session persistence wired in. She remembers who you are between visits.
 
 Extracts a likely name anchor from stimulus via ChomskyAtTheBit,
+
 and uses it as a canonical `display_name` across the conversation.
 
 Fixes applied:
 
 - Enhanced name extraction with spaCy NER priority for PERSON entities.
+
 - Expanded regex heuristics for common intro patterns ("I am called", etc.).
+
 - Safeguard against bad/verb-based names like "introduce" or "called".
+
 - Added intro_attempts session counter to detect and exit greeting loops.
+
 - Pivot to "What's on your mind?" after 1 failed intro, using fallback name "friend".
+
 - Fixed `global talk_memory` declaration in get_guvna() (was silently staying None).
+
 - Fixed async/sync contradiction: run_rilie is sync; run_rilie_upload uses run_in_threadpool correctly.
+
 - Removed duplicate block that was copy-pasted during block-by-block generation.
 """
 
@@ -25,26 +33,21 @@ import uuid
 import base64
 import logging
 import re
-
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
-
 import urllib.parse
 import urllib.request
 
 import httpx
-
 from fastapi import FastAPI, HTTPException, Request, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
 from pydantic import BaseModel
 
 from guvna import Guvna, LibraryIndex
 from banks import ensure_curiosity_table
 from curiosity import CuriosityEngine
-
 from session import (
     ensure_session_table,
     load_session,
@@ -89,7 +92,6 @@ def load_env_file(path: Path) -> None:
     """
     if not path.exists():
         return
-
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -117,7 +119,6 @@ def load_roux() -> Dict[str, Dict[str, Any]]:
     """
     if not ROUX_PATH.exists():
         return {}
-
     with ROUX_PATH.open("r", encoding="utf-8") as f:
         config = json.load(f)
 
@@ -314,6 +315,7 @@ async def brave_web_search(query: str, num_results: int = 5) -> List[Dict[str, s
         "Accept": "application/json",
         "X-Subscription-Token": BRAVE_API_KEY,
     }
+
     params = {
         "q": query,
         "count": max(1, min(num_results, 10)),
@@ -333,6 +335,7 @@ async def brave_web_search(query: str, num_results: int = 5) -> List[Dict[str, s
                 "snippet": item.get("description", ""),
             }
         )
+
     return items
 
 
@@ -347,6 +350,7 @@ def brave_search_sync(query: str, num_results: int = 5) -> List[Dict[str, str]]:
         "Accept": "application/json",
         "X-Subscription-Token": BRAVE_API_KEY,
     }
+
     params = {
         "q": query,
         "count": max(1, min(num_results, 10)),
@@ -366,6 +370,7 @@ def brave_search_sync(query: str, num_results: int = 5) -> List[Dict[str, str]]:
                 "snippet": item.get("description", ""),
             }
         )
+
     return items
 
 
@@ -396,7 +401,6 @@ def google_ocr(image_bytes: bytes) -> str:
 
     url = VISION_URL + "?key=" + urllib.parse.quote(GOOGLE_VISION_API_KEY)
     data = json.dumps(payload).encode("utf-8")
-
     req = urllib.request.Request(
         url,
         data=data,
@@ -621,7 +625,6 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
     """
     result_text = raw_envelope.get("result", "")
     priorities_met = int(raw_envelope.get("priorities_met", 0) or 0)
-
     qs = raw_envelope.get("quality_scores")
     if qs:
         vibe = {
@@ -741,7 +744,6 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
         s,
         re.IGNORECASE,
     )
-
     if m:
         name = m.group(1).strip()
         if name and name.lower() not in _BAD_NAMES and len(name) >= 2:
@@ -789,6 +791,7 @@ def is_multi_question_response(result: Dict[str, Any]) -> bool:
 
     if result.get("multi_question_parts"):
         return True
+
     if result.get("question_parts"):
         return True
 
@@ -812,6 +815,7 @@ def extract_question_parts(result: Dict[str, Any]) -> List[str]:
 
     if result.get("multi_question_parts"):
         return list(result["multi_question_parts"])
+
     if result.get("question_parts"):
         return list(result["question_parts"])
 
@@ -837,7 +841,6 @@ def process_multi_question_parts(
     for i, part in enumerate(parts, 1):
         if not part or not str(part).strip():
             continue
-
         text = str(part).strip()
         try:
             part_result = guvna_instance.process(text, maxpass=max_pass)
@@ -955,10 +958,10 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     name_source = session.get("name_source", "default")
 
-    # First turn if this *tab* hasn’t greeted yet OR we’ve never stored a name.
+    # First turn only if this tab has not greeted AND we have no name yet.
     # - HTML client: uses greeted flag per tab
     # - Raw API clients: fall back to session name_source
-    is_first_turn = (not req.greeted) or (name_source == "default")
+    is_first_turn = (not req.greeted) and (name_source == "default")
 
     if is_first_turn:
         _name = _extract_name_with_chomsky(stimulus)
@@ -1083,11 +1086,11 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
                 if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
                     display_name = candidate
 
-    display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
+        display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
 
-    if display_name != DEFAULT_NAME:
-        session["user_name"] = display_name
-        session["display_name"] = display_name
+        if display_name != DEFAULT_NAME:
+            session["user_name"] = display_name
+            session["display_name"] = display_name
 
     result.setdefault("display_name", session.get("user_name", DEFAULT_NAME))
 
@@ -1137,7 +1140,6 @@ async def run_rilie_upload(
                     file_context_parts.append(
                         f"[Image {f.filename}] OCR failed: {e}"
                     )
-
             elif contenttype.startswith("text") or f.filename.endswith(
                 (".txt", ".md", ".csv", ".json", ".py", ".js", ".html")
             ):
@@ -1148,7 +1150,6 @@ async def run_rilie_upload(
                     file_context_parts.append(
                         f"[File {f.filename}] (could not decode as UTF-8)"
                     )
-
             elif f.filename.endswith(".docx"):
                 try:
                     import io
@@ -1170,12 +1171,10 @@ async def run_rilie_upload(
                     file_context_parts.append(
                         f"[Document {f.filename}] parse failed: {e}"
                     )
-
             else:
                 file_context_parts.append(
                     f"[File {f.filename}] unsupported type: {contenttype}"
                 )
-
         except Exception as e:
             file_context_parts.append(f"[File {f.filename}] error: {e}")
 
