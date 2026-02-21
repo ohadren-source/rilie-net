@@ -925,7 +925,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # BASIC. One hostess pass per session. Kitchen never sees turn 1.
     # ---------------------------------------------------------------
-    # Minimal fix: gate on session user_name, not req.greeted.
+    # Minimal, session-based first-turn gate:
     is_first_turn = not bool(session.get("user_name"))
 
     if is_first_turn:
