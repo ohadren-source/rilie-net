@@ -55,6 +55,7 @@ def ensure_session_table() -> None:
         name_source TEXT NOT NULL DEFAULT 'default',
         turn_count INTEGER DEFAULT 0,
         whosonfirst BOOLEAN DEFAULT TRUE,
+        greeting_locked BOOLEAN DEFAULT FALSE,
         response_history JSONB DEFAULT '[]'::jsonb,
         talk_served JSONB DEFAULT '[]'::jsonb,
         social_state JSONB DEFAULT '{}'::jsonb,
@@ -128,7 +129,7 @@ def load_session(client_ip: str) -> Dict[str, Any]:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT session_id, user_name, client_ip, name_source, "
-                    "turn_count, whosonfirst, response_history, talk_served, social_state, "
+                    "turn_count, whosonfirst, greeting_locked, response_history, talk_served, social_state, "
                     "topics, created_at, updated_at "
                     "FROM banks_sessions WHERE session_id = %s",
                     (sid,),
@@ -161,6 +162,7 @@ def _fresh_session(client_ip: str) -> Dict[str, Any]:
         "name_source": "default",
         "turn_count": 0,
         "whosonfirst": True,
+        "greeting_locked": False,
         "response_history": [],
         "talk_served": [],
         "social_state": {"user_status": 0.5, "self_status": 0.4},
@@ -185,16 +187,17 @@ def save_session(session: Dict[str, Any]) -> None:
     sql = """
     INSERT INTO banks_sessions
         (session_id, user_name, client_ip, name_source, turn_count, whosonfirst,
-         response_history, talk_served, social_state, topics,
+         greeting_locked, response_history, talk_served, social_state, topics,
          created_at, updated_at)
     VALUES
-        (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb,
+        (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb,
          now(), now())
     ON CONFLICT (session_id) DO UPDATE SET
         user_name      = EXCLUDED.user_name,
         name_source    = EXCLUDED.name_source,
         turn_count     = EXCLUDED.turn_count,
         whosonfirst    = EXCLUDED.whosonfirst,
+        greeting_locked = EXCLUDED.greeting_locked,
         response_history = EXCLUDED.response_history,
         talk_served      = EXCLUDED.talk_served,
         social_state     = EXCLUDED.social_state,
@@ -213,6 +216,7 @@ def save_session(session: Dict[str, Any]) -> None:
                         session.get("name_source", "default"),
                         session.get("turn_count", 0),
                         session.get("whosonfirst", True),
+                        session.get("greeting_locked", False),
                         json.dumps(session.get("response_history", [])),
                         json.dumps(session.get("talk_served", [])),
                         json.dumps(session.get("social_state", {})),

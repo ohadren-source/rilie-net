@@ -915,11 +915,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
                 if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
                     name = candidate
 
-        # TEST: Show lock status in response
-        if session.get("greeting_locked"):
-            greet_as = "LOCKED_BUG_STILL_GREETING"
-        else:
-            greet_as = _sanitize_display_name(name) or DEFAULT_NAME
+        greet_as = _sanitize_display_name(name) or DEFAULT_NAME
 
         # Mark in session for memory/continuity
         session["user_name"] = greet_as
