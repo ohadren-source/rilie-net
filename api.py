@@ -895,10 +895,10 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     # ---------------------------------------------------------------
     # BASIC. First turn = greet. Early exit. Kitchen never wakes up.
-    # State lives in browser (req.greeted), not in DB.
-    # HTML client flips greeted=true after turn 1.
+    # Gate requires BOTH: req.greeted from browser AND no session lock.
+    # Once she greets, session["greeting_locked"] = True. She never returns.
     # ---------------------------------------------------------------
-    is_first_turn = not req.greeted
+    is_first_turn = not req.greeted and not session.get("greeting_locked")
 
     if is_first_turn:
         name = _extract_name_with_chomsky(stimulus)
@@ -911,10 +911,11 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
         greet_as = _sanitize_display_name(name) or DEFAULT_NAME
 
-        # Mark in session for memory/continuity, but gate relies on req.greeted
+        # Mark in session for memory/continuity
         session["user_name"] = greet_as
         session["display_name"] = greet_as
         session["name_source"] = "given"
+        session["greeting_locked"] = True  # Once she greets, she never comes back
         save_session(session)
 
         return build_plate(
