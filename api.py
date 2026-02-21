@@ -943,10 +943,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session = load_session(client_ip)
 
     # ---------------------------------------------------------------
-    # BASIC. First turn = greet. Early exit. Kitchen never wakes up.
+    # BASIC. One hostess pass per session. Kitchen never sees turn 1.
     # ---------------------------------------------------------------
-    name_source = session.get("name_source", "default")
-    is_first_turn = (not req.greeted) and (name_source == "default")
+    is_first_turn = not req.greeted  # state lives in browser, not DB
 
     if is_first_turn:
         name = _extract_name_with_chomsky(stimulus)
@@ -975,11 +974,11 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         )
 
     # ---------------------------------------------------------------
-    # Core Guvna pipeline
+    # Core Guvna pipeline — pure Kitchen from here on out
     # ---------------------------------------------------------------
     restore_guvna_state(guvna, session)
-    guvna.whosonfirst = False  # api.py owns greeting. guvna never greets.
-    guvna.memory.whosonfirst = False  # api.py owns greeting. guvna never greets.
+    guvna.whosonfirst = False          # api.py owns greeting
+    guvna.memory.whosonfirst = False   # api.py owns greeting
     restore_talk_memory(talk_memory, session)
 
     def _detect_multi_question(s: str):
@@ -1064,13 +1063,6 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     if not display_name:
         display_name = _extract_name_with_chomsky(stimulus)
-        if not display_name and is_first_turn:
-            words = stimulus.strip().strip(".,!?;:").split()
-            if 1 <= len(words) <= 2 and "?" not in stimulus:
-                candidate = words[0].capitalize()
-                if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
-                    display_name = candidate
-
         display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
 
         if display_name != DEFAULT_NAME:
