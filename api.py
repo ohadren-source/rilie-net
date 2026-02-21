@@ -540,7 +540,7 @@ class RilieRequest(BaseModel):
     stimulus: str
     max_pass: int = 3
     chef_mode: bool = False
-    greeted: bool = False  # GUEST MODE — legacy HTML flag
+    greeted: bool = False  # GUEST MODE — HTML flips True after turn 1
 
 
 class SearchRequest(BaseModel):
@@ -954,7 +954,11 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # BASIC. First turn = greet. Early exit. Kitchen never wakes up.
     # ---------------------------------------------------------------
     name_source = session.get("name_source", "default")
-    is_first_turn = (name_source == "default")
+
+    # First turn if this *tab* hasn’t greeted yet OR we’ve never stored a name.
+    # - HTML client: uses greeted flag per tab
+    # - Raw API clients: fall back to session name_source
+    is_first_turn = (not req.greeted) or (name_source == "default")
 
     if is_first_turn:
         _name = _extract_name_with_chomsky(stimulus)
