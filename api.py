@@ -1117,15 +1117,15 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     result.setdefault("display_name", display_name)
 
     # First turn only: greet, save, return. Kitchen never sees it.
-if is_first_turn and display_name:
-    result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? 🍳"
-    result["status"] = "GREETING"
-    guvna.turn_count += 1
-    guvna.memory.turn_count += 1
-    snapshot_guvna_state(guvna, session)
-    snapshot_talk_memory(talk_memory, session)
-    save_session(session)
-    return build_plate(result)
+    if is_first_turn and display_name:
+        result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? 🍳"
+        result["status"] = "GREETING"
+        guvna.turn_count += 1
+        guvna.memory.turn_count += 1
+        snapshot_guvna_state(guvna, session)
+        snapshot_talk_memory(talk_memory, session)
+        save_session(session)
+        return build_plate(result)
 
     snapshot_guvna_state(guvna, session)
     snapshot_talk_memory(talk_memory, session)
