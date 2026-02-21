@@ -2,7 +2,6 @@
 api.py — RILIE API v0.9.0 + Chomsky name tap (Fixed & Merged)
 
 Session persistence wired in. She remembers who you are between visits.
-
 Extracts a likely name anchor from stimulus via ChomskyAtTheBit,
 and uses it as a canonical `display_name` across the conversation.
 
@@ -667,8 +666,7 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Name extraction — one function, one regex, one job
-# (kept exactly as in your current version)
+# Name extraction helpers
 # ---------------------------------------------------------------------------
 
 _BAD_NAMES = {
@@ -707,7 +705,7 @@ _BAD_NAMES = {
 
 def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
-    Extract customer name — ONLY from intro stimuli.
+    Extract customer name ONLY from intro stimuli.
     Regex captures full name after any intro phrase, through trailing noise.
     NER fallback for natural intros without a pattern.
     """
@@ -766,7 +764,6 @@ def _sanitize_display_name(name: Optional[str]) -> Optional[str]:
 
 # ---------------------------------------------------------------------------
 # Multi-question helpers
-# (unchanged from your current version)
 # ---------------------------------------------------------------------------
 
 
@@ -949,32 +946,29 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # BASIC. First turn = greet. Early exit. Kitchen never wakes up.
     # ---------------------------------------------------------------
     name_source = session.get("name_source", "default")
-
-    # GUEST MODE: first non-empty request in this tab always goes through BASIC once.
-    # Require both: tab not greeted AND session has no name yet.
     is_first_turn = (not req.greeted) and (name_source == "default")
 
     if is_first_turn:
-        _name = _extract_name_with_chomsky(stimulus)
-        if not _name:
-            _words = stimulus.strip().strip(".,!?;:'").split()
-            if 1 <= len(_words) <= 2 and "?" not in stimulus:
-                _candidate = _words[0].capitalize()
-                if _candidate.lower() not in _BAD_NAMES and len(_candidate) >= 2:
-                    _name = _candidate
+        name = _extract_name_with_chomsky(stimulus)
+        if not name:
+            words = stimulus.strip().strip(".,!?;:'").split()
+            if 1 <= len(words) <= 2 and "?" not in stimulus:
+                candidate = words[0].capitalize()
+                if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
+                    name = candidate
 
-        _greet_as = _sanitize_display_name(_name) or DEFAULT_NAME
+        greet_as = _sanitize_display_name(name) or DEFAULT_NAME
 
-        session["user_name"] = _greet_as
-        session["display_name"] = _greet_as
+        session["user_name"] = greet_as
+        session["display_name"] = greet_as
         session["name_source"] = "given"
         save_session(session)
 
         return build_plate(
             {
-                "result": f"Pleasure to meet you, {_greet_as}! What's on your mind? 🍳",
+                "result": f"Pleasure to meet you, {greet_as}! What's on your mind? 🍳",
                 "status": "GREETING",
-                "display_name": _greet_as,
+                "display_name": greet_as,
                 "quality_score": 1.0,
                 "priorities_met": 1,
             }
@@ -1060,7 +1054,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         record_topics(session, domains_hit, [tag] if tag else [])
 
     # ---------------------------------------------------------------
-    # Name + greeting resolution (api-1 style)
+    # Name + display_name resolution for later turns
     # ---------------------------------------------------------------
     display_name = (
         session.get("user_name")
