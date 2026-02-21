@@ -1025,7 +1025,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # BASIC. First turn = greet. Early exit. Kitchen never wakes up.
     # ---------------------------------------------------------------
-    is_first_turn = not bool(session.get("display_name")) and session.get("user_name", "Mate") == "Mate"
+    is_first_turn = True  # GUEST MODE — greet every visit, login handles users
 
     if is_first_turn:
         _name = _extract_name_with_chomsky(stimulus)
