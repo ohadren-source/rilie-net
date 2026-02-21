@@ -894,17 +894,13 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session = load_session(client_ip)
 
     # ---------------------------------------------------------------
-    # BASIC. One hostess pass per browser tab / session.
-    # Single source of truth: session["has_greeted"] (persistence).
+    # BASIC. First turn = greet. Early exit. Kitchen never wakes up.
+    # State lives in browser (req.greeted), not in DB.
+    # HTML client flips greeted=true after turn 1.
     # ---------------------------------------------------------------
-    has_greeted_session = bool(session.get("has_greeted"))
-    logger.info(
-        "HOSTESS CHECK (turn=%s): has_greeted_session=%s",
-        "first" if not has_greeted_session else "later",
-        has_greeted_session,
-    )
+    is_first_turn = not req.greeted
 
-    if not has_greeted_session:
+    if is_first_turn:
         name = _extract_name_with_chomsky(stimulus)
         if not name:
             words = stimulus.strip().strip(".,!?;:'").split()
@@ -915,12 +911,10 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
         greet_as = _sanitize_display_name(name) or DEFAULT_NAME
 
+        # Mark in session for memory/continuity, but gate relies on req.greeted
         session["user_name"] = greet_as
         session["display_name"] = greet_as
         session["name_source"] = "given"
-
-        # Fuses: mark greeted in session (Database of Truth)
-        session["has_greeted"] = True
         save_session(session)
 
         return build_plate(
