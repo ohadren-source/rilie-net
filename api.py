@@ -604,6 +604,7 @@ class RilieRequest(BaseModel):
     stimulus: str
     max_pass: int = 3
     chef_mode: bool = False
+    greeted: bool = False  # GUEST MODE — HTML flips True after turn 1
 
 
 class SearchRequest(BaseModel):
@@ -1025,7 +1026,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # BASIC. First turn = greet. Early exit. Kitchen never wakes up.
     # ---------------------------------------------------------------
-    is_first_turn = session.get("name_source", "default") == "default"  # GUEST MODE
+    is_first_turn = not req.greeted  # GUEST MODE — state lives in browser, not DB
 
     if is_first_turn:
         _name = _extract_name_with_chomsky(stimulus)
@@ -1052,6 +1053,8 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # Core Guvna pipeline
     # ---------------------------------------------------------------
     restore_guvna_state(guvna, session)
+    guvna.whosonfirst = False        # api.py owns greeting. guvna never greets.
+    guvna.memory.whosonfirst = False  # api.py owns greeting. guvna never greets.
     restore_talk_memory(talk_memory, session)
 
     def _detect_multi_question(s: str):
