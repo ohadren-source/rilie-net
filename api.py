@@ -945,7 +945,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # BASIC. One hostess pass per session. Kitchen never sees turn 1.
     # ---------------------------------------------------------------
-    is_first_turn = not req.greeted  # state lives in browser, not DB
+    is_first_turn = not req.greeted  # browser owns this flag
 
     if is_first_turn:
         name = _extract_name_with_chomsky(stimulus)
