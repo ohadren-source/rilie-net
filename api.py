@@ -877,7 +877,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     Main RILIE endpoint — greet once on first turn, then move on.
     """
     stimulus = (req.stimulus or "").strip()
+    logger.info("STIMULUS_RECEIVED: '%s'", stimulus)
     if not stimulus:
+        logger.info("STIMULUS: empty")
         return {
             "stimulus": "",
             "result": "Drop something in. A question, a thought, a vibe. Then hit Go.",
@@ -892,6 +894,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
 
     client_ip = get_client_ip(request)
     session = load_session(client_ip)
+    logger.info("LOAD_SESSION: client_ip=%s session_keys=%s greeting_locked=%s", client_ip, list(session.keys()), session.get("greeting_locked"))
 
     # ---------------------------------------------------------------
     # BASIC. First turn = greet. Early exit. Kitchen never wakes up.
@@ -902,7 +905,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     logger.info("GATE: greeted=%s locked=%s → first_turn=%s", req.greeted, session.get("greeting_locked"), is_first_turn)
 
     if is_first_turn:
+        logger.info("GREETING_BLOCK: entering, will extract name from stimulus")
         name = _extract_name_with_chomsky(stimulus)
+        logger.info("NAME_EXTRACTED: chomsky returned '%s'", name)
         if not name:
             words = stimulus.strip().strip(".,!?;:'").split()
             if 1 <= len(words) <= 2 and "?" not in stimulus:
@@ -917,7 +922,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         session["display_name"] = greet_as
         session["name_source"] = "given"
         session["greeting_locked"] = True  # Once she greets, she never comes back
+        logger.info("BEFORE_SAVE: setting greeting_locked=True for client_ip=%s", client_ip)
         save_session(session)
+        logger.info("AFTER_SAVE: session saved")
 
         return build_plate(
             {
@@ -928,10 +935,12 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
                 "priorities_met": 1,
             }
         )
+        logger.info("GREETING_RETURNED: should not see this")
 
     # ---------------------------------------------------------------
     # Core Guvna pipeline — pure Kitchen from here on out.
     # ---------------------------------------------------------------
+    logger.info("KITCHEN_START: greeting was skipped, Kitchen now owns this turn")
     restore_guvna_state(guvna, session)
     guvna.whosonfirst = False  # api.py owns greeting
     guvna.memory.whosonfirst = False  # api.py owns greeting
