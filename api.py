@@ -1127,7 +1127,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # Name + greeting resolution (api-1 style)
     # ---------------------------------------------------------------
-    display_name = session.get("display_name") or session.get("name")
+    display_name = session.get("user_name") or session.get("display_name") or session.get("name")
 
     if not display_name:
         display_name = _extract_name_with_chomsky(stimulus)
@@ -1140,9 +1140,10 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
                 display_name = candidate
 
     display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
-    session["user_name"] = display_name
-    session["display_name"] = display_name
-    result.setdefault("display_name", display_name)
+    if display_name != DEFAULT_NAME:
+        session["user_name"] = display_name
+        session["display_name"] = display_name
+    result.setdefault("display_name", session.get("user_name", DEFAULT_NAME))
 
     # First turn only: greet, save, return. Kitchen never sees it.
     if is_first_turn and display_name:
