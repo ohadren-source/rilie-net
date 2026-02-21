@@ -1025,7 +1025,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # BASIC. First turn = greet. Early exit. Kitchen never wakes up.
     # ---------------------------------------------------------------
-    is_first_turn = True  # GUEST MODE — greet every visit, login handles users
+    is_first_turn = session.get("name_source", "default") == "default"  # GUEST MODE
 
     if is_first_turn:
         _name = _extract_name_with_chomsky(stimulus)
@@ -1038,6 +1038,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         _greet_as = _sanitize_display_name(_name) or DEFAULT_NAME
         session["user_name"] = _greet_as
         session["display_name"] = _greet_as
+        session["name_source"] = "given"
         save_session(session)
         return build_plate({
             "result": f"Pleasure to meet you, {_greet_as}! What's on your mind? 🍳",
