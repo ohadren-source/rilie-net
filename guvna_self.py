@@ -8,42 +8,32 @@ Extracted from guvna.py as a clean mixin.
 Guvna inherits this. These functions don't work without it.
 
 STATE OWNED HERE:
-  - _response_history   : everything she's said this session (capped at 20)
-  - user_name           : who she's talking to
-  - _awaiting_name      : did she just ask for a name?
-  - whosonfirst         : is this turn 0?
-  - turn_count          : how many turns deep are we?
+- _response_history : everything she's said this session (capped at 20)
+- user_name         : who she's talking to
+- _awaiting_name    : did she just ask for a name?
+- turn_count        : how many turns deep are we?
+
+NOTE: whosonfirst removed. The API owns the door. Guvna owns the kitchen.
+RILIE is always greeted before Guvna sees a single stimulus.
 
 BEHAVIORS OWNED HERE:
-  1. greet()                — APERTURE. Turn 0. First contact.
-  2. _handle_name_capture() — catch the name after she asked for it
-  3. _handle_recall()       — "what did you just say / what's my name"
-  4. _handle_clarification()— "what do you mean / say that differently"
-  5. _handle_meta_correction()— "forget that / never mind / drop it"
-  6. _finalize_response()   — THE WRITER. Every response gets logged here.
-                              Logs RAW result (pre-tone-header). History is clean.
-
-FIXES (this revision):
-  - greet() no longer stamps tone header on greeting text
-    "Hi there!" was getting "Insight focus 💡" prepended. No more.
-  - _finalize_response() now logs RAW result before tone header injection
-    History was storing header-polluted text. Recall/clarification now get
-    clean content, not "Insight focus 💡 Gotcha RILIE when focusing on..."
-  - _handle_recall() and _handle_clarification() stripped of fragile
-    header-strip logic (split("\n\n", 1)[1]) — history is clean now,
-    no stripping needed, legitimate \n\n in responses no longer mangled.
+1. _handle_name_capture() — catch the name after she asked for it
+2. _handle_recall()       — "what did you just say / what's my name"
+3. _handle_clarification()— "what do you mean / say that differently"
+4. _handle_meta_correction()— "forget that / never mind / drop it"
+5. _finalize_response()   — THE WRITER. Every response gets logged here.
+   Logs RAW result (pre-tone-header). History is clean.
 
 WHY THIS FILE EXISTS:
-  guvna.py was doing too many things.
-  This is the part that makes her self-governing — not just smart.
-  Split it out. Keep it clean. Import it back.
+guvna.py was doing too many things.
+This is the part that makes her self-governing — not just smart.
+Split it out. Keep it clean. Import it back.
 
 Usage:
-  class Guvna(GuvnaSelf, ...):
-      ...
-
-  GuvnaSelf.__init__(self) wires the state.
-  All methods available on Guvna instance.
+    class Guvna(GuvnaSelf, ...):
+        ...
+    GuvnaSelf.__init__(self) wires the state.
+    All methods available on Guvna instance.
 """
 
 from __future__ import annotations
@@ -64,7 +54,6 @@ logger = logging.getLogger("guvna_self")
 
 DEFAULT_NAME = "Mate"
 
-
 # ============================================================================
 # GUVNA SELF — MIXIN
 # ============================================================================
@@ -76,121 +65,41 @@ class GuvnaSelf:
     Owns all state and behavior related to:
     - Who am I talking to?
     - What did I just say?
-    - Is this the first turn?
     - Did I ask for their name?
 
     Guvna inherits this. Do not instantiate directly.
+
+    NOTE: Greeting (whosonfirst / greet()) has been removed.
+    The API owns turn 0. Guvna wakes on turn 1 with the name already known.
     """
 
     def _init_self_state(self) -> None:
         """
         Call this from Guvna.__init__() to wire self-state.
-
         Guvna.__init__ must call:
             self._init_self_state()
         """
         self.turn_count: int = 0
         self.user_name: Optional[str] = None
-        self.whosonfirst: bool = True
         self._awaiting_name: bool = False
         self._response_history: deque = deque(maxlen=20)
 
     # -----------------------------------------------------------------
-    # APERTURE — First contact. Before anything else.
-    # -----------------------------------------------------------------
-    def greet(self, stimulus: str, known_name: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """
-        APERTURE — Turn 0 only. First thing that happens.
-
-        Either know them by name already, or meet them fresh.
-        Returns a greeting response dict, or None if not turn 0.
-
-        Sets:
-          - self.user_name (if name found)
-          - self._awaiting_name (if name not found)
-          - self.whosonfirst = False (consumed)
-          - self.turn_count += 1
-        """
-        if not self.whosonfirst:
-            return None
-
-        if not known_name:
-            s = stimulus.lower().strip()
-            name_intros = ["my name is", "i'm ", "i am ", "call me", "name's"]
-            for intro in name_intros:
-                if intro in s:
-                    idx = s.index(intro) + len(intro)
-                    rest = stimulus[idx:].strip().split()[0] if idx < len(stimulus) else ""
-                    name = rest.strip(".,!?;:'\"")
-                    if name and len(name) > 1:
-                        known_name = name.capitalize()
-                        break
-
-            # Fallback: if stimulus is 1-2 words, no question mark, no verb
-            # treat it as a bare name ("Ohad", "Ohad Oren")
-            if not known_name:
-                words = stimulus.strip().strip(".,!?;:'\"").split()
-                _bad_names = {
-                    "yes", "no", "ok", "okay", "sure", "hey", "hi", "hello",
-                    "thanks", "nah", "idk", "what", "huh", "nothing", "nevermind",
-                    "good", "fine", "great", "cool", "nice", "well", "help",
-                    "start", "begin", "go", "ready",
-                }
-                if (1 <= len(words) <= 2
-                        and "?" not in stimulus
-                        and words[0].lower() not in _bad_names):
-                    known_name = words[0].capitalize()
-
-        if known_name:
-            self.user_name = known_name
-
-        if self.user_name:
-            greeting_text = (
-                f"Hi {self.user_name}! What's on your mind today?"
-            )
-            self._awaiting_name = False
-        else:
-            greeting_text = (
-                "Hi there! What's your name? You can call me RILIE if you please... :)"
-            )
-            self._awaiting_name = True
-
-        self.turn_count += 1
-        self.memory.turn_count += 1
-
-        tone = detect_tone_from_stimulus(stimulus)
-        # Greeting is always conversational — no tone header on "Hi there!"
-        # apply_tone_header suppresses for "engaged" but greetings need no label at all.
-        # Store raw greeting text. _finalize_response logs raw so recall gets clean text.
-
-        response = {
-            "stimulus": stimulus,
-            "result": greeting_text,
-            "status": "APERTURE",
-            "tone": tone,
-            "tone_emoji": TONE_EMOJIS.get(tone, TONE_EMOJIS["insightful"]),
-            "turn_count": self.turn_count,
-            "user_name": self.user_name,
-            "whosonfirst": False,
-        }
-        self.whosonfirst = False
-        return self._finalize_response(response)
-
-    # -----------------------------------------------------------------
     # NAME CAPTURE — turn after she asked "what's your name?"
     # -----------------------------------------------------------------
+
     def _handle_name_capture(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
         """
         Fast path: catch the name on the turn after RILIE asked for it.
 
         Only fires if:
-          - self._awaiting_name is True
-          - self.user_name is not already set
-          - stimulus is 1-3 words and not a known filler/bad word
+        - self._awaiting_name is True
+        - self.user_name is not already set
+        - stimulus is 1-3 words and not a known filler/bad word
 
         Writes:
-          - self.user_name
-          - self._awaiting_name = False
+        - self.user_name
+        - self._awaiting_name = False
         """
         if not self._awaiting_name or (self.user_name and self.user_name != "Mate"):
             return None
@@ -204,6 +113,7 @@ class GuvnaSelf:
             "thanks", "nah", "idk", "what", "huh", "nothing", "nevermind",
             "good", "fine", "great", "cool", "nice", "well",
         }
+
         candidate = words[0].capitalize()
         if candidate.lower() in _bad:
             return None
@@ -216,6 +126,7 @@ class GuvnaSelf:
             f"{self.user_name}! Good name. What are we getting into?",
             f"Great, {self.user_name}. What's on your mind?",
         ]
+
         return {
             "result": random.choice(replies),
             "status": "NAME_CAPTURE",
@@ -226,13 +137,14 @@ class GuvnaSelf:
     # -----------------------------------------------------------------
     # RECALL — "what did you just say / what's my name"
     # -----------------------------------------------------------------
+
     def _handle_recall(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
         """
         Fast path: user asking RILIE to repeat herself or recall their name.
 
         Reads:
-          - self._response_history  (to replay last response)
-          - self.user_name          (to answer "what's my name")
+        - self._response_history (to replay last response)
+        - self.user_name (to answer "what's my name")
 
         Returns None if no recall trigger detected.
         """
@@ -242,6 +154,7 @@ class GuvnaSelf:
             "do you remember my name", "what's my name", "whats my name",
             "who am i", "do you know my name",
         ]
+
         if not any(t in sl for t in triggers):
             return None
 
@@ -262,7 +175,6 @@ class GuvnaSelf:
             }
 
         # Response replay branch
-        # History stores RAW text (no tone headers) — no stripping needed
         if self._response_history:
             last = self._response_history[-1]
             return {
@@ -282,6 +194,7 @@ class GuvnaSelf:
     # -----------------------------------------------------------------
     # CLARIFICATION — "what do you mean / say that differently"
     # -----------------------------------------------------------------
+
     def _handle_clarification(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
         """
         Fast path: user asking RILIE to rephrase or clarify last response.
@@ -294,17 +207,17 @@ class GuvnaSelf:
             "explain that", "i don't understand", "i dont understand",
             "say that differently", "in other words", "what are you saying",
         ]
-        short_triggers = ["huh?", "what?", "come again", "say again"]
 
+        short_triggers = ["huh?", "what?", "come again", "say again"]
         word_count = len(s.split())
         matched = any(t in sl for t in clarify_triggers) and word_count <= 8
         matched = matched or any(
             sl.strip().rstrip("?!.") == t.rstrip("?") for t in short_triggers
         )
+
         if not matched:
             return None
 
-        # History stores RAW text (no tone headers) — no stripping needed
         if self._response_history:
             last = self._response_history[-1]
             bridges = [
@@ -329,10 +242,10 @@ class GuvnaSelf:
     # -----------------------------------------------------------------
     # META CORRECTION — "forget that / never mind / drop it"
     # -----------------------------------------------------------------
+
     def _handle_meta_correction(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
         """
         Fast path: user reacting to a bad RILIE response — reset and re-invite.
-
         Does NOT modify history. Just acknowledges and pivots.
         Returns None if no meta-correction pattern detected.
         """
@@ -349,6 +262,7 @@ class GuvnaSelf:
             r"^that was not",
             r"^not what i",
         ]
+
         for pat in meta_patterns:
             if re.search(pat, sl):
                 replies = [
@@ -363,11 +277,13 @@ class GuvnaSelf:
                     "triangle_reason": "CLEAN",
                     "quality_score": 0.8,
                 }
+
         return None
 
     # -----------------------------------------------------------------
     # FINALIZE RESPONSE — THE WRITER
     # -----------------------------------------------------------------
+
     def _finalize_response(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         """
         Final assembly of every response that leaves Guvna.
@@ -377,9 +293,7 @@ class GuvnaSelf:
 
         Adds all required fields, fills defaults. History cap handled by deque(maxlen=20).
 
-        Called at the end of:
-          - greet()
-          - process() (via fast paths and main pipeline)
+        Called at the end of process() via fast paths and main pipeline.
         """
         final = {
             "stimulus": raw.get("stimulus", ""),
@@ -397,7 +311,7 @@ class GuvnaSelf:
             "wit": raw.get("wit"),
             "language_mode": raw.get("language_mode"),
             "social": raw.get("social", {}),
-            "rx_signal": raw.get("rx_signal"),  # affirmation/negation reception signal
+            "rx_signal": raw.get("rx_signal"),
             "dejavu": raw.get(
                 "dejavu",
                 {"count": 0, "frequency": 0, "similarity": "none"},
@@ -411,7 +325,6 @@ class GuvnaSelf:
             "memory_polaroid": raw.get("memory_polaroid"),
             "turn_count": self.turn_count,
             "user_name": self.user_name,
-            "whosonfirst": self.whosonfirst,
             "library_metadata": {
                 "total_domains": self.library_metadata.total_domains,
                 "files_loaded": len(self.library_metadata.files),
@@ -421,19 +334,11 @@ class GuvnaSelf:
         }
 
         # THE LOG — this is what makes recall and clarification work
-        # CRITICAL: log RAW result (from raw dict) NOT the dressed plate (final["result"])
-        # final["result"] may have tone headers stamped by guvna.py Step 10.
-        # Recall and clarification should replay what she SAID, not the label she wore.
-        # raw.get("result") is the pre-header text. final["result"] is post-header.
-        # We log raw["result"] here — the actual content.
         raw_result_text = raw.get("result", "")
         if raw_result_text:
-            # Strip any tone header that may have already been applied upstream
-            # (greet() used to do this — belt and suspenders)
             _stripped = raw_result_text
             if "\n\n" in _stripped:
                 _candidate = _stripped.split("\n\n", 1)[1]
-                # Only strip if the first part looks like a tone label
                 _first = _stripped.split("\n\n", 1)[0]
                 from guvna_tools import TONE_LABELS
                 _tone_labels = set(TONE_LABELS.values())

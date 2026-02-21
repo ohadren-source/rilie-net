@@ -21,7 +21,6 @@ The Governor (Act 5) adds:
 - Language mode detection (literal/figurative/metaphor/simile/poetry)
 - Social status tracking (user always above self)
 - Library index for domain engine access (678 domains across B-U + urban_design)
-- WHOSONFIRST – greeting gate on first contact (before Triangle)
 - Curiosity resurface – past insights as context before RILIE processes
 - Domain lenses flow into RILIE for weighted interpretation
 - Déjà-vu as informative context on the plate
@@ -37,7 +36,7 @@ FAST PATH CLASSIFIER (fires before Kitchen wakes up):
 - Recall, clarification                           ← via GuvnaSelf
 
 SELF-GOVERNING STATE (owned by GuvnaSelf mixin):
-- _response_history, user_name, _awaiting_name, whosonfirst, turn_count
+- _response_history, user_name, _awaiting_name, turn_count
 - greet(), _handle_name_capture(), _handle_recall()
 - _handle_clarification(), _handle_meta_correction(), _finalize_response()
 
@@ -555,12 +554,6 @@ class Guvna(GuvnaSelf):
         self.memory.turn_count += 1
         raw: Dict[str, Any] = {"stimulus": stimulus}
 
-        # STEP 0: APERTURE
-        if self.whosonfirst:
-            greeting = self.greet(stimulus)
-            if greeting:
-                return greeting
-
         # STEP 0.5: MEANING FINGERPRINT — read before Kitchen wakes up
         # This is the gate that was removed. Putting it back.
         #
@@ -823,9 +816,6 @@ class Guvna(GuvnaSelf):
             raw["result"] = memory_callback + "\n\n" + result_text
         if memory_thread and result_text:
             raw["result"] = raw["result"] + "\n\n" + memory_thread
-
-        if self.whosonfirst:
-            self.whosonfirst = False
 
         return self._finalize_response(raw)
 
