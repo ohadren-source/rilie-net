@@ -1,20 +1,9 @@
 """
-api.py — RILIE API v0.9.0 + Chomsky name tap (Fixed & Merged)
+api.py — RILIE API v0.9.2 — GREET-ONCE, THEN KITCHEN
 
-Session persistence wired in. She remembers who you are between visits.
-
-Extracts a likely name anchor from stimulus via ChomskyAtTheBit,
-and uses it as a canonical `display_name` across the conversation.
-
-Fixes applied:
-- Enhanced name extraction with spaCy NER priority for PERSON entities.
-- Expanded regex heuristics for common intro patterns ("I am called", etc.).
-- Safeguard against bad/verb-based names like "introduce" or "called".
-- Added intro_attempts session counter to detect and exit greeting loops.
-- Pivot to "What's on your mind?" after 1 failed intro, using fallback name "friend".
-- Fixed `global talk_memory` declaration in get_guvna() (was silently staying None).
-- Fixed async/sync contradiction: run_rilie is sync; run_rilie_upload uses run_in_threadpool correctly.
-- Removed duplicate block that was copy-pasted during block-by-block generation.
+- One BASIC hostess pass per browser tab / session, then permanent promotion to Kitchen.
+- Primary gate: per-request greeted flag (tab-level).
+- Secondary fuse: session["has_greeted"] (best-effort DB/session).
 """
 
 import os
@@ -26,17 +15,14 @@ import logging
 import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
-
 import urllib.parse
 import urllib.request
 
 import httpx
-
 from fastapi import FastAPI, HTTPException, Request, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
 from pydantic import BaseModel
 
 from guvna import Guvna, LibraryIndex
@@ -57,12 +43,9 @@ from session import (
     update_name,
 )
 
-from talk import talk, TalkMemory
+from talk import TalkMemory
 
-# ✅ MEANING INTEGRATION — For logging and API responses
-# from guvna.meaning import MeaningFingerprint
-
-# Chomsky integration for name extraction, identity resolution, NER
+# Chomsky integration
 from ChomskyAtTheBit import (
     classify_stimulus,
     parse_question,
@@ -81,9 +64,7 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 def load_env_file(path: Path) -> None:
-    """
-    Minimal .env loader. KEY=VALUE per line, comments allowed.
-    """
+    """Minimal .env loader. KEY=VALUE per line, comments allowed."""
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -108,12 +89,9 @@ GENERATED_DIR = BASE_DIR / "generated"
 
 
 def load_roux() -> Dict[str, Dict[str, Any]]:
-    """
-    Load RILIE's 9-track Roux from ROUX.json and the RInitials/*.txt files.
-    """
+    """Load RILIE's 9-track Roux from ROUX.json and the RInitials/*.txt files."""
     if not ROUX_PATH.exists():
         return {}
-
     with ROUX_PATH.open("r", encoding="utf-8") as f:
         config = json.load(f)
 
@@ -147,9 +125,7 @@ GENERATED_DIR.mkdir(exist_ok=True)
 
 
 def build_library_index() -> LibraryIndex:
-    """
-    One-time study pass for RILIE. Import each Catch‑44 domain module.
-    """
+    """One-time study pass for RILIE. Import each Catch‑44 domain module."""
     import importlib
     import importlib.util
     import sys
@@ -168,7 +144,8 @@ def build_library_index() -> LibraryIndex:
                 "functions": {
                     name: getattr(mod, name)
                     for name in dir(mod)
-                    if callable(getattr(mod, name, None)) and not name.startswith("_")
+                    if callable(getattr(mod, name, None))
+                    and not name.startswith("_")
                 },
                 "tags": tags,
             }
@@ -201,6 +178,7 @@ def build_library_index() -> LibraryIndex:
             "relativity",
         ],
     )
+
     safe_import(
         "life",
         "life",
@@ -217,6 +195,7 @@ def build_library_index() -> LibraryIndex:
             "organism",
         ],
     )
+
     safe_import(
         "games",
         "games",
@@ -233,6 +212,7 @@ def build_library_index() -> LibraryIndex:
             "prisoner",
         ],
     )
+
     safe_import(
         "thermodynamics",
         "thermodynamics",
@@ -249,6 +229,7 @@ def build_library_index() -> LibraryIndex:
             "restore",
         ],
     )
+
     safe_import(
         "DuckSauce",
         "ducksauce",
@@ -263,6 +244,7 @@ def build_library_index() -> LibraryIndex:
             "creation",
         ],
     )
+
     safe_import(
         "ChomskyAtTheBit",
         "chomsky",
@@ -279,9 +261,7 @@ def build_library_index() -> LibraryIndex:
         ],
     )
 
-    # ... keep all other safe_import calls from your original v0.9.0 here ...
-    # SOi sauce, SOiOS, networktheory, bigbang, etc. – unchanged.
-
+    # ... keep all other safe_import calls from your original index ...
     logger.info("Library index complete (%d domain engines loaded)", len(index))
     return index
 
@@ -292,7 +272,6 @@ def build_library_index() -> LibraryIndex:
 
 BRAVE_API_KEY = os.getenv("BRAVE_API_KEY")
 BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
-
 SearchFn = Callable[[str, int], List[Dict[str, str]]]
 
 
@@ -310,7 +289,7 @@ async def brave_web_search(query: str, num_results: int = 5) -> List[Dict[str, s
         "count": max(1, min(num_results, 10)),
     }
 
-    async with httpx.AsyncClient(timeout=10) as client:
+    with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(BRAVE_SEARCH_URL, headers=headers, params=params)
         resp.raise_for_status()
         data = resp.json()
@@ -328,9 +307,7 @@ async def brave_web_search(query: str, num_results: int = 5) -> List[Dict[str, s
 
 
 def brave_search_sync(query: str, num_results: int = 5) -> List[Dict[str, str]]:
-    """
-    Synchronous Brave Search safe to call from sync code inside async event loop.
-    """
+    """Synchronous Brave Search safe to call from sync code inside async loop."""
     if not BRAVE_API_KEY:
         raise RuntimeError("Brave Search API not configured (BRAVE_API_KEY).")
 
@@ -393,14 +370,12 @@ def google_ocr(image_bytes: bytes) -> str:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-
     with urllib.request.urlopen(req, timeout=15) as resp:
         resp_data = json.loads(resp.read().decode("utf-8"))
 
     responses = resp_data.get("responses", [])
     if not responses:
         return ""
-
     res0 = responses[0]
     full = res0.get("fullTextAnnotation", {})
     text = full.get("text")
@@ -410,7 +385,6 @@ def google_ocr(image_bytes: bytes) -> str:
     ann = res0.get("textAnnotations", [])
     if not ann:
         return ""
-
     parts = [a.get("description", "") for a in ann]
     return "\n".join(parts)
 
@@ -427,7 +401,7 @@ BANKS_URL = os.getenv("BANKS_URL", "http://127.0.0.1:8001")
 # FastAPI app
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="RILIE API", version="0.9.0")
+app = FastAPI(title="RILIE API", version="0.9.2")
 
 app.add_middleware(
     CORSMiddleware,
@@ -461,7 +435,7 @@ curiosity_engine = CuriosityEngine(
 talk_memory = TalkMemory()
 
 logger.info(
-    "RILIE API v0.9.0 booted — Roux %d tracks, Library %d engines, "
+    "RILIE API v0.9.2 booted — Roux %d tracks, Library %d engines, "
     "Brave %s, Vision %s, Manifesto %s, Sessions ON",
     len(roux_seeds),
     len(library_index),
@@ -486,10 +460,10 @@ def serve_client():
         raise HTTPException(status_code=404, detail="Client HTML not found")
     return FileResponse(client_path, media_type="text/html")
 
+
 # ---------------------------------------------------------------------------
 # Startup / Shutdown
 # ---------------------------------------------------------------------------
-
 
 @app.on_event("startup")
 def on_startup() -> None:
@@ -519,15 +493,16 @@ def on_shutdown() -> None:
     curiosity_engine.stop_background()
     logger.info("Curiosity engine stopped.")
 
+
 # ---------------------------------------------------------------------------
 # Pydantic models
 # ---------------------------------------------------------------------------
-
 
 class RilieRequest(BaseModel):
     stimulus: str
     max_pass: int = 3
     chef_mode: bool = False
+    greeted: bool = False  # per-tab greet flag (front-end echoes this)
 
 
 class SearchRequest(BaseModel):
@@ -577,6 +552,7 @@ class CuriosityQueueRequest(BaseModel):
 class HelloRequest(BaseModel):
     text: str
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -602,13 +578,11 @@ def save_generated_file(ext: str, content: str) -> str:
 
 
 def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Format the Guvna's output into a clean plate for the client.
-    """
+    """Format the Guvna's output into a clean plate for the client."""
     result_text = raw_envelope.get("result", "")
     priorities_met = int(raw_envelope.get("priorities_met", 0) or 0)
-    qs = raw_envelope.get("quality_scores")
 
+    qs = raw_envelope.get("quality_scores")
     if qs:
         vibe = {
             p: qs.get(p, 0.3)
@@ -642,6 +616,7 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
         "result": result_text,
         "vibe": vibe,
         "status": status_map.get(status, "served"),
+        "priorities_met": priorities_met,
     }
 
     if "talk_attempts" in raw_envelope:
@@ -655,36 +630,79 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
 
     return plate
 
+
 # ---------------------------------------------------------------------------
-# Name extraction — one function, one regex, one job
+# Name extraction helpers
 # ---------------------------------------------------------------------------
+
+_BAD_NAMES = {
+    "introduce",
+    "called",
+    "myself",
+    "allow",
+    "please",
+    "i",
+    "im",
+    "i'm",
+    "hi",
+    "hello",
+    "hey",
+    "sup",
+    "yo",
+    "ok",
+    "okay",
+    "no",
+    "yes",
+    "yeah",
+    "nah",
+    "nothing",
+    "idk",
+    "skip",
+    "nope",
+    "what",
+    "who",
+    "why",
+    "how",
+    "huh",
+    "lol",
+    "haha",
+}
+
 
 def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
-    Extract customer name — ONLY from intro stimuli.
+    Extract customer name ONLY from intro stimuli.
     Regex captures full name after any intro phrase, through trailing noise.
     NER fallback for natural intros without a pattern.
     """
     s = (stimulus or "").strip()
-    INTRO_SIGNALS = ["my name is", "i am called", "i'm called", "call me",
-                     "introduce myself", "they call me"]
+    INTRO_SIGNALS = [
+        "my name is",
+        "i am called",
+        "i'm called",
+        "call me",
+        "introduce myself",
+        "they call me",
+        "i am ",
+        "i'm ",
+        "im ",
+    ]
     if not any(sig in s.lower() for sig in INTRO_SIGNALS):
         return None
 
-    # Regex: capture everything after intro phrase until punctuation or known noise
     m = re.search(
         r"(?:my name is|i am called|i'm called|call me|i am|i'm|"
         r"they call me|introduce myself(?: as)?)\s+"
         r"([A-Za-z][A-Za-z\s'\-]{1,50}?)"
         r"(?:\s*[.,!?]|\s+[Aa] |\s*$)",
-        s, re.IGNORECASE
+        s,
+        re.IGNORECASE,
     )
     if m:
         name = m.group(1).strip()
         if name and name.lower() not in _BAD_NAMES and len(name) >= 2:
             return name.title()
 
-    # NER fallback
     try:
         nlp = _get_nlp()
         doc = nlp(s)
@@ -699,24 +717,27 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     return None
 
 
+def _sanitize_display_name(name: Optional[str]) -> Optional[str]:
+    """Return None if name is a known bad parse or too short."""
+    if not name:
+        return None
+    if name.lower() in _BAD_NAMES or len(name) < 2:
+        return None
+    return name
 
 
 # ---------------------------------------------------------------------------
 # Multi-question helpers
 # ---------------------------------------------------------------------------
 
-
 def is_multi_question_response(result: Dict[str, Any]) -> bool:
-    """
-    Check if the Kitchen/Guvna returned a multi-question response.
-    """
+    """Check if the Kitchen/Guvna returned a multi-question response."""
     if not isinstance(result, dict):
         return False
 
     status = str(result.get("status", "")).upper()
     if status == "MULTI_QUESTION_SPLIT":
         return True
-
     if result.get("multi_question_parts"):
         return True
     if result.get("question_parts"):
@@ -729,20 +750,16 @@ def is_multi_question_response(result: Dict[str, Any]) -> bool:
     result_text = str(result.get("result", "")).lower()
     if "noticed" in result_text and "questions" in result_text:
         return True
-
     return False
 
 
 def extract_question_parts(result: Dict[str, Any]) -> List[str]:
-    """
-    Extract the individual question parts from Kitchen/Guvna response.
-    """
+    """Extract the individual question parts from Kitchen/Guvna response."""
     if not isinstance(result, dict):
         return []
 
     if result.get("multi_question_parts"):
         return list(result["multi_question_parts"])
-
     if result.get("question_parts"):
         return list(result["question_parts"])
 
@@ -759,16 +776,12 @@ def process_multi_question_parts(
     max_pass: int = 3,
     session: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """
-    Process each question part separately through the full Guvna pipeline.
-    Returns combined result and per-part details.
-    """
+    """Process each question part separately through the full Guvna pipeline."""
     part_results: List[Dict[str, Any]] = []
 
     for i, part in enumerate(parts, 1):
         if not part or not str(part).strip():
             continue
-
         text = str(part).strip()
         try:
             part_result = guvna_instance.process(text, maxpass=max_pass)
@@ -816,27 +829,10 @@ def process_multi_question_parts(
         "quality_score": combined_q,
     }
 
-# ---------------------------------------------------------------------------
-# Bad-name safeguard
-# ---------------------------------------------------------------------------
-
-BAD_NAMES = {"introduce", "called", "myself", "allow", "please", "i", "hi", "hello",
-             "hey", "sup", "yo", "ok", "okay", "no", "yes", "yeah", "nah", "nothing",
-             "idk", "skip", "nope", "what", "who", "why", "how", "huh", "lol", "haha"}
-
-
-def _sanitize_display_name(name: Optional[str]) -> Optional[str]:
-    """Return None if name is a known bad parse or too short."""
-    if not name:
-        return None
-    if name.lower() in BAD_NAMES or len(name) < 2:
-        return None
-    return name
 
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
-
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
@@ -867,31 +863,20 @@ def hello(req: HelloRequest) -> Dict[str, str]:
         return {"name": "mate"}
 
     clean = text.rstrip("!?.").strip()
-    if clean.lower() in BAD_NAMES:
+    if clean.lower() in _BAD_NAMES:
         return {"name": "mate"}
 
     name = _extract_name_with_chomsky(text)
     name = _sanitize_display_name(name)
-
     return {"name": name or "mate"}
 
 
 @app.post("/v1/rilie")
 def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
-    Main RILIE endpoint — SESSION-AWARE:
-
-    1. Load session from Postgres by IP
-    2. Restore Guvna + TalkMemory state
-    3. Process stimulus (with multi-question support)
-    4. Run conversation memory behaviors (incl. Christening)
-    5. Resolve display_name via NER → heuristics → Chomsky (with bad-name guard)
-    6. Handle first-turn greeting with intro loop exit safeguard
-    7. Snapshot state back to session
-    8. Save session to Postgres
-    9. Return plate
+    Main RILIE endpoint — greet once on first turn, then move on.
     """
-    stimulus = req.stimulus.strip()
+    stimulus = (req.stimulus or "").strip()
     if not stimulus:
         return {
             "stimulus": "",
@@ -908,25 +893,64 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     client_ip = get_client_ip(request)
     session = load_session(client_ip)
 
-    # Restore state
+    # ---------------------------------------------------------------
+    # BASIC. One hostess pass per browser tab / session.
+    # Single source of truth: session["has_greeted"] (persistence).
+    # ---------------------------------------------------------------
+    has_greeted_session = bool(session.get("has_greeted"))
+    logger.info(
+        "HOSTESS CHECK (turn=%s): has_greeted_session=%s",
+        "first" if not has_greeted_session else "later",
+        has_greeted_session,
+    )
+
+    if not has_greeted_session:
+        name = _extract_name_with_chomsky(stimulus)
+        if not name:
+            words = stimulus.strip().strip(".,!?;:'").split()
+            if 1 <= len(words) <= 2 and "?" not in stimulus:
+                candidate = words[0].capitalize()
+                if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
+                    name = candidate
+
+        greet_as = _sanitize_display_name(name) or DEFAULT_NAME
+
+        session["user_name"] = greet_as
+        session["display_name"] = greet_as
+        session["name_source"] = "given"
+
+        # Fuses: mark greeted in session (Database of Truth)
+        session["has_greeted"] = True
+        save_session(session)
+
+        return build_plate(
+            {
+                "result": f"Pleasure to meet you, {greet_as}! What's on your mind? 🍳",
+                "status": "GREETING",
+                "display_name": greet_as,
+                "quality_score": 1.0,
+                "priorities_met": 1,
+            }
+        )
+
+    # ---------------------------------------------------------------
+    # Core Guvna pipeline — pure Kitchen from here on out.
+    # ---------------------------------------------------------------
     restore_guvna_state(guvna, session)
+    guvna.whosonfirst = False  # api.py owns greeting
+    guvna.memory.whosonfirst = False  # api.py owns greeting
+
     restore_talk_memory(talk_memory, session)
 
-    # Pre-split: detect multiple questions BEFORE guvna
     def _detect_multi_question(s: str):
         """Split stimulus into parts if user explicitly requested numbered answers."""
-        import re
-        # Only trigger if they asked for numbered format explicitly
-        if not re.search(r'\b(1\.|2\.|3\.|question|each|order|following)\b', s, re.IGNORECASE):
+        if not re.search(
+            r"\b(1\.|2\.|3\.|question|each|order|following)\b", s, re.IGNORECASE
+        ):
             return None
-        # Split on question marks, numbered patterns, or explicit question boundaries
-        parts = re.split(r'(?<=[?!])\s+(?=[A-Z])|(?=\b[1-9]\.\s)', s)
-        # Clean and filter
+        parts = re.split(r"(?<=[?!])\s+(?=[A-Z])|(?=\b[1-9]\.\s)", s)
         parts = [p.strip() for p in parts if p.strip() and len(p.strip()) > 8]
-        # Only split if we found more than 1 real question
-        if len(parts) > 1:
-            return parts
-        return None
+        return parts if len(parts) > 1 else None
 
     pre_parts = _detect_multi_question(stimulus)
     if pre_parts:
@@ -934,7 +958,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         multi = process_multi_question_parts(
             pre_parts, guvna_instance=guvna, max_pass=req.max_pass, session=session
         )
-        result = {
+        result: Dict[str, Any] = {
             "result": multi["combined_result"],
             "status": "MULTI_QUESTION_PROCESSED",
             "is_multi_question": True,
@@ -944,16 +968,17 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             "quality_score": multi["quality_score"],
         }
     else:
-        # Core Guvna call
         result = guvna.process(stimulus, maxpass=req.max_pass)
 
-    # Multi-question handling
     if is_multi_question_response(result):
-        logger.info("MULTIQUESTION detected: %s...", stimulus[:120])
+        logger.info("MULTI-QUESTION detected %s...", stimulus[:120])
         parts = extract_question_parts(result)
         if parts:
             multi = process_multi_question_parts(
-                parts, guvna_instance=guvna, max_pass=req.max_pass, session=session
+                parts,
+                guvna_instance=guvna,
+                max_pass=req.max_pass,
+                session=session,
             )
             result = {
                 "result": multi["combined_result"],
@@ -965,7 +990,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
                 "quality_score": multi["quality_score"],
             }
 
-    # Memory behaviors
+    # ---------------------------------------------------------------
+    # Memory behaviors / christening
+    # ---------------------------------------------------------------
     domains_hit = result.get("domains_hit", [])
     quality = result.get("quality_score", 0.0)
     tone = result.get("tone", "insightful")
@@ -975,42 +1002,39 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         domains_hit=domains_hit,
         quality=quality,
         tone=tone,
-        topics=session.get("topics", []),
+        topics=session.get("topics", {}),
     )
 
-    # Christening → updates display_name via update_name
     if mem_result.get("christening"):
         result["christening"] = mem_result["christening"]
-        update_name(
-            session,
-            mem_result["christening"].get("nickname"),
-            christened=True,
-        )
 
-    # Topic tracking (Moment is an object, not a dict)
     if mem_result.get("moment"):
         moment = mem_result["moment"]
         tag = getattr(moment, "tag", None)
-        record_topics(session, domains_hit, tag)
+        record_topics(session, domains_hit, [tag] if tag else [])
 
-    # Resolve display_name: session → NER/heuristics/Chomsky → DEFAULT_NAME
-    display_name = session.get("display_name") or session.get("name")
+    # ---------------------------------------------------------------
+    # Name + display_name resolution for later turns
+    # ---------------------------------------------------------------
+    display_name = (
+        session.get("user_name")
+        or session.get("display_name")
+        or session.get("name")
+    )
 
     if not display_name:
         display_name = _extract_name_with_chomsky(stimulus)
+        display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
 
-    display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
-    session["display_name"] = display_name
-    result.setdefault("display_name", display_name)
+    if display_name != DEFAULT_NAME:
+        session["user_name"] = display_name
+        session["display_name"] = display_name
 
-    # Greeting on first turn — name intro only, kitchen handles everything else
-    if not session.get("has_spoken"):
-        session["has_spoken"] = True
-        if display_name != DEFAULT_NAME:
-            result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? 🍳"
-            result["status"] = "GREETING"
+    result.setdefault("display_name", session.get("user_name", DEFAULT_NAME))
 
-    # Snapshot state + save session
+    # ---------------------------------------------------------------
+    # Snapshot + response
+    # ---------------------------------------------------------------
     snapshot_guvna_state(guvna, session)
     snapshot_talk_memory(talk_memory, session)
     save_session(session)
@@ -1054,6 +1078,7 @@ async def run_rilie_upload(
                     file_context_parts.append(
                         f"[Image {f.filename}] OCR failed: {e}"
                     )
+
             elif contenttype.startswith("text") or f.filename.endswith(
                 (".txt", ".md", ".csv", ".json", ".py", ".js", ".html")
             ):
@@ -1064,10 +1089,11 @@ async def run_rilie_upload(
                     file_context_parts.append(
                         f"[File {f.filename}] (could not decode as UTF-8)"
                     )
+
             elif f.filename.endswith(".docx"):
                 try:
                     import io
-                    from docx import Document
+                    from docx import Document  # type: ignore[import]
 
                     doc = Document(io.BytesIO(rawbytes))
                     text = "\n".join(
@@ -1085,10 +1111,12 @@ async def run_rilie_upload(
                     file_context_parts.append(
                         f"[Document {f.filename}] parse failed: {e}"
                     )
+
             else:
                 file_context_parts.append(
                     f"[File {f.filename}] unsupported type: {contenttype}"
                 )
+
         except Exception as e:
             file_context_parts.append(f"[File {f.filename}] error: {e}")
 
@@ -1098,10 +1126,10 @@ async def run_rilie_upload(
     else:
         combined = stimulus
 
-    # run_rilie is sync — run_in_threadpool is correct here
     from starlette.concurrency import run_in_threadpool
-    req = RilieRequest(stimulus=combined, max_pass=max_pass, chef_mode=False)
-    return await run_in_threadpool(run_rilie, req, request)
+
+    req_obj = RilieRequest(stimulus=combined, max_pass=max_pass, chef_mode=False)
+    return await run_in_threadpool(run_rilie, req_obj, request)
 
 
 @app.post("/v1/google-search")
