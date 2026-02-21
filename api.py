@@ -749,6 +749,8 @@ _BAD_NAMES = {
     "allow",
     "please",
     "i",
+    "im",
+    "i'm",
     "hi",
     "hello",
     "hey",
