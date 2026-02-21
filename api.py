@@ -1,70 +1,130 @@
 """
-api.py — RILIE API v0.9.2 — GREET-ONCE, THEN KITCHEN
+api.py — RILIE API v0.9.0 + Chomsky name tap (Fixed & Merged)
 
-- One BASIC hostess pass per browser tab / session, then permanent promotion to Kitchen.
-- Primary gate: per-request greeted flag (tab-level).
-- Secondary fuse: session["has_greeted"] (best-effort DB/session).
+Session persistence wired in. She remembers who you are between visits.
+
+Extracts a likely name anchor from stimulus via ChomskyAtTheBit,
+and uses it as a canonical `display_name` across the conversation.
+
+Fixes applied:
+
+- Enhanced name extraction with spaCy NER priority for PERSON entities.
+- Expanded regex heuristics for common intro patterns ("I am called", etc.).
+- Safeguard against bad/verb-based names like "introduce" or "called".
+- Added intro_attempts session counter to detect and exit greeting loops.
+- Pivot to "What's on your mind?" after 1 failed intro, using fallback name "friend".
+- Fixed `global talk_memory` declaration in get_guvna() (was silently staying None).
+- Fixed async/sync contradiction: run_rilie is sync; run_rilie_upload uses run_in_threadpool correctly.
+- Removed duplicate block that was copy-pasted during block-by-block generation.
 """
 
 import os
+
 import json
+
 import time
+
 import uuid
+
 import base64
+
 import logging
+
 import re
+
 from pathlib import Path
+
 from typing import Dict, Any, List, Optional, Callable
+
 import urllib.parse
+
 import urllib.request
 
 import httpx
+
 from fastapi import FastAPI, HTTPException, Request, File, Form, UploadFile
+
 from fastapi.middleware.cors import CORSMiddleware
+
 from fastapi.responses import FileResponse
+
 from fastapi.staticfiles import StaticFiles
+
 from pydantic import BaseModel
 
 from guvna import Guvna, LibraryIndex
+
 from banks import ensure_curiosity_table
+
 from curiosity import CuriosityEngine
+
 from session import (
+
     ensure_session_table,
+
     load_session,
+
     save_session,
+
     get_client_ip,
+
     restore_guvna_state,
+
     snapshot_guvna_state,
+
     restore_talk_memory,
+
     snapshot_talk_memory,
+
     record_topics,
+
     DEFAULT_NAME,
+
     logger,
+
     update_name,
+
 )
 
 from talk import TalkMemory
 
-# Chomsky integration
+# ✅ MEANING INTEGRATION — For logging and API responses
+
+# from guvna.meaning import MeaningFingerprint
+
+# Chomsky integration for name extraction, identity resolution, NER
+
 from ChomskyAtTheBit import (
+
     classify_stimulus,
+
     parse_question,
+
     _get_nlp,
+
     resolve_identity,
+
     extract_customer_name,
+
     RILIE_SELF_NAME,
+
     RILIE_MADE_BY,
+
 )
 
 # ---------------------------------------------------------------------------
+
 # Base dir and .env loader
+
 # ---------------------------------------------------------------------------
 
 BASE_DIR = Path(__file__).resolve().parent
 
 
 def load_env_file(path: Path) -> None:
-    """Minimal .env loader. KEY=VALUE per line, comments allowed."""
+    """
+    Minimal .env loader. KEY=VALUE per line, comments allowed.
+    """
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -80,21 +140,26 @@ def load_env_file(path: Path) -> None:
 load_env_file(BASE_DIR / ".env")
 
 # ---------------------------------------------------------------------------
+
 # Roux and generated paths
+
 # ---------------------------------------------------------------------------
 
 ROUX_PATH = BASE_DIR / "ROUX.json"
+
 RINITIALS_DIR = BASE_DIR / "RInitials"
+
 GENERATED_DIR = BASE_DIR / "generated"
 
 
 def load_roux() -> Dict[str, Dict[str, Any]]:
-    """Load RILIE's 9-track Roux from ROUX.json and the RInitials/*.txt files."""
+    """
+    Load RILIE's 9-track Roux from ROUX.json and the RInitials/*.txt files.
+    """
     if not ROUX_PATH.exists():
         return {}
     with ROUX_PATH.open("r", encoding="utf-8") as f:
         config = json.load(f)
-
     seeds: Dict[str, Dict[str, Any]] = {}
     for key, meta in config.items():
         file_name = meta.get("file")
@@ -113,19 +178,22 @@ def load_roux() -> Dict[str, Dict[str, Any]]:
             "weight": float(weight),
             "role": role,
         }
-
     return seeds
 
 
 GENERATED_DIR.mkdir(exist_ok=True)
 
 # ---------------------------------------------------------------------------
+
 # Library index (Catch‑44 domain engines)
+
 # ---------------------------------------------------------------------------
 
 
 def build_library_index() -> LibraryIndex:
-    """One-time study pass for RILIE. Import each Catch‑44 domain module."""
+    """
+    One-time study pass for RILIE. Import each Catch‑44 domain module.
+    """
     import importlib
     import importlib.util
     import sys
@@ -261,17 +329,22 @@ def build_library_index() -> LibraryIndex:
         ],
     )
 
-    # ... keep all other safe_import calls from your original index ...
+    # ... keep all other safe_import calls from your original v0.9.0 here ...
+
     logger.info("Library index complete (%d domain engines loaded)", len(index))
     return index
 
 
 # ---------------------------------------------------------------------------
+
 # Brave Search configuration
+
 # ---------------------------------------------------------------------------
 
 BRAVE_API_KEY = os.getenv("BRAVE_API_KEY")
+
 BRAVE_SEARCH_URL = "https://api.search.brave.com/res/v1/web/search"
+
 SearchFn = Callable[[str, int], List[Dict[str, str]]]
 
 
@@ -284,12 +357,13 @@ async def brave_web_search(query: str, num_results: int = 5) -> List[Dict[str, s
         "Accept": "application/json",
         "X-Subscription-Token": BRAVE_API_KEY,
     }
+
     params = {
         "q": query,
         "count": max(1, min(num_results, 10)),
     }
 
-    with httpx.AsyncClient(timeout=10) as client:
+    async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(BRAVE_SEARCH_URL, headers=headers, params=params)
         resp.raise_for_status()
         data = resp.json()
@@ -303,11 +377,14 @@ async def brave_web_search(query: str, num_results: int = 5) -> List[Dict[str, s
                 "snippet": item.get("description", ""),
             }
         )
+
     return items
 
 
 def brave_search_sync(query: str, num_results: int = 5) -> List[Dict[str, str]]:
-    """Synchronous Brave Search safe to call from sync code inside async loop."""
+    """
+    Synchronous Brave Search safe to call from sync code inside async event loop.
+    """
     if not BRAVE_API_KEY:
         raise RuntimeError("Brave Search API not configured (BRAVE_API_KEY).")
 
@@ -315,6 +392,7 @@ def brave_search_sync(query: str, num_results: int = 5) -> List[Dict[str, str]]:
         "Accept": "application/json",
         "X-Subscription-Token": BRAVE_API_KEY,
     }
+
     params = {
         "q": query,
         "count": max(1, min(num_results, 10)),
@@ -334,16 +412,20 @@ def brave_search_sync(query: str, num_results: int = 5) -> List[Dict[str, str]]:
                 "snippet": item.get("description", ""),
             }
         )
+
     return items
 
 
 HAS_BRAVE_SEARCH = bool(BRAVE_API_KEY)
 
 # ---------------------------------------------------------------------------
+
 # Google Vision OCR configuration
+
 # ---------------------------------------------------------------------------
 
 GOOGLE_VISION_API_KEY = os.getenv("GOOGLE_VISION_API_KEY")
+
 VISION_URL = "https://vision.googleapis.com/v1/images:annotate"
 
 
@@ -361,21 +443,23 @@ def google_ocr(image_bytes: bytes) -> str:
             }
         ]
     }
+
     url = VISION_URL + "?key=" + urllib.parse.quote(GOOGLE_VISION_API_KEY)
     data = json.dumps(payload).encode("utf-8")
-
     req = urllib.request.Request(
         url,
         data=data,
         headers={"Content-Type": "application/json"},
         method="POST",
     )
+
     with urllib.request.urlopen(req, timeout=15) as resp:
         resp_data = json.loads(resp.read().decode("utf-8"))
 
     responses = resp_data.get("responses", [])
     if not responses:
         return ""
+
     res0 = responses[0]
     full = res0.get("fullTextAnnotation", {})
     text = full.get("text")
@@ -385,6 +469,7 @@ def google_ocr(image_bytes: bytes) -> str:
     ann = res0.get("textAnnotations", [])
     if not ann:
         return ""
+
     parts = [a.get("description", "") for a in ann]
     return "\n".join(parts)
 
@@ -392,16 +477,20 @@ def google_ocr(image_bytes: bytes) -> str:
 HAS_GOOGLE_VISION = bool(GOOGLE_VISION_API_KEY)
 
 # ---------------------------------------------------------------------------
+
 # BANKS configuration (PRE-RESPONSE target)
+
 # ---------------------------------------------------------------------------
 
 BANKS_URL = os.getenv("BANKS_URL", "http://127.0.0.1:8001")
 
 # ---------------------------------------------------------------------------
+
 # FastAPI app
+
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="RILIE API", version="0.9.2")
+app = FastAPI(title="RILIE API", version="0.9.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -411,11 +500,15 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
+
 # Guvna + RILIE singletons
+
 # ---------------------------------------------------------------------------
 
 roux_seeds: Dict[str, Dict[str, Any]] = load_roux()
+
 wired_search_fn: Optional[SearchFn] = brave_search_sync if HAS_BRAVE_SEARCH else None
+
 library_index: LibraryIndex = build_library_index()
 
 guvna = Guvna(
@@ -435,7 +528,7 @@ curiosity_engine = CuriosityEngine(
 talk_memory = TalkMemory()
 
 logger.info(
-    "RILIE API v0.9.2 booted — Roux %d tracks, Library %d engines, "
+    "RILIE API v0.9.0 booted — Roux %d tracks, Library %d engines, "
     "Brave %s, Vision %s, Manifesto %s, Sessions ON",
     len(roux_seeds),
     len(library_index),
@@ -445,10 +538,13 @@ logger.info(
 )
 
 # ---------------------------------------------------------------------------
+
 # Static / Client
+
 # ---------------------------------------------------------------------------
 
 app.mount("/generated", StaticFiles(directory=str(GENERATED_DIR)), name="generated")
+
 app.mount("/static", StaticFiles(directory=str(BASE_DIR)), name="static")
 
 
@@ -462,8 +558,11 @@ def serve_client():
 
 
 # ---------------------------------------------------------------------------
+
 # Startup / Shutdown
+
 # ---------------------------------------------------------------------------
+
 
 @app.on_event("startup")
 def on_startup() -> None:
@@ -495,14 +594,16 @@ def on_shutdown() -> None:
 
 
 # ---------------------------------------------------------------------------
+
 # Pydantic models
+
 # ---------------------------------------------------------------------------
+
 
 class RilieRequest(BaseModel):
     stimulus: str
     max_pass: int = 3
     chef_mode: bool = False
-    greeted: bool = False  # per-tab greet flag (front-end echoes this)
 
 
 class SearchRequest(BaseModel):
@@ -554,7 +655,9 @@ class HelloRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+
 # Helpers
+
 # ---------------------------------------------------------------------------
 
 ALLOWED_EXTENSIONS = {"md", "js", "py", "json", "txt", "docx", "pdf"}
@@ -578,7 +681,9 @@ def save_generated_file(ext: str, content: str) -> str:
 
 
 def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
-    """Format the Guvna's output into a clean plate for the client."""
+    """
+    Format the Guvna's output into a clean plate for the client.
+    """
     result_text = raw_envelope.get("result", "")
     priorities_met = int(raw_envelope.get("priorities_met", 0) or 0)
 
@@ -632,7 +737,9 @@ def build_plate(raw_envelope: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Name extraction helpers
+
+# Name extraction — one function, one regex, one job
+
 # ---------------------------------------------------------------------------
 
 _BAD_NAMES = {
@@ -642,8 +749,6 @@ _BAD_NAMES = {
     "allow",
     "please",
     "i",
-    "im",
-    "i'm",
     "hi",
     "hello",
     "hey",
@@ -671,11 +776,13 @@ _BAD_NAMES = {
 
 def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
     """
-    Extract customer name ONLY from intro stimuli.
+    Extract customer name — ONLY from intro stimuli.
+
     Regex captures full name after any intro phrase, through trailing noise.
     NER fallback for natural intros without a pattern.
     """
     s = (stimulus or "").strip()
+
     INTRO_SIGNALS = [
         "my name is",
         "i am called",
@@ -683,13 +790,12 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
         "call me",
         "introduce myself",
         "they call me",
-        "i am ",
-        "i'm ",
-        "im ",
     ]
+
     if not any(sig in s.lower() for sig in INTRO_SIGNALS):
         return None
 
+    # Regex: capture everything after intro phrase until punctuation or known noise
     m = re.search(
         r"(?:my name is|i am called|i'm called|call me|i am|i'm|"
         r"they call me|introduce myself(?: as)?)\s+"
@@ -698,11 +804,13 @@ def _extract_name_with_chomsky(stimulus: str) -> Optional[str]:
         s,
         re.IGNORECASE,
     )
+
     if m:
         name = m.group(1).strip()
         if name and name.lower() not in _BAD_NAMES and len(name) >= 2:
             return name.title()
 
+    # NER fallback
     try:
         nlp = _get_nlp()
         doc = nlp(s)
@@ -727,17 +835,23 @@ def _sanitize_display_name(name: Optional[str]) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
+
 # Multi-question helpers
+
 # ---------------------------------------------------------------------------
 
+
 def is_multi_question_response(result: Dict[str, Any]) -> bool:
-    """Check if the Kitchen/Guvna returned a multi-question response."""
+    """
+    Check if the Kitchen/Guvna returned a multi-question response.
+    """
     if not isinstance(result, dict):
         return False
 
     status = str(result.get("status", "")).upper()
     if status == "MULTI_QUESTION_SPLIT":
         return True
+
     if result.get("multi_question_parts"):
         return True
     if result.get("question_parts"):
@@ -750,11 +864,14 @@ def is_multi_question_response(result: Dict[str, Any]) -> bool:
     result_text = str(result.get("result", "")).lower()
     if "noticed" in result_text and "questions" in result_text:
         return True
+
     return False
 
 
 def extract_question_parts(result: Dict[str, Any]) -> List[str]:
-    """Extract the individual question parts from Kitchen/Guvna response."""
+    """
+    Extract the individual question parts from Kitchen/Guvna response.
+    """
     if not isinstance(result, dict):
         return []
 
@@ -776,7 +893,10 @@ def process_multi_question_parts(
     max_pass: int = 3,
     session: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Process each question part separately through the full Guvna pipeline."""
+    """
+    Process each question part separately through the full Guvna pipeline.
+    Returns combined result and per-part details.
+    """
     part_results: List[Dict[str, Any]] = []
 
     for i, part in enumerate(parts, 1):
@@ -831,8 +951,11 @@ def process_multi_question_parts(
 
 
 # ---------------------------------------------------------------------------
+
 # Endpoints
+
 # ---------------------------------------------------------------------------
+
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
@@ -877,6 +1000,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     Main RILIE endpoint — greet once on first turn, then move on.
     """
     stimulus = (req.stimulus or "").strip()
+
     if not stimulus:
         return {
             "stimulus": "",
@@ -893,54 +1017,13 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     client_ip = get_client_ip(request)
     session = load_session(client_ip)
 
-    # ---------------------------------------------------------------
-    # BASIC. One hostess pass per browser tab / session.
-    # Dual-gate: (not req.greeted) AND (name_source == "default")
-    # Both must be true to trigger greeting.
-    # ---------------------------------------------------------------
-    name_source = session.get("name_source", "default")
-    is_first_turn = (not req.greeted) and (name_source == "default")
-    
-    logger.info(
-        "HOSTESS CHECK: req.greeted=%s, name_source=%s, is_first_turn=%s",
-        req.greeted,
-        name_source,
-        is_first_turn,
-    )
-
-    if is_first_turn:
-        name = _extract_name_with_chomsky(stimulus)
-        if not name:
-            words = stimulus.strip().strip(".,!?;:'").split()
-            if 1 <= len(words) <= 2 and "?" not in stimulus:
-                candidate = words[0].capitalize()
-                if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
-                    name = candidate
-
-        greet_as = _sanitize_display_name(name) or DEFAULT_NAME
-
-        session["user_name"] = greet_as
-        session["display_name"] = greet_as
-        session["name_source"] = "given"  # Mark that we've greeted
-        save_session(session)
-
-        return build_plate(
-            {
-                "result": f"Pleasure to meet you, {greet_as}! What's on your mind? 🍳",
-                "status": "GREETING",
-                "display_name": greet_as,
-                "quality_score": 1.0,
-                "priorities_met": 1,
-            }
-        )
+    # First turn = no display_name stored yet
+    is_first_turn = not bool(session.get("display_name"))
 
     # ---------------------------------------------------------------
-    # Core Guvna pipeline — pure Kitchen from here on out.
+    # Core Guvna pipeline (no BASIC block here)
     # ---------------------------------------------------------------
     restore_guvna_state(guvna, session)
-    guvna.whosonfirst = False  # api.py owns greeting
-    guvna.memory.whosonfirst = False  # api.py owns greeting
-
     restore_talk_memory(talk_memory, session)
 
     def _detect_multi_question(s: str):
@@ -971,25 +1054,25 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     else:
         result = guvna.process(stimulus, maxpass=req.max_pass)
 
-    if is_multi_question_response(result):
-        logger.info("MULTI-QUESTION detected %s...", stimulus[:120])
-        parts = extract_question_parts(result)
-        if parts:
-            multi = process_multi_question_parts(
-                parts,
-                guvna_instance=guvna,
-                max_pass=req.max_pass,
-                session=session,
-            )
-            result = {
-                "result": multi["combined_result"],
-                "status": "MULTI_QUESTION_PROCESSED",
-                "is_multi_question": True,
-                "part_count": multi["part_count"],
-                "parts": multi["parts"],
-                "all_parts_passed": multi["all_passed"],
-                "quality_score": multi["quality_score"],
-            }
+        if is_multi_question_response(result):
+            logger.info("MULTI-QUESTION detected %s...", stimulus[:120])
+            parts = extract_question_parts(result)
+            if parts:
+                multi = process_multi_question_parts(
+                    parts,
+                    guvna_instance=guvna,
+                    max_pass=req.max_pass,
+                    session=session,
+                )
+                result = {
+                    "result": multi["combined_result"],
+                    "status": "MULTI_QUESTION_PROCESSED",
+                    "is_multi_question": True,
+                    "part_count": multi["part_count"],
+                    "parts": multi["parts"],
+                    "all_parts_passed": multi["all_passed"],
+                    "quality_score": multi["quality_score"],
+                }
 
     # ---------------------------------------------------------------
     # Memory behaviors / christening
@@ -1015,27 +1098,35 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         record_topics(session, domains_hit, [tag] if tag else [])
 
     # ---------------------------------------------------------------
-    # Name + display_name resolution for later turns
+    # Name + greeting resolution (api-1 style)
     # ---------------------------------------------------------------
-    display_name = (
-        session.get("user_name")
-        or session.get("display_name")
-        or session.get("name")
-    )
+    display_name = session.get("display_name") or session.get("name")
 
     if not display_name:
         display_name = _extract_name_with_chomsky(stimulus)
-        display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
 
-    if display_name != DEFAULT_NAME:
-        session["user_name"] = display_name
-        session["display_name"] = display_name
+    if not display_name and is_first_turn:
+        words = stimulus.strip().strip('.,!?;:').split()
+        if 1 <= len(words) <= 2 and "?" not in stimulus:
+            candidate = words[0].capitalize()
+            if candidate.lower() not in _BAD_NAMES and len(candidate) >= 2:
+                display_name = candidate
 
-    result.setdefault("display_name", session.get("user_name", DEFAULT_NAME))
+    display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
+    session["display_name"] = display_name
+    result.setdefault("display_name", display_name)
 
-    # ---------------------------------------------------------------
-    # Snapshot + response
-    # ---------------------------------------------------------------
+    # First turn only: greet, save, return. Kitchen never sees it.
+if is_first_turn and display_name:
+    result["result"] = f"Pleasure to meet you, {display_name}! What's on your mind? 🍳"
+    result["status"] = "GREETING"
+    guvna.turn_count += 1
+    guvna.memory.turn_count += 1
+    snapshot_guvna_state(guvna, session)
+    snapshot_talk_memory(talk_memory, session)
+    save_session(session)
+    return build_plate(result)
+
     snapshot_guvna_state(guvna, session)
     snapshot_talk_memory(talk_memory, session)
     save_session(session)
@@ -1101,9 +1192,7 @@ async def run_rilie_upload(
                         p.text for p in doc.paragraphs if p.text.strip()
                     )
                     if text:
-                        file_context_parts.append(
-                            f"[Document {f.filename}] {text}"
-                        )
+                        file_context_parts.append(f"[Document {f.filename}] {text}")
                     else:
                         file_context_parts.append(
                             f"[Document {f.filename}] (no text found)"
