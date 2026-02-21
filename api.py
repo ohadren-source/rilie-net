@@ -1023,7 +1023,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session = load_session(client_ip)
 
     # First turn = no display_name stored yet
-    is_first_turn = not bool(session.get("display_name"))
+    is_first_turn = session.get("user_name", "Mate") == "Mate"
 
     # ---------------------------------------------------------------
     # Core Guvna pipeline (no BASIC block here)
@@ -1118,6 +1118,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
                 display_name = candidate
 
     display_name = _sanitize_display_name(display_name) or DEFAULT_NAME
+    session["user_name"] = display_name
     session["display_name"] = display_name
     result.setdefault("display_name", display_name)
 
