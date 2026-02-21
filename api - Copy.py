@@ -1022,33 +1022,11 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     client_ip = get_client_ip(request)
     session = load_session(client_ip)
 
-    # ---------------------------------------------------------------
-    # BASIC. First turn = greet. Early exit. Kitchen never wakes up.
-    # ---------------------------------------------------------------
+    # First turn = no display_name stored yet
     is_first_turn = session.get("user_name", "Mate") == "Mate"
 
-    if is_first_turn:
-        _name = _extract_name_with_chomsky(stimulus)
-        if not _name:
-            _words = stimulus.strip().strip(".,!?;:'").split()
-            if 1 <= len(_words) <= 2 and "?" not in stimulus:
-                _candidate = _words[0].capitalize()
-                if _candidate.lower() not in _BAD_NAMES and len(_candidate) >= 2:
-                    _name = _candidate
-        _greet_as = _sanitize_display_name(_name) or DEFAULT_NAME
-        session["user_name"] = _greet_as
-        session["display_name"] = _greet_as
-        save_session(session)
-        return build_plate({
-            "result": f"Pleasure to meet you, {_greet_as}! What's on your mind? 🍳",
-            "status": "GREETING",
-            "display_name": _greet_as,
-            "quality_score": 1.0,
-            "priorities_met": 1,
-        })
-
     # ---------------------------------------------------------------
-    # Core Guvna pipeline
+    # Core Guvna pipeline (no BASIC block here)
     # ---------------------------------------------------------------
     restore_guvna_state(guvna, session)
     restore_talk_memory(talk_memory, session)
