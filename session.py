@@ -188,7 +188,7 @@ def save_session(session: Dict[str, Any]) -> None:
          response_history, talk_served, social_state, topics,
          created_at, updated_at)
     VALUES
-        (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb,
+        (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb,
          now(), now())
     ON CONFLICT (session_id) DO UPDATE SET
         user_name      = EXCLUDED.user_name,
