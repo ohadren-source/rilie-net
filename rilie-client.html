@@ -737,6 +737,9 @@
 
     const GREETING_HTML = '<div style="margin-bottom:16px"><p><strong>RILIE:</strong> Hi there! What\'s your name? You can call me RILIE if you so please... :)</p></div>';
 
+    // Signal API to reset whosonfirst for this session
+    fetch("/v1/reset-whosonfirst", { method: "POST" }).catch(e => console.log("reset signal sent"));
+
     console.log("submitBtn:", submitBtn);
     console.log("inputEl:", inputEl);
     console.log("outputEl:", outputEl);

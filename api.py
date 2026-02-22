@@ -533,7 +533,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         session["whosonfirst"] = False
         save_session(session)
         return build_plate({
-            "result": f"{session.get('whosonfirst')} ! Pleasure to meet you, {greet_as}! What's on your mind? 🍳",
+            "result": f"Pleasure to meet you, {greet_as}! What's on your mind? 🍳",
             "status": "GREETING",
             "display_name": greet_as,
             "quality_score": 1.0,
@@ -697,6 +697,15 @@ async def pre_response(req: PreResponseRequest) -> PreResponseResponse:
     except Exception as e:
         return PreResponseResponse(question=q, shallow=req.shallow, harvested=0, status=f"ERROR: {e}")
     return PreResponseResponse(question=q, shallow=req.shallow, harvested=harvested, status="OK")
+
+@app.post("/v1/reset-whosonfirst")
+def reset_whosonfirst(request: Request) -> Dict[str, Any]:
+    """Reset whosonfirst to True for this session (called by HTML on page load)."""
+    client_ip = get_client_ip(request)
+    session = load_session(client_ip)
+    session["whosonfirst"] = True
+    save_session(session)
+    return {"status": "OK"}
 
 if __name__ == "__main__":
     import uvicorn
