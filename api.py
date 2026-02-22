@@ -533,7 +533,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         session["whosonfirst"] = False
         save_session(session)
         return build_plate({
-            "result": f"Pleasure to meet you, {greet_as}! What's on your mind? 🍳",
+            "result": f"{session.get('whosonfirst')} ! Pleasure to meet you, {greet_as}! What's on your mind? 🍳",
             "status": "GREETING",
             "display_name": greet_as,
             "quality_score": 1.0,
