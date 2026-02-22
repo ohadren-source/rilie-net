@@ -715,7 +715,7 @@
   SOi
   <a href="https://www.sauc-e.com" target="_blank" rel="noopener noreferrer">
     <img
-      src="/static/369Mafia.png"
+      src="/static/369Mafia.jpg"
       alt="sauc-e"
       style="height:1em; vertical-align:-0.15em; margin:0 4px;"
     >
@@ -947,6 +947,11 @@
         }
         rilieDiv.innerHTML = html;
         outputEl.appendChild(rilieDiv);
+
+        // Signal session reset if this is a greeting response
+        if (data.status === "GREETING") {
+          fetch("/v1/session-reset", { method: "POST" }).catch(e => console.log("reset signal sent"));
+        }
 
         rilieDiv.querySelectorAll(".rilie-code-copy").forEach((btn) => {
           btn.onclick = async () => {

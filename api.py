@@ -516,9 +516,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session = load_session(client_ip)
 
     # ---------------------------------------------------------------
-    # FIRST REQUEST: greeted not set. Assign once. Never again.
+    # FIRST REQUEST: greeting not fired. Greet once. Never again.
     # ---------------------------------------------------------------
-    if session.get("greeted"):
+    if not session.get("greeting_count"):
         name = extract_customer_name(stimulus)
         if not name:
             words = stimulus.strip().strip(".,!?;:'").split()
@@ -530,6 +530,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         session["user_name"] = greet_as
         session["display_name"] = greet_as
         session["name_source"] = "given"
+        session["greeting_count"] = 1
         save_session(session)
         return build_plate({
             "result": f"Pleasure to meet you, {greet_as}! What's on your mind? 🍳",
@@ -696,6 +697,15 @@ async def pre_response(req: PreResponseRequest) -> PreResponseResponse:
     except Exception as e:
         return PreResponseResponse(question=q, shallow=req.shallow, harvested=0, status=f"ERROR: {e}")
     return PreResponseResponse(question=q, shallow=req.shallow, harvested=harvested, status="OK")
+
+@app.post("/v1/session-reset")
+def session_reset(request: Request) -> Dict[str, Any]:
+    """Reset greeting counter for this session."""
+    client_ip = get_client_ip(request)
+    session = load_session(client_ip)
+    session["greeting_count"] = 0
+    save_session(session)
+    return {"status": "OK", "client_ip": client_ip}
 
 if __name__ == "__main__":
     import uvicorn
