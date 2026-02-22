@@ -516,9 +516,9 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session = load_session(client_ip)
 
     # ---------------------------------------------------------------
-    # FIRST REQUEST: turn_count is 0. Greet once. Never again.
+    # FIRST REQUEST: whosonfirst is True. Greet once. Never again.
     # ---------------------------------------------------------------
-    if session.get("turn_count") == 0:
+    if session.get("whosonfirst"):
         name = extract_customer_name(stimulus)
         if not name:
             words = stimulus.strip().strip(".,!?;:'").split()
@@ -530,6 +530,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
         session["user_name"] = greet_as
         session["display_name"] = greet_as
         session["name_source"] = "given"
+        session["whosonfirst"] = False
         save_session(session)
         return build_plate({
             "result": f"Pleasure to meet you, {greet_as}! What's on your mind? 🍳",
