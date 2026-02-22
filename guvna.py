@@ -479,6 +479,24 @@ class Guvna(GuvnaSelf):
         logger.info(f" Boole substrate: {self.library_metadata.boole_substrate}")
         logger.info(f" Core tracks: {self.library_metadata.core_tracks}")
 
+        # FIX 3: Hard boot confirmation — no more silent degradation
+        # She either boots with her full pantry or she does not boot.
+        _actual_domains = sum(self.library_metadata.files.values()) if self.library_metadata.files else 0
+        if _actual_domains < 100:
+            logger.error(
+                f"GUVNA BOOT FAILURE: only {_actual_domains} domains resolved — "
+                f"Kitchen is cooking blind. Check soi_domain_map and library imports."
+            )
+            raise RuntimeError(
+                f"Library boot incomplete ({_actual_domains} domains). "
+                f"Check soi_domain_map.py and library.py are importable and populated."
+            )
+        else:
+            logger.info(
+                f"GUVNA BOOT CONFIRMED: full pantry online "
+                f"({_actual_domains} domains resolved across {len(self.library_metadata.files)} files) ✓"
+            )
+
         # RILIE still expects rouxseeds/searchfn keywords
         self.rilie = RILIE(rouxseeds=self.roux_seeds, searchfn=self.search_fn)
 

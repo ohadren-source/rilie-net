@@ -470,7 +470,17 @@ def _maybe_lookup_unknown_reference(stimulus: str, search_fn: SearchFn) -> str:
     words = s.split()
 
     # Only fires on short stimuli — long ones have enough signal already
-    if len(words) > 8:
+    # FIX 2: factual triggers bypass the length gate
+    # Album/track follow-ups ("what album features that track?") are longer
+    # but still need a lookup — Kitchen has no factual baseline for these.
+    _FACTUAL_TRIGGERS = [
+        "what album", "which album", "what track", "which track",
+        "what song", "which song", "what record", "features",
+        "came out", "dropped", "released", "produced by",
+        "who made", "who produced", "what year",
+    ]
+    _is_factual = any(t in sl for t in _FACTUAL_TRIGGERS)
+    if len(words) > 8 and not _is_factual:
         return ""
 
     # Known vocabulary — if any of these are present, Kitchen has enough signal

@@ -43,16 +43,6 @@ FIXES (this revision):
   - summarize_person_model() added -- was missing, Guvna v4.1.1 calls it.
     Returns compact snapshot: name, turns, energy, register, top tags/domains.
   - logger import added -- was used (buffer pruning) but never imported.
-
-FIXES (v4.2.1 — Thread Pull echo bug):
-- check_thread_pull() FIX: excerpt now pulled from a PAST beautiful Moment,
-  not the current stimulus. Previously: marker fires on offhand word in the
-  current turn -> excerpts from that same turn -> echoes user's own words back
-  dressed as RILIE's insight. Now: marker fires -> looks backward into
-  self.moments -> picks highest-resonance past moment -> surfaces that instead.
-  Guards: if no beautiful prior moments exist, returns None (stays quiet).
-  If the best moment is from the immediately preceding turn, falls back to
-  second-best (callbacks own that slot). Zero breakage to other behaviors.
 """
 
 import logging
@@ -777,7 +767,8 @@ class ConversationMemory:
         if not recent_beautiful:
             return None
 
-        parts = ["Quick Polaroid —"]
+        name = self.user_name or DEFAULT_NAME
+        parts = [f"{name} — Quick Polaroid —"]
         for m in recent_beautiful:
             excerpt = self._excerpt(m.user_words, 40)
             if m.tag == "truth":
@@ -895,10 +886,11 @@ class ConversationMemory:
             if (m.domain_hit in current_domains
                     and abs(self.turn_count - m.turn) >= 3):
                 excerpt = self._excerpt(m.user_words, 30)
+                _cb_name = self.user_name or DEFAULT_NAME
                 connectors = [
-                    f'This connects to what you said earlier about \"{excerpt}.\" Same thread, different angle.',
-                    f'Hold on — remember when you asked about \"{excerpt}\"? You\'re circling the same thing.',
-                    f'You said \"{excerpt}\" a few turns back. This is the same question wearing different clothes.',
+                    f'{_cb_name} — this connects to what you said earlier about \"{excerpt}.\" Same thread, different angle.',
+                    f'{_cb_name} — hold on, remember when you asked about \"{excerpt}\"? You\'re circling the same thing.',
+                    f'{_cb_name} — you said \"{excerpt}\" a few turns back. This is the same question wearing different clothes.',
                 ]
                 return random.choice(connectors)
         return None
@@ -956,16 +948,7 @@ class ConversationMemory:
     # -----------------------------------------------------------------
 
     def check_thread_pull(self, stimulus: str) -> Optional[str]:
-        """
-        Catch the offhand remark that's actually the most interesting thing.
-
-        FIX (v4.2.1): excerpt now comes from a PAST beautiful moment, not the
-        current stimulus. Previously the marker fired and immediately quoted the
-        user's own words back at them as if RILIE found them profound — the
-        classic echo bug. Now she only surfaces the thread if there is prior
-        beautiful material to pull from. The current turn seeds the trigger;
-        a past Moment supplies the content.
-        """
+        """Catch the offhand remark that's actually the most interesting thing."""
         s = stimulus.lower().strip()
         words = s.split()
 
@@ -983,52 +966,17 @@ class ConversationMemory:
 
         for marker in offhand_markers:
             if marker in s:
-                # FIX: Only pull from a PAST beautiful moment.
-                # Never echo the current stimulus back at the user.
-                beautiful = [m for m in self.moments if m.is_beautiful]
-                if not beautiful:
-                    return None  # No prior material — stay quiet.
-
-                # Pick the highest-resonance past moment.
-                # Don't grab the immediately preceding turn (callbacks own that).
-                past = max(beautiful, key=lambda m: m.resonance)
-                if past.turn >= self.turn_count - 1:
-                    if len(beautiful) < 2:
-                        return None
-                    past = sorted(beautiful, key=lambda m: m.resonance, reverse=True)[1]
-
-                excerpt = self._excerpt(past.user_words, 40)
-                pulls = [
-                    f"huh... \"{excerpt}\" — that's still sitting with me. what made you think of it back then? :)",
-                    f"oh wow... \"{excerpt}\" — i keep coming back to that. want to go deeper? :)",
-                    f"wait... \"{excerpt}\" — something about that keeps pulling me back. curious where it came from.",
-                    f"hmm... \"{excerpt}\" — i feel like there's more there. want to unpack it a little? :)",
-                    f"no way... \"{excerpt}\" — that really landed with me. say a little more perhaps? :)",
-                ]
-                return random.choice(pulls)
-        return None
-
-        offhand_markers = [
-            "by the way", "btw", "oh and", "also",
-            "i guess", "sort of", "kind of", "like",
-            "my mom", "my dad", "my kid", "she said",
-            "he told me", "i heard", "someone once",
-            "funny thing", "random but", "not sure if",
-            "i was thinking", "it reminded me",
-        ]
-
-        for marker in offhand_markers:
-            if marker in s:
                 idx = s.index(marker)
                 after = stimulus[idx:].strip()
                 if len(after.split()) >= 4:
                     excerpt = self._excerpt(after, 40)
                     pulls = [
-                        f'huh... \"{excerpt}\" — that\'s intriguing. you mind going a bit deeper on that? :)',
-                        f'oh wow... \"{excerpt}\" — that was unexpected! in a good way... :)',
-                        f'wait... \"{excerpt}\" — something about that. i\'m curious... what made you think of it?',
-                        f'hmm... \"{excerpt}\" — i feel like there\'s more there. want to unpack that a little? :)',
-                        f'no way... \"{excerpt}\" — that really landed with me! say a little more perhaps? :)',
+                        _tp_name = self.user_name or DEFAULT_NAME
+                        f'{_tp_name}, huh... \"{excerpt}\" — that\'s intriguing. you mind going a bit deeper on that? :)',
+                        f'{_tp_name}, oh wow... \"{excerpt}\" — that was unexpected! in a good way... :)',
+                        f'{_tp_name} — wait... \"{excerpt}\" — something about that. i\'m curious... what made you think of it?',
+                        f'{_tp_name} — hmm... \"{excerpt}\" — i feel like there\'s more there. want to unpack that a little? :)',
+                        f'{_tp_name} — no way... \"{excerpt}\" — that really landed with me! say a little more perhaps? :)',
                     ]
                     return random.choice(pulls)
         return None
@@ -1102,11 +1050,12 @@ class ConversationMemory:
                 excerpt = self._excerpt(m.user_words, 30)
                 domain_now = current_domains[0]
                 gifts = [
-                    f'You didn\'t ask, but — what you\'re exploring in {domain_now} '
+                    _ss_name = self.user_name or DEFAULT_NAME
+                    f'{_ss_name} — you didn\'t ask, but — what you\'re exploring in {domain_now} '
                     f'connects to \"{excerpt}.\" Same pattern, different surface.',
-                    f'Chef\'s choice: your {domain_now} question rhymes with '
+                    f'{_ss_name} — chef\'s choice: your {domain_now} question rhymes with '
                     f'\"{excerpt}\" from earlier. The connection is real.',
-                    f'Free plate: \"{excerpt}\" and what you\'re asking now — '
+                    f'{_ss_name} — free plate: \"{excerpt}\" and what you\'re asking now — '
                     f'those are the same question from two angles.',
                 ]
                 return random.choice(gifts)
