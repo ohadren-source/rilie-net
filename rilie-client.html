@@ -948,11 +948,6 @@
         rilieDiv.innerHTML = html;
         outputEl.appendChild(rilieDiv);
 
-        // Signal session reset if this is a greeting response
-        if (data.status === "GREETING") {
-          fetch("/v1/session-reset", { method: "POST" }).catch(e => console.log("reset signal sent"));
-        }
-
         rilieDiv.querySelectorAll(".rilie-code-copy").forEach((btn) => {
           btn.onclick = async () => {
             const code = btn.parentElement.querySelector("pre").innerText;
