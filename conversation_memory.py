@@ -46,10 +46,10 @@ FIXES (this revision):
 
 FIXES (v4.2.1 — Thread Pull echo bug):
 - check_thread_pull() FIX: excerpt now pulled from a PAST beautiful Moment,
-  not the current stimulus. Previously: marker fires on "like X said" in the
-  current turn → excerpts X from that same turn → echoes user's own words back
-  dressed as RILIE's insight. Now: marker fires → looks backward into
-  self.moments → picks highest-resonance past moment → surfaces that instead.
+  not the current stimulus. Previously: marker fires on offhand word in the
+  current turn -> excerpts from that same turn -> echoes user's own words back
+  dressed as RILIE's insight. Now: marker fires -> looks backward into
+  self.moments -> picks highest-resonance past moment -> surfaces that instead.
   Guards: if no beautiful prior moments exist, returns None (stays quiet).
   If the best moment is from the immediately preceding turn, falls back to
   second-best (callbacks own that slot). Zero breakage to other behaviors.
@@ -990,7 +990,7 @@ class ConversationMemory:
                     return None  # No prior material — stay quiet.
 
                 # Pick the highest-resonance past moment.
-                # Don't grab the immediately preceding turn (callbacks handle that).
+                # Don't grab the immediately preceding turn (callbacks own that).
                 past = max(beautiful, key=lambda m: m.resonance)
                 if past.turn >= self.turn_count - 1:
                     if len(beautiful) < 2:
@@ -999,11 +999,11 @@ class ConversationMemory:
 
                 excerpt = self._excerpt(past.user_words, 40)
                 pulls = [
-                    f'huh... "{excerpt}" — that's still sitting with me. what made you think of it back then? :)',
-                    f'oh wow... "{excerpt}" — i keep coming back to that. want to go deeper? :)',
-                    f'wait... "{excerpt}" — something about that keeps pulling me back. curious where it came from.',
-                    f'hmm... "{excerpt}" — i feel like there's more there. want to unpack it a little? :)',
-                    f'no way... "{excerpt}" — that really landed with me. say a little more perhaps? :)',
+                    f"huh... \"{excerpt}\" — that's still sitting with me. what made you think of it back then? :)",
+                    f"oh wow... \"{excerpt}\" — i keep coming back to that. want to go deeper? :)",
+                    f"wait... \"{excerpt}\" — something about that keeps pulling me back. curious where it came from.",
+                    f"hmm... \"{excerpt}\" — i feel like there's more there. want to unpack it a little? :)",
+                    f"no way... \"{excerpt}\" — that really landed with me. say a little more perhaps? :)",
                 ]
                 return random.choice(pulls)
         return None
