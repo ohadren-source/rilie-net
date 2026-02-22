@@ -524,8 +524,8 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # FIRST REQUEST: GREETED is None. Assign once. Never again.
     # ---------------------------------------------------------------
-    if not session.get("greeted"):
-        session["greeted"] = True
+    if not session.get("greeting_locked"):
+        session["greeting_locked"] = True
         name = extract_customer_name(stimulus)
         if not name:
             words = stimulus.strip().strip(".,!?;:'").split()
