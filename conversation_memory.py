@@ -970,8 +970,8 @@ class ConversationMemory:
                 after = stimulus[idx:].strip()
                 if len(after.split()) >= 4:
                     excerpt = self._excerpt(after, 40)
+                    _tp_name = self.user_name or DEFAULT_NAME
                     pulls = [
-                        _tp_name = self.user_name or DEFAULT_NAME
                         f'{_tp_name}, huh... \"{excerpt}\" — that\'s intriguing. you mind going a bit deeper on that? :)',
                         f'{_tp_name}, oh wow... \"{excerpt}\" — that was unexpected! in a good way... :)',
                         f'{_tp_name} — wait... \"{excerpt}\" — something about that. i\'m curious... what made you think of it?',
@@ -1049,8 +1049,8 @@ class ConversationMemory:
                     and m.resonance >= 0.65):
                 excerpt = self._excerpt(m.user_words, 30)
                 domain_now = current_domains[0]
+                _ss_name = self.user_name or DEFAULT_NAME
                 gifts = [
-                    _ss_name = self.user_name or DEFAULT_NAME
                     f'{_ss_name} — you didn\'t ask, but — what you\'re exploring in {domain_now} '
                     f'connects to \"{excerpt}.\" Same pattern, different surface.',
                     f'{_ss_name} — chef\'s choice: your {domain_now} question rhymes with '
