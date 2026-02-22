@@ -43,6 +43,16 @@ FIXES (this revision):
   - summarize_person_model() added -- was missing, Guvna v4.1.1 calls it.
     Returns compact snapshot: name, turns, energy, register, top tags/domains.
   - logger import added -- was used (buffer pruning) but never imported.
+
+FIXES (v4.2.1 — Thread Pull echo bug):
+- check_thread_pull() FIX: excerpt now pulled from a PAST beautiful Moment,
+  not the current stimulus. Previously: marker fires on "like X said" in the
+  current turn → excerpts X from that same turn → echoes user's own words back
+  dressed as RILIE's insight. Now: marker fires → looks backward into
+  self.moments → picks highest-resonance past moment → surfaces that instead.
+  Guards: if no beautiful prior moments exist, returns None (stays quiet).
+  If the best moment is from the immediately preceding turn, falls back to
+  second-best (callbacks own that slot). Zero breakage to other behaviors.
 """
 
 import logging
@@ -946,12 +956,57 @@ class ConversationMemory:
     # -----------------------------------------------------------------
 
     def check_thread_pull(self, stimulus: str) -> Optional[str]:
-        """Catch the offhand remark that's actually the most interesting thing."""
+        """
+        Catch the offhand remark that's actually the most interesting thing.
+
+        FIX (v4.2.1): excerpt now comes from a PAST beautiful moment, not the
+        current stimulus. Previously the marker fired and immediately quoted the
+        user's own words back at them as if RILIE found them profound — the
+        classic echo bug. Now she only surfaces the thread if there is prior
+        beautiful material to pull from. The current turn seeds the trigger;
+        a past Moment supplies the content.
+        """
         s = stimulus.lower().strip()
         words = s.split()
 
         if len(words) < 10:
             return None
+
+        offhand_markers = [
+            "by the way", "btw", "oh and", "also",
+            "i guess", "sort of", "kind of", "like",
+            "my mom", "my dad", "my kid", "she said",
+            "he told me", "i heard", "someone once",
+            "funny thing", "random but", "not sure if",
+            "i was thinking", "it reminded me",
+        ]
+
+        for marker in offhand_markers:
+            if marker in s:
+                # FIX: Only pull from a PAST beautiful moment.
+                # Never echo the current stimulus back at the user.
+                beautiful = [m for m in self.moments if m.is_beautiful]
+                if not beautiful:
+                    return None  # No prior material — stay quiet.
+
+                # Pick the highest-resonance past moment.
+                # Don't grab the immediately preceding turn (callbacks handle that).
+                past = max(beautiful, key=lambda m: m.resonance)
+                if past.turn >= self.turn_count - 1:
+                    if len(beautiful) < 2:
+                        return None
+                    past = sorted(beautiful, key=lambda m: m.resonance, reverse=True)[1]
+
+                excerpt = self._excerpt(past.user_words, 40)
+                pulls = [
+                    f'huh... "{excerpt}" — that's still sitting with me. what made you think of it back then? :)',
+                    f'oh wow... "{excerpt}" — i keep coming back to that. want to go deeper? :)',
+                    f'wait... "{excerpt}" — something about that keeps pulling me back. curious where it came from.',
+                    f'hmm... "{excerpt}" — i feel like there's more there. want to unpack it a little? :)',
+                    f'no way... "{excerpt}" — that really landed with me. say a little more perhaps? :)',
+                ]
+                return random.choice(pulls)
+        return None
 
         offhand_markers = [
             "by the way", "btw", "oh and", "also",
