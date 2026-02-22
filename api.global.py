@@ -53,7 +53,7 @@ from ChomskyAtTheBit import (
 # ---------------------------------------------------------------------------
 # GREETING STATE — assigned once on first request, never again
 # ---------------------------------------------------------------------------
-# GREETED = None
+GREETED = None
 
 # ---------------------------------------------------------------------------
 # Base dir and .env loader
@@ -524,8 +524,8 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     # ---------------------------------------------------------------
     # FIRST REQUEST: GREETED is None. Assign once. Never again.
     # ---------------------------------------------------------------
-    if not session.get("greeted"):
-        session["greeted"] = True
+    if GREETED is None:
+        GREETED = True
         name = extract_customer_name(stimulus)
         if not name:
             words = stimulus.strip().strip(".,!?;:'").split()
