@@ -498,12 +498,11 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     """
     Main RILIE endpoint.
 
-    First request: GREETED is None → assign True, greet, save session, return.
-    All subsequent requests: GREETED has a value → Kitchen processes normally.
+    First request: greeted is not set → assign True, greet, save session, return.
+    All subsequent requests: greeted is set → Kitchen processes normally.
 
     One assignment. Never again.
     """
-    global GREETED
 
     stimulus = (req.stimulus or "").strip()
     if not stimulus:
@@ -517,7 +516,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
     session = load_session(client_ip)
 
     # ---------------------------------------------------------------
-    # FIRST REQUEST: GREETED is None. Assign once. Never again.
+    # FIRST REQUEST: greeted not set. Assign once. Never again.
     # ---------------------------------------------------------------
     if not session.get("greeted"):
         session["greeted"] = True
