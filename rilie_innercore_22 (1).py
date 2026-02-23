@@ -538,9 +538,9 @@ def run_pass_pipeline(
         return bl
 
     if best_global is not None:
-        # Kitchen produced something. Serve it. No shortcuts. No comparison.
-        # Water doesn't flow back uphill just because the well looks easier.
-        # She cooks or she fails. Baseline is only the parachute when the plane explodes.
+        # Kitchen produced something. Serve it. No comparison. No shortcuts.
+        # Water takes the path of least resistance. So remove the easy paths.
+        # If she cooked, serve what she cooked.
         debug_audit = _build_debug_audit(
             clean_stimulus, domains, best_global, _debug_all_candidates,
             _debug_dejavu_killed, _debug_passes, "GUESS"
