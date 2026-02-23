@@ -597,8 +597,8 @@ def construct_response(stimulus: str, snippet: str) -> str:
             else:
                 # MAD LIB GATED BY DEPTH (3+ domains)
                 # This will be controlled by Guvna at response finalization time
-                # For now, return None — let confidence gate handle empty responses
-                return None
+                # For now, return empty string — scorers need text, not None
+                return ""
         except Exception:
             pass
 
