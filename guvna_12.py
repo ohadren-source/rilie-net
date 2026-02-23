@@ -593,6 +593,10 @@ class Guvna(GuvnaSelf):
         # Domain state: track the last active domain for facts-first behavior
         self.current_domain: Optional[str] = None
 
+        # Mad lib reward system: track domains explored for unlock at 3+
+        self.domains_explored: Set[str] = set()  # Keep track of all domains visited
+        self.madlib_unlocked: bool = False  # True once 3+ domains visited
+
         # SELF-GOVERNING SESSION STATE — wired via GuvnaSelf mixin
         # Initializes: turn_count, user_name, whosonfirst,
         # _awaiting_name, _response_history
@@ -621,39 +625,55 @@ class Guvna(GuvnaSelf):
         
         Returns domain name if match found, None otherwise.
         """
+        logger.info("GUVNA: _infer_domain_from_web called with: %s", original_question)
+        
         if not self.search_fn:
+            logger.info("GUVNA: search_fn is None, skipping web inference")
             return None
+        
+        logger.info("GUVNA: search_fn available, proceeding with web inference")
         
         # Use Chomsky to extract subject/object
         try:
             from ChomskyAtTheBit import extract_holy_trinity_for_roux
             parsed = extract_holy_trinity_for_roux(original_question)
             if not parsed:
+                logger.info("GUVNA: Chomsky returned None/empty")
                 return None
             
             subject = parsed.get("subject", "")
             obj = parsed.get("object", "")
             concept = subject or obj or original_question.strip()
+            logger.info("GUVNA: Chomsky extracted subject=%s, object=%s, concept=%s", subject, obj, concept)
             
-        except Exception:
+        except Exception as e:
+            logger.info("GUVNA: Chomsky extraction failed: %s", e)
             concept = original_question.strip()
         
         if not concept:
+            logger.info("GUVNA: No concept extracted, returning None")
             return None
         
         # Search for subject/category/field/discipline of this concept
         query = f"what subject category field discipline does {concept} belong to"
+        logger.info("GUVNA: Searching web for: %s", query)
+        
         try:
             results = self.search_fn(query)
+            logger.info("GUVNA: Web search returned %d results", len(results) if results else 0)
+            
             if not results:
+                logger.info("GUVNA: Web search returned empty, no domain inference")
                 return None
             
             first_result = results[0].get("snippet", "") or results[0].get("title", "")
             first_result_lower = first_result.lower()
+            logger.info("GUVNA: First result snippet: %s", first_result[:100])
             
             # Dynamically check if any 678 domain keywords appear in the result
             try:
                 from rilie_innercore_12 import DOMAIN_KEYWORDS
+                logger.info("GUVNA: Loaded DOMAIN_KEYWORDS, checking %d domains", len(DOMAIN_KEYWORDS))
                 
                 for domain, keywords in DOMAIN_KEYWORDS.items():
                     for keyword in keywords:
@@ -663,12 +683,14 @@ class Guvna(GuvnaSelf):
                                 domain, keyword
                             )
                             return domain
-            except Exception:
-                pass
+                
+                logger.info("GUVNA: No domain keywords matched in web result")
+            except Exception as e:
+                logger.info("GUVNA: DOMAIN_KEYWORDS import failed: %s", e)
             
             return None
         except Exception as e:
-            logger.debug("GUVNA: Web inference search failed: %s", e)
+            logger.info("GUVNA: Web inference search failed: %s", e)
             return None
 
     # -----------------------------------------------------------------
@@ -723,10 +745,23 @@ class Guvna(GuvnaSelf):
                 # Domain shift (or first domain ever): facts-first plate
                 facts_first = True
                 self.current_domain = new_domain
+                
+                # Track domains for mad lib reward system
+                self.domains_explored.add(new_domain)
+                if len(self.domains_explored) >= 3 and not self.madlib_unlocked:
+                    self.madlib_unlocked = True
+                    logger.info(
+                        "GUVNA: Mad lib unlocked! 3+ domains explored: %s",
+                        sorted(self.domains_explored)
+                    )
+                
                 logger.info(
-                    "GUVNA: Domain shift detected %s → %s, facts_first=True",
+                    "GUVNA: Domain shift detected %s → %s, facts_first=True. "
+                    "Domains explored: %d, madlib_unlocked=%s",
                     self.current_domain if self.current_domain != new_domain else "(first)",
                     new_domain,
+                    len(self.domains_explored),
+                    self.madlib_unlocked
                 )
         # If no domain detected, leave current_domain unchanged and facts_first False
         return new_domain, facts_first
@@ -912,28 +947,37 @@ class Guvna(GuvnaSelf):
             "YES" if has_meaning else "NO"
         )
 
-        # STEP 4: CURIOSITY RESURFACE
+        # STEP 4: CURIOSITY RESURFACE (GATED BY DOMAIN KNOWLEDGE)
+        # SESSION 3 CHANGE: No curiosity until domain is known.
+        # If we're hunting for subject (domain unknown), don't distract with past insights.
+        # Once domain detected → curiosity engine can resurface context.
         curiosity_context = ""
-        if self.curiosity_engine and hasattr(self.curiosity_engine, "resurface"):
-            try:
-                curiosity_context = self.curiosity_engine.resurface(stimulus)
-                if curiosity_context:
-                    logger.info("GUVNA: Curiosity resurfaced context for stimulus")
-            except Exception as e:
-                logger.debug("GUVNA: Curiosity resurface failed (non-fatal): %s", e)
-        elif search_curiosity:
-            try:
-                curiosity_results = search_curiosity(stimulus)
-                if curiosity_results:
-                    curiosity_context = " | ".join(
-                        r.get("insight", r.get("tangent", ""))
-                        for r in curiosity_results[:3]
-                        if r.get("insight") or r.get("tangent")
-                    )
-                if curiosity_context:
-                    logger.info("GUVNA: Curiosity resurfaced from banks_curiosity")
-            except Exception as e:
-                logger.debug("GUVNA: banks curiosity search failed (non-fatal): %s", e)
+        
+        if has_domain:
+            # Domain is known — curiosity can help explore
+            if self.curiosity_engine and hasattr(self.curiosity_engine, "resurface"):
+                try:
+                    curiosity_context = self.curiosity_engine.resurface(stimulus)
+                    if curiosity_context:
+                        logger.info("GUVNA: Curiosity resurfaced context for stimulus")
+                except Exception as e:
+                    logger.debug("GUVNA: Curiosity resurface failed (non-fatal): %s", e)
+            elif search_curiosity:
+                try:
+                    curiosity_results = search_curiosity(stimulus)
+                    if curiosity_results:
+                        curiosity_context = " | ".join(
+                            r.get("insight", r.get("tangent", ""))
+                            for r in curiosity_results[:3]
+                            if r.get("insight") or r.get("tangent")
+                        )
+                    if curiosity_context:
+                        logger.info("GUVNA: Curiosity resurfaced from banks_curiosity")
+                except Exception as e:
+                    logger.debug("GUVNA: banks curiosity search failed (non-fatal): %s", e)
+        else:
+            logger.info("GUVNA: Domain unknown — curiosity gated. Hunting for subject instead.")
+        
         raw["curiosity_context"] = curiosity_context
 
         # STEP 5: RILIE CORE PROCESSING
@@ -950,6 +994,9 @@ class Guvna(GuvnaSelf):
         if not rilie_result:
             rilie_result = {}
         raw.update(rilie_result)
+        
+        # Store madlib unlock status for later use
+        raw["madlib_unlocked"] = self.madlib_unlocked
 
         # STEP 6: GOVERNOR OVERSIGHT
         wit = detect_wit(stimulus)
@@ -1049,6 +1096,20 @@ class Guvna(GuvnaSelf):
                 raw["result"] = ""
         raw["baseline"] = baseline
         raw["baseline_used"] = bool(baseline_text)
+
+        # MAD LIB REWARD: If 3+ domains explored and empty result, generate mad lib
+        result_text = raw.get("result", "")
+        if not result_text and self.madlib_unlocked:
+            # User has earned the mad lib reward — generate one on empty response
+            subject = stimulus.split()[0] if stimulus else "this"
+            core = stimulus.split()[1] if len(stimulus.split()) > 1 else "it"
+            mad_lib = (
+                f"This hits {subject}... let's explore "
+                f"{core[0].lower()}{core[1:]} if you're game"
+            )
+            raw["result"] = mad_lib
+            raw["status"] = "MADLIB_REWARD"
+            logger.info("GUVNA: Mad lib reward generated (3+ domains explored)")
 
         result_text = raw.get("result", "")
         triangle_reason = raw.get("triangle_reason", "CLEAN")

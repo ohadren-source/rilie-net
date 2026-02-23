@@ -595,13 +595,10 @@ def construct_response(stimulus: str, snippet: str) -> str:
                     f"You dig a little deeper and discover it's the foundation :)"
                 )
             else:
-                core = snippet_clean
-                if subject and subject.strip() and len(subject.strip()) > 2 and subject.strip()[0].isalpha():
-                    return (
-                        f"This hits {subject.strip()}... let's explore "
-                        f"{core[0].lower()}{core[1:]} if you're game"
-                    )
-                return f"The thing about {core[0].lower()}{core[1:]}"
+                # MAD LIB GATED BY DEPTH (3+ domains)
+                # This will be controlled by Guvna at response finalization time
+                # For now, return None — let confidence gate handle empty responses
+                return None
         except Exception:
             pass
 
