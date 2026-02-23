@@ -14,6 +14,8 @@ from __future__ import annotations
 import logging
 logger = logging.getLogger(__name__)
 
+import re
+
 from rilie_foundation import (
     extract_tangents,
     _fix_mojibake,
