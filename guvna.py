@@ -1,58 +1,72 @@
 """
-guvna.py — Shim / Brain Stitcher
+guvna.py
 
-Act 5 – The Governor lives in multiple files:
+Shim / Brain Stitcher – Act 5 The Governor lives in multiple files:
 
-- guvna_12.py  → core class Guvna(GuvnaSelf): __init__, process, metadata, doctrine
-- guvna_22.py  → extension methods: fast paths, preference, domain lenses, baseline
-- guvna_river.py → The River: early debug-only lookup + telemetry
+- guvna_12.py  → core class Guvna (init, process, metadata, doctrine)
+- guvna_22.py  → extension methods (fast paths, preference, domain lenses, baseline)
+- guvna_river.py → The River (early lookup telemetry, no cooking)
 
 This shim:
 
 - Exposes Guvna and LibraryIndex to the rest of the system.
-- Binds all extension functions from guvna_22.py (and river hooks) onto the Guvna class.
+- Binds all extension functions from guvna_22.py and River hooks onto the Guvna class.
 - Keeps api.py stable: `from guvna import Guvna, LibraryIndex` still works.
 """
 
 from __future__ import annotations
 
-from guvna_12 import Guvna, LibraryIndex
+from typing import Any, Dict, List
+
+from guvna_12 import Guvna, LibraryIndex  # core Governor
 from guvna_22 import (
-    _classify_stimulus,
-    _handle_preference,
-    _respond_from_preference_rakim_track,
-    _respond_from_preference,
-    _handle_user_list,
-    _handle_social_glue,
-    _solve_arithmetic,
-    _solve_conversion,
-    _solve_spelling,
-    _respond_from_self,
-    _apply_domain_lenses,
-    _get_baseline,
+    classify_stimulus,
+    handle_preference,
+    respond_from_preference_rakim_track,
+    respond_from_preference,
+    handle_user_list,
+    handle_social_glue,
+    solve_arithmetic,
+    solve_conversion,
+    solve_spelling,
+    respond_from_self,
+    apply_domain_lenses,
+    get_baseline,
 )
-from guvna_river import guvna_river
+from guvna_river import guvna_river  # The River – lookup only, no Kitchen
 
 
 # ---------------------------------------------------------------------------
-# Bind extension methods onto the Guvna class
+# Stitch guvna_22 fast paths onto Guvna
 # ---------------------------------------------------------------------------
 
-# Fast paths / preference / baseline / domains
-Guvna._classify_stimulus = _classify_stimulus  # type: ignore[attr-defined]
-Guvna._handle_preference = _handle_preference  # type: ignore[attr-defined]
-Guvna._respond_from_preference_rakim_track = _respond_from_preference_rakim_track  # type: ignore[attr-defined]
-Guvna._respond_from_preference = _respond_from_preference  # type: ignore[attr-defined]
-Guvna._handle_user_list = _handle_user_list  # type: ignore[attr-defined]
-Guvna._handle_social_glue = _handle_social_glue  # type: ignore[attr-defined]
-Guvna._solve_arithmetic = _solve_arithmetic  # type: ignore[attr-defined]
-Guvna._solve_conversion = _solve_conversion  # type: ignore[attr-defined]
-Guvna._solve_spelling = _solve_spelling  # type: ignore[attr-defined]
-Guvna._respond_from_self = _respond_from_self  # type: ignore[attr-defined]
-Guvna._apply_domain_lenses = _apply_domain_lenses  # type: ignore[attr-defined]
-Guvna._get_baseline = _get_baseline  # type: ignore[attr-defined]
+Guvna._classify_stimulus = classify_stimulus  # type: ignore[attr-defined]
+Guvna._handle_preference = handle_preference  # type: ignore[attr-defined]
+Guvna._respond_from_preference_rakim_track = (
+    respond_from_preference_rakim_track  # type: ignore[attr-defined]
+)
+Guvna._respond_from_preference = respond_from_preference  # type: ignore[attr-defined]
+Guvna._handle_user_list = handle_user_list  # type: ignore[attr-defined]
+Guvna._handle_social_glue = handle_social_glue  # type: ignore[attr-defined]
+Guvna._solve_arithmetic = solve_arithmetic  # type: ignore[attr-defined]
+Guvna._solve_conversion = solve_conversion  # type: ignore[attr-defined]
+Guvna._solve_spelling = solve_spelling  # type: ignore[attr-defined]
+Guvna._respond_from_self = respond_from_self  # type: ignore[attr-defined]
+Guvna._apply_domain_lenses = apply_domain_lenses  # type: ignore[attr-defined]
+Guvna._get_baseline = get_baseline  # type: ignore[attr-defined]
 
-# River hook: Guvna can call self.guvna_river(...) from process()
-Guvna.guvna_river = guvna_river  # type: ignore[attr-defined]
+# ---------------------------------------------------------------------------
+# River hook – bind as staticmethod so no extra `self` is passed
+# ---------------------------------------------------------------------------
+
+# guvna_river is defined as:
+#   def guvna_river(*, stimulus, meaning, get_baseline, apply_domain_lenses,
+#                   compute_domain_and_factsfirst, debug_mode=False) -> Optional[Dict[str, Any]]
+#
+# In guvna_12.Guvna.process we call:
+#   self.guvna_river(stimulus=..., meaning=..., get_baseline=self._get_baseline, ...)
+#
+# Binding as staticmethod keeps that keyword-only signature intact.
+Guvna.guvna_river = staticmethod(guvna_river)  # type: ignore[attr-defined]
 
 __all__ = ["Guvna", "LibraryIndex"]
