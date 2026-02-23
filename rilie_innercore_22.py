@@ -1,4 +1,5 @@
 from typing import List, Dict, Optional  # and any others you use
+from rilie_innercore_12 import Interpretation
 
 # ============================================================================
 # DOMAIN DETECTION & EXCAVATION
