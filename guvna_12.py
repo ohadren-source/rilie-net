@@ -870,6 +870,48 @@ class Guvna(GuvnaSelf):
                 domain,
             )
 
+        # STEP 3.7: CONFIDENCE GATE (PRIORITY CHECK)
+        # Before Kitchen wakes up: do we have ANYTHING viable to work with?
+        # PRIORITY 100: Answer with facts. PRIORITY 0: "I don't know" (only after exhaustion)
+        # Baseline is "I don't know" — Kitchen must earn the right to speak.
+        has_domain = bool(soi_domain_names)
+        has_baseline = bool(baseline_text and baseline_text.strip())
+        has_meaning = bool(_meaning and _meaning.pulse > 0.3)
+        
+        # DEBUG: Log all three viability checks
+        logger.info(
+            "GUVNA CONFIDENCE GATE: has_domain=%s (%s), has_baseline=%s (len=%d), has_meaning=%s (pulse=%.2f)",
+            has_domain, soi_domain_names if has_domain else "EMPTY",
+            has_baseline, len(baseline_text) if baseline_text else 0,
+            has_meaning, _meaning.pulse if _meaning else 0.0
+        )
+        
+        if not (has_domain or has_baseline or has_meaning):
+            # EXHAUSTED SEARCH: No viable path forward
+            logger.info(
+                "GUVNA: Confidence gate TRIGGERED → NO viable content (all checks failed). "
+                "Returning 'I don't know' early."
+            )
+            return self._finalize_response({
+                "stimulus": stimulus,
+                "result": (
+                    "I don't know. I looked everywhere — combed the 678 domains, "
+                    "searched the internet, came back with nothing solid enough to say with confidence."
+                ),
+                "quality_score": 0.0,
+                "status": "NO_CONFIDENCE",
+                "tone": "honest",
+                "meaning": raw.get("meaning"),
+            })
+        
+        # Gate passed: at least one viable path exists
+        logger.info(
+            "GUVNA: Confidence gate PASSED → proceeding to Kitchen (domain=%s, baseline=%s, meaning=%s)",
+            "YES" if has_domain else "NO",
+            "YES" if has_baseline else "NO",
+            "YES" if has_meaning else "NO"
+        )
+
         # STEP 4: CURIOSITY RESURFACE
         curiosity_context = ""
         if self.curiosity_engine and hasattr(self.curiosity_engine, "resurface"):
