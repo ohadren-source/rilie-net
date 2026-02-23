@@ -462,28 +462,22 @@ class Guvna(GuvnaSelf):
 
         - Step 0: APERTURE check → GuvnaSelf.greet()
         - Step 0.5: MEANING FINGERPRINT → meaning.read_meaning()
-            Dead input / light GIVE → social glue, never Kitchen
-            GET with substance → Kitchen gets the fingerprint too
         - Step 1: Fast path classifier (via guvna_22)
         - Step 2: Self-awareness fast path
         - Step 3: Baseline lookup
         - Step 3.1: Precision override detection
         - Step 3.5: Domain lenses → RILIE
         - Step 3.5b: Domain shift → facts-first
-        - Step 3.6: Cultural anchors (via guvna_22)
+        - RIVER: early lookup telemetry
         - Step 3.7: Confidence gate
         - Step 4: Curiosity resurface
         - Step 5: RILIE core processing
-        - Step 6: Governor oversight
-        - Step 7: Memory & conversation health
-        - Step 8: Domain annotations & SOi tracks
-        - Step 9: Ethics check
-        - Step 10: Response finalization
+        - Step 6–10: Governor oversight, memory, ethics, finalize
 
         kwargs accepted:
 
         - reference_context: Optional[Dict] from session.resolve_reference()
-        - debug_river: Optional[bool] — if True, River short-circuits with lookup summary
+        - debug_river: Optional[bool] — if True, River also short-circuits and responds alone
         """
 
         self.turn_count += 1
@@ -582,19 +576,29 @@ class Guvna(GuvnaSelf):
             stimulus, soi_domain_names
         )
 
-        # RIVER — FIRST READ (DEBUG-ONLY, SHORT-CIRCUIT TURN)
-        debug_river = bool(kwargs.get("debug_river"))
-        if debug_river and hasattr(self, "guvna_river"):
-            river_payload = self.guvna_river(
-                stimulus=stimulus,
-                meaning=_meaning,
-                get_baseline=self._get_baseline,
-                apply_domain_lenses=self._apply_domain_lenses,
-                compute_domain_and_factsfirst=self._compute_domain_and_factsfirst,
-                debug_mode=True,
-            )
-            if river_payload is not None:
-                return self._finalize_response(river_payload)
+        # RIVER — FIRST READ (lookup + say what she found)
+        try:
+            river_payload = None
+            if hasattr(self, "guvna_river"):
+                # Always run River for telemetry; may short-circuit if debug_river=True
+                river_payload = self.guvna_river(
+                    stimulus=stimulus,
+                    meaning=_meaning,
+                    get_baseline=self._get_baseline,
+                    apply_domain_lenses=self._apply_domain_lenses,
+                    compute_domain_and_factsfirst=self._compute_domain_and_factsfirst,
+                    debug_mode=bool(kwargs.get("debug_river", False)),
+                )
+                if river_payload is not None:
+                    # Store what River saw in raw for future introspection
+                    raw["river"] = river_payload
+        except Exception as e:
+            logger.warning("GUVNA: River failed (non-fatal): %s", e)
+            river_payload = None
+
+        # If debug_river=True and River returned a payload, serve River and stop
+        if river_payload is not None and bool(kwargs.get("debug_river", False)):
+            return self._finalize_response(river_payload)
 
         # STEP 3.7: CONFIDENCE GATE (PRIORITY CHECK)
         has_domain = bool(soi_domain_names)
@@ -673,7 +677,7 @@ class Guvna(GuvnaSelf):
 
         raw["curiosity_context"] = curiosity_context
 
-        # STEP 5: RILIE CORE PROCESSING
+        # STEP 5: RILIE CORE PROCESSING — unchanged
         rilie_result = self.rilie.process(
             stimulus=stimulus,
             baselinetext=baseline_text,
@@ -684,9 +688,6 @@ class Guvna(GuvnaSelf):
             baselinescoreboost=raw.get("baseline_score_boost", 0.03),
             factsfirst=facts_first,
         )
-        if not rilie_result:
-            rilie_result = raw.update(rilie_result)
 
         # STEP 6–10: Governor oversight, memory, ethics, finalize
-        # (Assume these are implemented in GuvnaSelf._finalize_response and related helpers)
         return self._finalize_response(rilie_result)
