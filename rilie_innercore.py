@@ -69,7 +69,7 @@ __all__ = [
     "anti_beige_check",
     "construct_response",
     "construct_blend",
-    "less_is_more_or_less",         # LIMO canonical export
+    "less_is_more_or_less",
     # clarification / freestyle (v4.3.0)
     "clarify_or_freestyle",
     "get_clarification_counter",

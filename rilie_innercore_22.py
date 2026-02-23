@@ -1,28 +1,4 @@
-"""
-
-rilie_innercore_22.py — THE KITCHEN PIPELINE (v4.3.0)
-
-=====================================================
-
-Extended pipeline: detect_domains, excavate_domains, generate_9_interpretations,
-_apply_limo, run_pass_pipeline.
-
-CHANGES FROM v4.2.0 (v4.3.0):
-
-- run_pass_pipeline() REWRITTEN to wire in Steps 6, 8, 9, 10:
-
-  Step 6: parse_baseline_results() — Google snippets get meaning-parsed.
-  Step 8: Explicit superiority comparison — Kitchen vs parsed baseline.
-  Step 9: direct_answer_gate() — GET questions with clear objects.
-  Step 10: clarify_or_freestyle() — When Kitchen empty, she asks (3x)
-           then freestyles + [MORON_OR_TROLL] tag. Counter resets on clarity.
-
-- New statuses: DIRECT_ANSWER, CLARIFICATION, FREESTYLE, BASELINE_WIN
-- MISE_EN_PLACE now only fires when clarify_or_freestyle also returns nothing.
-
-"""
-
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional  # and any others you use
 import re
 import random
 
@@ -95,7 +71,6 @@ def detect_domains(stimulus: str) -> List[str]:
         d: sum(1 for kw in kws if kw in sl)
         for d, kws in DOMAIN_KEYWORDS.items()
     }
-
     # Chompky boost: use holy_trinity to find domains the keywords missed
     if CHOMSKY_AVAILABLE:
         try:
@@ -107,7 +82,6 @@ def detect_domains(stimulus: str) -> List[str]:
                         scores[d] = scores.get(d, 0) + 2
         except Exception:
             pass
-
     ordered = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     return [d for d, _ in ordered[:4] if d in DOMAIN_KNOWLEDGE]
 
@@ -123,7 +97,6 @@ def excavate_domains(stimulus: str, domains: List[str]) -> Dict[str, List[str]]:
         if domain not in DOMAIN_KNOWLEDGE:
             excavated[domain] = []
             continue
-
         sub_items: List[tuple] = []
         for sub_key, items in DOMAIN_KNOWLEDGE[domain].items():
             sub_relevance = 1 if sub_key.lower() in sl else 0
@@ -133,7 +106,6 @@ def excavate_domains(stimulus: str, domains: List[str]) -> Dict[str, List[str]]:
                 word_overlap = len(item_words & stim_words)
                 score = sub_relevance * 2 + word_overlap
                 sub_items.append((score, item))
-
         if sub_items:
             sub_items.sort(key=lambda x: x[0], reverse=True)
             top = [item for _, item in sub_items[:4]]
@@ -160,11 +132,10 @@ def excavate_domains(stimulus: str, domains: List[str]) -> Dict[str, List[str]]:
                     parts.append("also: " + ", ".join(synonyms[:4]))
                 if homonyms:
                     parts.append("other meanings: " + "; ".join(homonyms[:3]))
-                enriched.append(" \u2014 ".join(parts))
+                enriched.append(" — ".join(parts))
             else:
                 enriched.append(item)
         excavated[domain] = enriched
-
     return excavated
 
 
@@ -185,7 +156,6 @@ _CANNED_MARKERS = [
     "where",
     "goes from here",
 ]
-
 
 def _originality_multiplier(text: str, domain: str) -> float:
     """Generated > Searched > Canned. Always."""
@@ -208,7 +178,6 @@ def generate_9_interpretations(
 ) -> List[Interpretation]:
     """Generate up to 9 internal candidate interpretations."""
     stimulus_domains = set(domains) if domains else set()
-
     try:
         from guvna import detect_tone_from_stimulus
         stimulus_tone = detect_tone_from_stimulus(stimulus)
@@ -248,7 +217,7 @@ def generate_9_interpretations(
         stim_questions = stimulus.count("?")
         challenge = min(1.0, (stim_words / 30) + (stim_questions * 0.2))
         resp_words = len(text.split())
-        resp_has_structure = 1.0 if any(c in text for c in ["\u2014", ":", ";"]) else 0.0
+        resp_has_structure = 1.0 if any(c in text for c in ["—", ":", ";"]) else 0.0
         skill = min(1.0, (resp_words / 40) + (resp_has_structure * 0.1))
         gap = abs(skill - challenge)
         return max(0.1, 1.0 - gap)
@@ -331,6 +300,11 @@ def generate_9_interpretations(
 def _apply_limo(text: str, precision_override: bool = False) -> str:
     """
     Run LIMO compression on a response text.
+
+    Rules:
+    - precision_override=True → skip entirely. Fact IS the demi-glace.
+    - LIMO_AVAILABLE=False → pass through unchanged (graceful fallback)
+    - Otherwise: compress. Maximum signal, zero waste.
     """
     if precision_override:
         return text
@@ -344,23 +318,23 @@ def _apply_limo(text: str, precision_override: bool = False) -> str:
 
 
 # ============================================================================
+# PASS PIPELINE — the actual cooking
+# ============================================================================
+
+
+# ============================================================================
 # STEP 8 — SUPERIORITY COMPARISON (v4.3.0)
 # ============================================================================
 
 def _is_kitchen_superior(
     kitchen_text: str,
-    parsed_baseline: List[Dict],
+    parsed_baseline: list,
     stimulus: str,
 ) -> bool:
     """
     STEP 8: Is the Kitchen result superior to the best parsed baseline?
-
-    Compares on three axes:
-    1. Coherence — is it a real sentence vs word salad?
-    2. Relevance — does it address the stimulus object?
-    3. Substance — does it actually say something vs empty platitude?
-
-    Returns True if Kitchen wins. False if baseline is better.
+    Compares on coherence, relevance, and substance.
+    Returns True if Kitchen wins.
     """
     if not kitchen_text or not kitchen_text.strip():
         return False
@@ -370,24 +344,20 @@ def _is_kitchen_superior(
     kitchen_coherent = _is_real_sentence(kitchen_text)
 
     baseline_text = ""
-    baseline_relevance = 0.0
     if parsed_baseline:
         top = parsed_baseline[0]
         baseline_text = top.get("sentence", top.get("raw_snippet", ""))
-        baseline_relevance = top.get("relevance", 0.0)
 
     if not baseline_text:
         return True
 
     baseline_coherent = _is_real_sentence(baseline_text)
 
-    # --- Axis 1: Coherence ---
     if kitchen_coherent and not baseline_coherent:
         return True
     if not kitchen_coherent and baseline_coherent:
         return False
 
-    # --- Axis 2: Relevance to stimulus ---
     stim_lower = stimulus.lower()
     _stop = {
         "the", "a", "an", "is", "are", "was", "were", "be",
@@ -398,46 +368,23 @@ def _is_kitchen_superior(
         "i", "you", "he", "she", "we", "they", "my", "your",
     }
     stim_words = set(stim_lower.split()) - _stop
-
     kitchen_words = set(re.sub(r"[^a-zA-Z0-9]", " ", kitchen_text.lower()).split()) - _stop
     baseline_words = set(re.sub(r"[^a-zA-Z0-9]", " ", baseline_text.lower()).split()) - _stop
 
     kitchen_overlap = len(kitchen_words & stim_words) / max(len(stim_words), 1)
     baseline_overlap = len(baseline_words & stim_words) / max(len(stim_words), 1)
 
-    # --- Axis 3: Substance — penalize empty platitudes ---
     _PLATITUDE_MARKERS = [
-        "it comes down to", "that's what drives me",
-        "everything else is built on", "that's the part most people",
-        "dig in and the whole picture", "that's deep",
-        "i mean that sincerely", "light bulb went",
+        "it comes down to", "that\'s what drives me",
+        "everything else is built on", "that\'s the part most people",
+        "dig in and the whole picture", "that\'s deep",
         "two sides of the same", "same root different branches",
     ]
     kitchen_platitude = sum(1 for m in _PLATITUDE_MARKERS if m in kitchen_text.lower())
     baseline_platitude = sum(1 for m in _PLATITUDE_MARKERS if m in baseline_text.lower())
 
-    kitchen_word_count = len(kitchen_text.split())
-    baseline_word_count = len(baseline_text.split())
-
-    # --- SCORING ---
-    kitchen_score = 0.0
-    baseline_score = 0.0
-
-    if kitchen_coherent:
-        kitchen_score += 2.0
-    if baseline_coherent:
-        baseline_score += 2.0
-
-    kitchen_score += kitchen_overlap * 3.0
-    baseline_score += baseline_overlap * 3.0
-
-    kitchen_score -= kitchen_platitude * 1.5
-    baseline_score -= baseline_platitude * 1.5
-    kitchen_score += min(kitchen_word_count / 20.0, 1.5)
-    baseline_score += min(baseline_word_count / 20.0, 1.5)
-
-    # Originality bonus for Kitchen (she cooked it)
-    kitchen_score += 0.5
+    kitchen_score = (2.0 if kitchen_coherent else 0) + kitchen_overlap * 3.0 - kitchen_platitude * 1.5 + min(len(kitchen_text.split()) / 20.0, 1.5) + 0.5
+    baseline_score = (2.0 if baseline_coherent else 0) + baseline_overlap * 3.0 - baseline_platitude * 1.5 + min(len(baseline_text.split()) / 20.0, 1.5)
 
     return kitchen_score >= baseline_score
 
@@ -450,12 +397,12 @@ def run_pass_pipeline(
     stimulus: str,
     disclosure_level: str,
     max_pass: int = 3,
-    baseline_results: Optional[List[Dict[str, str]]] = None,
-    prior_responses: Optional[List[str]] = None,
+    baseline_results=None,
+    prior_responses=None,
     baseline_text: str = "",
     precision_override: bool = False,
     baseline_score_boost: float = 0.03,
-) -> Dict:
+) -> dict:
     """
     Run interpretation passes. Called only at OPEN or FULL disclosure.
 
@@ -469,43 +416,30 @@ def run_pass_pipeline(
     7. Step 10: if Kitchen empty, clarify_or_freestyle instead of silence
 
     STATUS CODES:
-    - COMPRESSED: Kitchen cooked, served early (shallow question)
-    - GUESS: Kitchen's best candidate after all passes
-    - DIRECT_ANSWER: Step 9 gate fired — factual GET answered directly
-    - CLARIFICATION: Step 10 — asking for clarity (counter 0-2)
-    - FREESTYLE: Step 10 — all 3 clarifications failed, song + [MORON_OR_TROLL]
-    - BASELINE_WIN: Step 8 — baseline was genuinely superior
-    - BASELINE_FALLBACK: absolute last resort
-    - MISE_EN_PLACE: true silence — nothing worked at all
+    - COMPRESSED, GUESS, DIRECT_ANSWER, CLARIFICATION,
+    - FREESTYLE, BASELINE_WIN, BASELINE_FALLBACK, MISE_EN_PLACE
     """
+    from typing import List, Dict, Optional
 
-    # Check for curiosity context
     curiosity_ctx = extract_curiosity_context(stimulus)
     clean_stimulus = strip_curiosity_context(stimulus)
 
-    # Set external trite score
     trite = compute_trite_score(baseline_results)
     set_trite_score(trite)
-
-    # Set curiosity bonus
-    if curiosity_ctx:
-        set_curiosity_bonus(0.15)
-    else:
-        set_curiosity_bonus(0.0)
+    set_curiosity_bonus(0.15 if curiosity_ctx else 0.0)
 
     question_type = detect_question_type(clean_stimulus)
     domains = detect_domains(clean_stimulus)
 
     # ================================================================
-    # STEP 6: Parse baseline results (v4.3.0)
+    # STEP 6: Parse baseline results
     # ================================================================
-    parsed_baseline: List[Dict] = []
+    parsed_baseline: list = []
     stimulus_fingerprint = None
 
     if MEANING_AVAILABLE:
         try:
             stimulus_fingerprint = read_meaning(clean_stimulus)
-            # Stimulus parsed successfully — reset clarification counter
             reset_clarification_counter()
         except Exception:
             pass
@@ -536,40 +470,32 @@ def run_pass_pipeline(
                 raw_baseline_text=baseline_text,
             )
             if direct and direct.strip():
-                logger.info("STEP 9: direct_answer_gate fired — serving direct answer")
-                debug_audit = _build_debug_audit(
-                    clean_stimulus, domains, None, [], [], [],
-                    "DIRECT_ANSWER"
-                )
+                logger.info("STEP 9: direct_answer_gate fired")
                 return {
-                    "stimulus": clean_stimulus,
-                    "result": direct,
-                    "quality_score": 0.7,
-                    "priorities_met": 1,
-                    "anti_beige_score": 0.5,
-                    "status": "DIRECT_ANSWER",
-                    "depth": 0,
-                    "pass": 0,
+                    "stimulus": clean_stimulus, "result": direct,
+                    "quality_score": 0.7, "priorities_met": 1,
+                    "anti_beige_score": 0.5, "status": "DIRECT_ANSWER",
+                    "depth": 0, "pass": 0,
                     "disclosure_level": disclosure_level,
                     "trite_score": trite,
                     "curiosity_informed": bool(curiosity_ctx),
-                    "domains_used": domains,
-                    "domain": "direct_answer",
+                    "domains_used": domains, "domain": "direct_answer",
                     "limo_applied": False,
                     "precision_override": precision_override,
-                    "debug_audit": debug_audit,
+                    "debug_audit": _build_debug_audit(
+                        clean_stimulus, domains, None, [], [], [], "DIRECT_ANSWER"),
                 }
         except Exception as e:
-            logger.debug("STEP 9 direct_answer_gate error: %s", e)
+            logger.debug("STEP 9 error: %s", e)
 
-    # --- Anti-deja-vu: build word sets from her recent responses ---
-    _prior_word_sets: List[set] = []
+    # --- Anti-deja-vu ---
+    _prior_word_sets = []
     if prior_responses:
         for pr in prior_responses[-5:]:
             words = set(re.sub(r"[^a-zA-Z0-9\s]", "", pr.lower()).split())
             _prior_word_sets.append(words)
 
-    def _is_dejavu(candidate_text: str) -> bool:
+    def _is_dejavu(candidate_text):
         if not _prior_word_sets or not candidate_text:
             return False
         cand_words = set(re.sub(r"[^a-zA-Z0-9\s]", "", candidate_text.lower()).split())
@@ -591,7 +517,7 @@ def run_pass_pipeline(
     if roux_match:
         roux_text = roux_match.group(1).strip()
         if roux_text:
-            roux_items = [s.strip() for s in re.split(r'[.!?]+', roux_text)
+            roux_items = [s.strip() for s in re.split(r"[.!?]+", roux_text)
                           if s.strip() and len(s.strip()) > 10]
             if roux_items:
                 excavated["roux"] = roux_items[:5]
@@ -614,20 +540,17 @@ def run_pass_pipeline(
                 else:
                     excavated["catch44"] = wisdom
     except ImportError as e:
-        logger.error(
-            "SOiDOMAINMAP IMPORT FAILED — Kitchen running without wisdom layer: %s", e
-        )
+        logger.error("SOiDOMAINMAP IMPORT FAILED: %s", e)
 
     hard_cap = 3
     max_pass = max(1, min(max_pass, hard_cap))
     if disclosure_level == "open":
         max_pass = min(max_pass, 3)
 
-    best_global: Optional[Interpretation] = None
-
-    _debug_all_candidates: List[Dict] = []
-    _debug_dejavu_killed: List[Dict] = []
-    _debug_passes: List[Dict] = []
+    best_global = None
+    _debug_all_candidates = []
+    _debug_dejavu_killed = []
+    _debug_passes = []
 
     for current_pass in range(1, max_pass + 1):
         depth = current_pass - 1
@@ -641,9 +564,7 @@ def run_pass_pipeline(
         for i in nine:
             dejavu = _is_dejavu(i.text)
             entry = {
-                "id": i.id,
-                "domain": i.domain,
-                "text": i.text[:120],
+                "id": i.id, "domain": i.domain, "text": i.text[:120],
                 "overall_score": round(i.overall_score, 4),
                 "count_met": i.count_met,
                 "anti_beige": round(i.anti_beige_score, 3),
@@ -664,82 +585,64 @@ def run_pass_pipeline(
         ]
 
         if not filtered and nine:
-            def _dejavu_score(text: str) -> float:
+            def _dejavu_score(text):
                 if not _prior_word_sets or not text:
                     return 0.0
                 cand_words = set(re.sub(r"[^a-zA-Z0-9\s]", "", text.lower()).split())
                 if len(cand_words) < 3:
                     return 0.0
-                best_overlap = 0.0
+                best_ov = 0.0
                 for pw in _prior_word_sets:
                     if not pw:
                         continue
-                    overlap = cand_words & pw
+                    ov = cand_words & pw
                     smaller = min(len(cand_words), len(pw))
                     if smaller > 0:
-                        best_overlap = max(best_overlap, len(overlap) / smaller)
-                return best_overlap
-
+                        best_ov = max(best_ov, len(ov) / smaller)
+                return best_ov
             ranked = sorted(nine, key=lambda x: _dejavu_score(x.text))
             filtered = [ranked[0]]
 
         _debug_passes.append({
-            "pass": current_pass,
-            "candidates": len(nine),
+            "pass": current_pass, "candidates": len(nine),
             "survived_filter": len(filtered),
             "dejavu_killed": sum(1 for c in pass_candidates if c["dejavu_blocked"]),
         })
 
-        if filtered:
-            best = max(filtered, key=lambda x: (x.count_met, x.overall_score))
-        else:
-            best = max(nine, key=lambda x: x.overall_score)
+        best = max(filtered, key=lambda x: (x.count_met, x.overall_score)) if filtered else max(nine, key=lambda x: x.overall_score)
 
         if (best_global is None) or (best.overall_score > best_global.overall_score):
             best_global = best
 
-        # Compress quickly for shallow questions
         if current_pass <= 2 and question_type in {
-            QuestionType.UNKNOWN,
-            QuestionType.CHOICE,
-            QuestionType.DEFINITION,
+            QuestionType.UNKNOWN, QuestionType.CHOICE, QuestionType.DEFINITION,
         }:
-            debug_audit = _build_debug_audit(
-                clean_stimulus, domains, best, _debug_all_candidates,
-                _debug_dejavu_killed, _debug_passes, "COMPRESSED"
-            )
-
             compressed_text = _apply_limo(best.text, precision_override=precision_override)
-
             return {
-                "stimulus": clean_stimulus,
-                "result": compressed_text,
+                "stimulus": clean_stimulus, "result": compressed_text,
                 "quality_score": best.overall_score,
                 "priorities_met": best.count_met,
                 "anti_beige_score": best.anti_beige_score,
-                "status": "COMPRESSED",
-                "depth": depth,
-                "pass": current_pass,
-                "disclosure_level": disclosure_level,
-                "trite_score": trite,
+                "status": "COMPRESSED", "depth": depth, "pass": current_pass,
+                "disclosure_level": disclosure_level, "trite_score": trite,
                 "curiosity_informed": bool(curiosity_ctx),
-                "domains_used": domains,
-                "domain": best.domain,
+                "domains_used": domains, "domain": best.domain,
                 "limo_applied": LIMO_AVAILABLE and not precision_override,
                 "precision_override": precision_override,
-                "debug_audit": debug_audit,
+                "debug_audit": _build_debug_audit(
+                    clean_stimulus, domains, best, _debug_all_candidates,
+                    _debug_dejavu_killed, _debug_passes, "COMPRESSED"),
             }
 
     # ==================================================================
-    # FINAL TALLY — Step 8 superiority comparison
+    # FINAL — Step 8 superiority, Step 9 post, or Step 10
     # ==================================================================
 
-    def _clean_baseline(bl: str) -> str:
-        """Strip HTML, clean up, cut at sentence boundary."""
+    def _clean_baseline(bl):
         if not bl:
             return ""
-        import html
-        bl = html.unescape(bl)
+        import html as _html
+        bl = _html.unescape(bl)
         bl = re.sub(r"<[^>]+>", "", bl)
         bl = re.sub(r"\s+", " ", bl).strip()
         if len(bl) > 300:
@@ -754,44 +657,28 @@ def run_pass_pipeline(
         return bl
 
     if best_global is not None:
-        # ============================================================
-        # STEP 8: Is Kitchen actually superior to parsed baseline?
-        # ============================================================
-        kitchen_text = best_global.text
-        kitchen_text = _apply_limo(kitchen_text, precision_override=precision_override)
+        kitchen_text = _apply_limo(best_global.text, precision_override=precision_override)
 
+        # STEP 8: superiority check
         if parsed_baseline and not _is_kitchen_superior(kitchen_text, parsed_baseline, clean_stimulus):
-            best_baseline_sentence = parsed_baseline[0].get("sentence", "")
-            if best_baseline_sentence and len(best_baseline_sentence.split()) >= 5:
-                logger.info(
-                    "STEP 8: baseline superior (kitchen lost comparison). Serving baseline."
-                )
-                debug_audit = _build_debug_audit(
-                    clean_stimulus, domains, best_global, _debug_all_candidates,
-                    _debug_dejavu_killed, _debug_passes, "BASELINE_WIN"
-                )
+            best_bl = parsed_baseline[0].get("sentence", "")
+            if best_bl and len(best_bl.split()) >= 5:
+                logger.info("STEP 8: baseline superior")
                 return {
-                    "stimulus": clean_stimulus,
-                    "result": best_baseline_sentence,
-                    "quality_score": 0.5,
-                    "priorities_met": 0,
-                    "anti_beige_score": 0.5,
-                    "status": "BASELINE_WIN",
-                    "depth": best_global.depth,
-                    "pass": max_pass,
-                    "disclosure_level": disclosure_level,
-                    "trite_score": trite,
+                    "stimulus": clean_stimulus, "result": best_bl,
+                    "quality_score": 0.5, "priorities_met": 0,
+                    "anti_beige_score": 0.5, "status": "BASELINE_WIN",
+                    "depth": best_global.depth, "pass": max_pass,
+                    "disclosure_level": disclosure_level, "trite_score": trite,
                     "curiosity_informed": bool(curiosity_ctx),
-                    "domains_used": domains,
-                    "domain": "parsed_baseline",
-                    "limo_applied": False,
-                    "precision_override": precision_override,
-                    "debug_audit": debug_audit,
+                    "domains_used": domains, "domain": "parsed_baseline",
+                    "limo_applied": False, "precision_override": precision_override,
+                    "debug_audit": _build_debug_audit(
+                        clean_stimulus, domains, best_global, _debug_all_candidates,
+                        _debug_dejavu_killed, _debug_passes, "BASELINE_WIN"),
                 }
 
-        # ============================================================
-        # STEP 9 (post-Kitchen): Re-check direct answer gate
-        # ============================================================
+        # STEP 9 post-Kitchen re-check
         if FOUNDATION_STEPS_AVAILABLE and stimulus_fingerprint:
             try:
                 direct = direct_answer_gate(
@@ -802,183 +689,124 @@ def run_pass_pipeline(
                 )
                 if direct and direct.strip() and direct != kitchen_text:
                     logger.info("STEP 9 (post): direct answer gate improved result")
-                    debug_audit = _build_debug_audit(
-                        clean_stimulus, domains, best_global, _debug_all_candidates,
-                        _debug_dejavu_killed, _debug_passes, "DIRECT_ANSWER"
-                    )
                     return {
-                        "stimulus": clean_stimulus,
-                        "result": direct,
+                        "stimulus": clean_stimulus, "result": direct,
                         "quality_score": best_global.overall_score,
                         "priorities_met": best_global.count_met,
                         "anti_beige_score": best_global.anti_beige_score,
                         "status": "DIRECT_ANSWER",
-                        "depth": best_global.depth,
-                        "pass": max_pass,
-                        "disclosure_level": disclosure_level,
-                        "trite_score": trite,
+                        "depth": best_global.depth, "pass": max_pass,
+                        "disclosure_level": disclosure_level, "trite_score": trite,
                         "curiosity_informed": bool(curiosity_ctx),
-                        "domains_used": domains,
-                        "domain": best_global.domain,
+                        "domains_used": domains, "domain": best_global.domain,
                         "limo_applied": LIMO_AVAILABLE and not precision_override,
                         "precision_override": precision_override,
-                        "debug_audit": debug_audit,
+                        "debug_audit": _build_debug_audit(
+                            clean_stimulus, domains, best_global, _debug_all_candidates,
+                            _debug_dejavu_killed, _debug_passes, "DIRECT_ANSWER"),
                     }
             except Exception:
                 pass
 
-        # Kitchen cooked and survived Step 8. Serve it.
-        debug_audit = _build_debug_audit(
-            clean_stimulus, domains, best_global, _debug_all_candidates,
-            _debug_dejavu_killed, _debug_passes, "GUESS"
-        )
-
+        # Kitchen survived. Serve it.
         return {
-            "stimulus": clean_stimulus,
-            "result": kitchen_text,
+            "stimulus": clean_stimulus, "result": kitchen_text,
             "quality_score": best_global.overall_score,
             "priorities_met": best_global.count_met,
             "anti_beige_score": best_global.anti_beige_score,
-            "status": "GUESS",
-            "depth": best_global.depth,
-            "pass": max_pass,
-            "disclosure_level": disclosure_level,
-            "trite_score": trite,
+            "status": "GUESS", "depth": best_global.depth, "pass": max_pass,
+            "disclosure_level": disclosure_level, "trite_score": trite,
             "curiosity_informed": bool(curiosity_ctx),
-            "domains_used": domains,
-            "domain": best_global.domain,
+            "domains_used": domains, "domain": best_global.domain,
             "limo_applied": LIMO_AVAILABLE and not precision_override,
             "precision_override": precision_override,
-            "debug_audit": debug_audit,
+            "debug_audit": _build_debug_audit(
+                clean_stimulus, domains, best_global, _debug_all_candidates,
+                _debug_dejavu_killed, _debug_passes, "GUESS"),
         }
 
     # ==================================================================
-    # STEP 10: Clarify or freestyle — Kitchen is empty, she asks
+    # STEP 10: Clarify or freestyle
     # ==================================================================
     clarify_result = clarify_or_freestyle(
         stimulus=clean_stimulus,
         domains=domains,
         excavated=excavated,
         fingerprint=stimulus_fingerprint,
-        search_fn=None,  # Wired by Guvna if available
+        search_fn=None,
     )
 
     if clarify_result and clarify_result.get("response"):
         status = "CLARIFICATION" if clarify_result["type"] == "clarification" else "FREESTYLE"
-        logger.info(
-            "STEP 10: %s (counter=%d, tag=%s)",
-            status,
-            clarify_result.get("counter", 0),
-            clarify_result.get("internal_tag", ""),
-        )
-        debug_audit = _build_debug_audit(
-            clean_stimulus, domains, None, _debug_all_candidates,
-            _debug_dejavu_killed, _debug_passes, status
-        )
+        logger.info("STEP 10: %s (counter=%d, tag=%s)",
+                     status, clarify_result.get("counter", 0),
+                     clarify_result.get("internal_tag", ""))
         return {
             "stimulus": clean_stimulus,
             "result": clarify_result["response"],
             "quality_score": 0.2 if status == "CLARIFICATION" else 0.1,
-            "priorities_met": 0,
-            "anti_beige_score": 0.3,
-            "status": status,
-            "depth": max_pass - 1,
-            "pass": max_pass,
-            "disclosure_level": disclosure_level,
-            "trite_score": trite,
+            "priorities_met": 0, "anti_beige_score": 0.3,
+            "status": status, "depth": max_pass - 1, "pass": max_pass,
+            "disclosure_level": disclosure_level, "trite_score": trite,
             "curiosity_informed": bool(curiosity_ctx),
-            "domains_used": domains,
-            "domain": "clarification",
-            "limo_applied": False,
-            "precision_override": precision_override,
+            "domains_used": domains, "domain": "clarification",
+            "limo_applied": False, "precision_override": precision_override,
             "clarification_counter": clarify_result.get("counter", 0),
             "internal_tag": clarify_result.get("internal_tag", ""),
-            "debug_audit": debug_audit,
+            "debug_audit": _build_debug_audit(
+                clean_stimulus, domains, None, _debug_all_candidates,
+                _debug_dejavu_killed, _debug_passes, status),
         }
 
-    # Absolute fallback — Kitchen AND clarification empty. Baseline parachute.
+    # Baseline parachute
     clean_bl = _clean_baseline(baseline_text)
     if clean_bl:
-        debug_audit = _build_debug_audit(
-            clean_stimulus, domains, None, _debug_all_candidates,
-            _debug_dejavu_killed, _debug_passes, "BASELINE_FALLBACK"
-        )
         return {
-            "stimulus": clean_stimulus,
-            "result": clean_bl,
-            "quality_score": 0.3,
-            "priorities_met": 0,
-            "anti_beige_score": 0.5,
-            "status": "BASELINE_FALLBACK",
-            "depth": 0,
-            "pass": max_pass,
-            "disclosure_level": disclosure_level,
-            "trite_score": trite,
+            "stimulus": clean_stimulus, "result": clean_bl,
+            "quality_score": 0.3, "priorities_met": 0,
+            "anti_beige_score": 0.5, "status": "BASELINE_FALLBACK",
+            "depth": 0, "pass": max_pass,
+            "disclosure_level": disclosure_level, "trite_score": trite,
             "curiosity_informed": bool(curiosity_ctx),
-            "domains_used": domains,
-            "domain": "google_baseline",
-            "limo_applied": False,
-            "precision_override": precision_override,
-            "debug_audit": debug_audit,
+            "domains_used": domains, "domain": "google_baseline",
+            "limo_applied": False, "precision_override": precision_override,
+            "debug_audit": _build_debug_audit(
+                clean_stimulus, domains, None, _debug_all_candidates,
+                _debug_dejavu_killed, _debug_passes, "BASELINE_FALLBACK"),
         }
 
-    # True nothing. MISE_EN_PLACE.
-    debug_audit = _build_debug_audit(
-        clean_stimulus, domains, None, _debug_all_candidates,
-        _debug_dejavu_killed, _debug_passes, "MISE_EN_PLACE"
-    )
+    # True nothing
     return {
-        "stimulus": clean_stimulus,
-        "result": "",
-        "quality_score": 0.0,
-        "priorities_met": 0,
-        "anti_beige_score": 0.0,
-        "status": "MISE_EN_PLACE",
-        "depth": max_pass - 1,
-        "pass": max_pass,
-        "disclosure_level": disclosure_level,
-        "trite_score": trite,
+        "stimulus": clean_stimulus, "result": "",
+        "quality_score": 0.0, "priorities_met": 0,
+        "anti_beige_score": 0.0, "status": "MISE_EN_PLACE",
+        "depth": max_pass - 1, "pass": max_pass,
+        "disclosure_level": disclosure_level, "trite_score": trite,
         "curiosity_informed": bool(curiosity_ctx),
-        "domains_used": domains,
-        "domain": "",
-        "limo_applied": False,
-        "precision_override": precision_override,
-        "debug_audit": debug_audit,
+        "domains_used": domains, "domain": "",
+        "limo_applied": False, "precision_override": precision_override,
+        "debug_audit": _build_debug_audit(
+            clean_stimulus, domains, None, _debug_all_candidates,
+            _debug_dejavu_killed, _debug_passes, "MISE_EN_PLACE"),
     }
 
 
-def _build_debug_audit(
-    stimulus: str,
-    domains: List[str],
-    winner: Optional[Interpretation],
-    all_candidates: List[Dict],
-    dejavu_killed: List[Dict],
-    passes: List[Dict],
-    status: str,
-) -> Dict:
-    """
-    DEBUG MODE: She defends every response.
-    This is her receipt. Her work shown. Her pick justified.
-    """
+def _build_debug_audit(stimulus, domains, winner, all_candidates,
+                        dejavu_killed, passes, status):
+    """DEBUG MODE: She defends every response."""
     audit = {
-        "stimulus": stimulus,
-        "domains_detected": domains,
-        "status": status,
-        "passes": passes,
+        "stimulus": stimulus, "domains_detected": domains,
+        "status": status, "passes": passes,
         "total_candidates": len(all_candidates),
         "dejavu_killed_count": len(dejavu_killed),
         "dejavu_killed": dejavu_killed[:5],
         "all_candidates": sorted(
-            all_candidates,
-            key=lambda x: x.get("overall_score", 0),
-            reverse=True,
+            all_candidates, key=lambda x: x.get("overall_score", 0), reverse=True
         )[:9],
     }
-
     if winner:
         audit["winner"] = {
-            "text": winner.text,
-            "domain": winner.domain,
+            "text": winner.text, "domain": winner.domain,
             "overall_score": round(winner.overall_score, 4),
             "count_met": winner.count_met,
             "anti_beige": round(winner.anti_beige_score, 3),
@@ -993,10 +821,9 @@ def _build_debug_audit(
         if winner.domain:
             reasons.append(f"Domain: {winner.domain}")
         if not reasons:
-            reasons.append("Last resort \u2014 all others worse or blocked")
+            reasons.append("Last resort — all others worse or blocked")
         audit["defense"] = reasons
     else:
         audit["winner"] = None
-        audit["defense"] = ["NO CANDIDATES SURVIVED. All gates rejected everything."]
-
+        audit["defense"] = ["NO CANDIDATES SURVIVED."]
     return audit

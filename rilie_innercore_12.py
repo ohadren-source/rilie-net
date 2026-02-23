@@ -485,186 +485,388 @@ def _get_self_answer(stimulus: str) -> Optional[str]:
 # ============================================================================
 # RESPONSE CONSTRUCTION — Chompky gives her a voice
 # ============================================================================
-# STEP 10 — CLARIFY OR FREESTYLE (v4.3.0)
-# ============================================================================
-# When Kitchen can't parse meaning from the stimulus, she doesn't go silent.
-# She doesn't hallucinate. She ASKS.
-#
-# Three escalating clarification attempts:
-#   Q1: "What did you mean by {object}?"
-#   Q2: "Could you explain {object} a little further?"
-#   Q3: "From my understanding, you're saying/asking {reconstructed}?"
-#
-# If clarification lands at ANY point (counter 0, 1, or 2): reset to 0, cook.
-# If all 3 fail: "I love everything you're saying right now!" + song lookup.
-# Internal tag: [MORON_OR_TROLL]
-#
-# Counter: 0 → 1 → 2 → freestyle → reset to 0. No grudges. Clean slate.
-# ============================================================================
 
-# Module-level clarification counter.
-# Persists across calls within the same process/conversation.
-_clarification_counter: int = 0
-
-
-def get_clarification_counter() -> int:
-    """Get the current clarification counter value."""
-    return _clarification_counter
-
-
-def reset_clarification_counter() -> None:
-    """Reset counter to 0. Called when stimulus is understood."""
-    global _clarification_counter
-    _clarification_counter = 0
-
-
-def _increment_clarification_counter() -> int:
-    """Increment and return new counter value."""
-    global _clarification_counter
-    _clarification_counter += 1
-    return _clarification_counter
-
-
-def clarify_or_freestyle(
-    stimulus: str,
-    domains: List[str],
-    excavated: Optional[Dict[str, List[str]]] = None,
-    fingerprint: Optional[object] = None,
-    search_fn: Optional[object] = None,
-) -> Dict[str, str]:
+def construct_response(stimulus: str, snippet: str) -> str:
     """
-    STEP 10: When Kitchen can't cook, she asks or freestyles.
-
-    Returns a dict:
-    {
-        "response": str,         # The text to serve
-        "type": str,             # "clarification" or "freestyle"
-        "counter": int,          # Current counter value after this call
-        "internal_tag": str,     # "" or "[MORON_OR_TROLL]"
-    }
-
-    Args:
-        stimulus: The original human input.
-        domains: Detected domains (may be empty).
-        excavated: Domain excavation results (may be empty/None).
-        fingerprint: MeaningFingerprint of the stimulus (optional).
-        search_fn: Google search function for freestyle song lookup.
+    Construct a response from a domain snippet + stimulus.
+    The snippet is a SEED — could be a word, a keyword list, or a sentence.
+    She must BUILD a response that connects the seed to the question.
     """
-    global _clarification_counter
+    if not snippet or not stimulus:
+        return snippet or ""
 
-    # Extract object from fingerprint for clarification questions
-    obj = ""
-    act = ""
-    if fingerprint and hasattr(fingerprint, "object"):
-        obj = fingerprint.object or ""
-    if fingerprint and hasattr(fingerprint, "act"):
-        act = fingerprint.act or ""
+    stim_lower = stimulus.lower().strip()
+    snippet_clean = snippet.strip()
+    snippet_words = snippet_clean.split()
+    is_word_seed = len(snippet_words) < 5
+    is_kw_list = _is_keyword_list(snippet_clean)
 
-    # If object is "unknown" or empty, fall back to stimulus fragments
-    if not obj or obj == "unknown":
-        # Try to grab meaningful words from stimulus
-        _stop = {
-            "what", "why", "how", "who", "when", "where", "which",
-            "is", "are", "was", "were", "the", "a", "an", "do", "does",
-            "can", "could", "would", "should", "about", "tell", "me",
-            "you", "your", "my", "i", "it", "that", "this",
-        }
-        words = [w for w in stimulus.lower().split()
-                 if w.strip("?.,!") not in _stop and len(w.strip("?.,!")) > 2]
-        obj = " ".join(words[:3]) if words else "that"
+    if _is_self_question(stimulus):
+        hard_answer = _get_self_answer(stimulus)
+        if hard_answer:
+            return hard_answer
+        if is_kw_list:
+            anchor1, anchor2 = _pick_two_anchors(snippet_clean)
+            if anchor2:
+                return (
+                    f"It comes down to {anchor1} and {anchor2}. "
+                    f"That's what drives me."
+                )
+            return f"It comes down to {anchor1}. That's what drives me."
+        if is_word_seed:
+            seed = snippet_clean.lower()
+            return (
+                f"For me it's {seed}. "
+                f"Everything else is built on that."
+            )
+        return snippet_clean
 
-    counter = _clarification_counter
-
-    # --- Counter 0: First attempt ---
-    if counter == 0:
-        new_counter = _increment_clarification_counter()
-        return {
-            "response": f"What did you mean by {obj}?",
-            "type": "clarification",
-            "counter": new_counter,
-            "internal_tag": "",
-        }
-
-    # --- Counter 1: Second attempt ---
-    if counter == 1:
-        new_counter = _increment_clarification_counter()
-        return {
-            "response": f"Could you explain {obj} a little further?",
-            "type": "clarification",
-            "counter": new_counter,
-            "internal_tag": "",
-        }
-
-    # --- Counter 2: Third attempt — mirror it back ---
-    if counter == 2:
-        # Reconstruct what she thinks they're saying/asking
-        if act == "GET":
-            reconstruction = f"you're asking about {obj}"
-        elif act == "GIVE":
-            reconstruction = f"you're telling me about {obj}"
-        elif act == "SHOW":
-            reconstruction = f"you're showing me something about {obj}"
-        else:
-            reconstruction = f"you're saying something about {obj}"
-
-        # Try Chomsky reconstruction for better mirror
+    if is_kw_list:
+        anchor1, anchor2 = _pick_two_anchors(snippet_clean)
         if CHOMSKY_AVAILABLE:
             try:
                 parsed = parse_question(stimulus)
                 subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
                 focus = " ".join(parsed.focus_tokens) if parsed.focus_tokens else ""
-                if subject and focus:
-                    reconstruction = f"you're asking about {subject} in terms of {focus}"
+                if subject and focus and anchor2:
+                    return (
+                        f"When you look at {subject} through the lens of {focus}, "
+                        f"{anchor1} is the thread — and {anchor2} is where it leads."
+                    )
+                elif subject and anchor2:
+                    return (
+                        f"The core of {subject} is {anchor1}. "
+                        f"But flip it over and you find {anchor2} underneath."
+                    )
                 elif subject:
-                    reconstruction = f"you're asking about {subject}"
+                    return (
+                        f"With {subject}, it comes down to {anchor1}. "
+                        f"That's the part most people skip past."
+                    )
+                elif anchor2:
+                    return (
+                        f"Start with {anchor1}. Follow it far enough "
+                        f"and you hit {anchor2} — that's where it gets real."
+                    )
+                else:
+                    return (
+                        f"The thing about {anchor1} — it's not what it looks like "
+                        f"on the surface. Dig in and the whole picture shifts."
+                    )
             except Exception:
                 pass
 
-        new_counter = _increment_clarification_counter()
-        return {
-            "response": f"From my understanding, {reconstruction}?",
-            "type": "clarification",
-            "counter": new_counter,
-            "internal_tag": "",
-        }
+        topic_words = [w for w in stim_lower.split()
+                       if w not in {"what", "why", "how", "who", "when", "where",
+                                    "is", "are", "the", "a", "an", "do", "does",
+                                    "can", "could", "would", "should", "about",
+                                    "tell", "me", "you", "your", "my", "i"}]
+        topic = " ".join(topic_words[:3]) if topic_words else "this"
+        if anchor2:
+            return (
+                f"With {topic}, think about {anchor1} — "
+                f"then notice how {anchor2} changes the whole equation."
+            )
+        return (
+            f"The heart of {topic} is {anchor1}. "
+            f"Everything else orbits around that."
+        )
 
-    # --- Counter 3+: All attempts failed. Freestyle. ---
-    # Parse subject/object, Google a song about it, present it.
-    song_query = f"song about {obj}" if obj and obj != "that" else "song about confusion"
-    song_result = ""
-
-    if search_fn:
+    if CHOMSKY_AVAILABLE:
         try:
-            results = search_fn(song_query)
-            if results and isinstance(results, list):
-                for r in results:
-                    snippet = r.get("snippet", "")
-                    title = r.get("title", "")
-                    if title and len(title) > 3:
-                        # Clean up the title — grab artist + song name
-                        song_result = title.strip()
-                        break
+            parsed = parse_question(stimulus)
+            subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
+            focus = " ".join(parsed.focus_tokens) if parsed.focus_tokens else ""
+            if is_word_seed:
+                seed = snippet_clean.lower()
+                if subject and focus:
+                    return (
+                        f"Gotcha.. {subject} when focusing on {focus}, "
+                        f"shows us that {seed} is not absolute truth, "
+                        f"it's just our perspective."
+                    )
+                if subject:
+                    return (
+                        f"The core of {subject} is {seed}. "
+                        f"It's all about essence, ain't it?"
+                    )
+                return (
+                    f"Start with {seed}. On the surface, a mere detail. "
+                    f"You dig a little deeper and discover it's the foundation :)"
+                )
+            else:
+                core = snippet_clean
+                if subject and subject.strip() and len(subject.strip()) > 2 and subject.strip()[0].isalpha():
+                    return (
+                        f"This hits {subject.strip()}... let's explore "
+                        f"{core[0].lower()}{core[1:]} if you're game"
+                    )
+                return f"The thing about {core[0].lower()}{core[1:]}"
         except Exception:
             pass
 
-    # Build the freestyle response
-    if song_result:
-        freestyle = (
-            f"I love everything you're saying right now! "
-            f"Here's a song that captures the vibe: {song_result}"
+    if is_word_seed:
+        seed = snippet_clean.lower()
+        topic_words = [w for w in stim_lower.split()
+                       if w not in {"what", "why", "how", "who", "when", "where",
+                                    "is", "are", "the", "a", "an", "do", "does",
+                                    "can", "could", "would", "should", "about",
+                                    "tell", "me", "you", "your", "my", "i"}]
+        topic = " ".join(topic_words[:3]) if topic_words else "this"
+        return (
+            f"Interesting... {topic}... {seed}... that's deep. "
+            f"I mean that, sincerely."
+        )
+    core = snippet_clean
+    return f"Oh... it connects to {core[0].lower()}{core[1:]}"
+
+
+def construct_blend(stimulus: str, snippet1: str, snippet2: str) -> str:
+    """
+    Construct a cross-domain blend — two ideas connected through the question.
+    Handles word-level seeds, keyword lists, and full sentences.
+    """
+    s1 = snippet1.strip()
+    s2 = snippet2.strip()
+    if not s1 or not s2:
+        return s1 or s2 or ""
+
+    if _is_keyword_list(s1):
+        s1 = _pick_anchor(s1)
+    if _is_keyword_list(s2):
+        s2 = _pick_anchor(s2)
+
+    s1_is_word = len(s1.split()) < 5
+    s2_is_word = len(s2.split()) < 5
+    stim_lower = stimulus.lower().strip()
+
+    if CHOMSKY_AVAILABLE:
+        try:
+            parsed = parse_question(stimulus)
+            subject = " ".join(parsed.subject_tokens) if parsed.subject_tokens else ""
+            if s1_is_word and s2_is_word:
+                if subject:
+                    return (
+                        f"With {subject}, there are two forces at work — "
+                        f"{s1.lower()} and {s2.lower()}. "
+                        f"They seem different but they're related... huh..."
+                    )
+                return (
+                    f"That tracks... {s1.lower()} and {s2.lower()} "
+                    f"seem like opposites at first and then you realize "
+                    f"they're actually 2 sides of the same continuum. "
+                    f"Light bulb went off/on hehe 💡!"
+                )
+            elif s1_is_word or s2_is_word:
+                word = s1 if s1_is_word else s2
+                sentence = s2 if s1_is_word else s1
+                return (
+                    f"That tracks... {word.lower()} and "
+                    f"{sentence[0].lower()}{sentence[1:]} "
+                    f"seem like opposites at first and then you realize "
+                    f"they're actually 2 sides of the same continuum. "
+                    f"Light bulb went off/on hehe 💡!"
+                )
+            else:
+                if subject:
+                    return (
+                        f"With {subject}, notice how "
+                        f"{s1[0].lower()}{s1[1:]} connects to "
+                        f"{s2[0].lower()}{s2[1:]}. "
+                        f"Not a coincidence."
+                    )
+                return (
+                    f"Here's what's wild: {s1[0].lower()}{s1[1:]} and "
+                    f"{s2[0].lower()}{s2[1:]} — "
+                    f"they're actually the same insight wearing different clothes."
+                )
+        except Exception:
+            pass
+
+    if s1_is_word and s2_is_word:
+        return (
+            f"Two threads here: {s1.lower()} and {s2.lower()}. "
+            f"Pull either one and the whole thing unravels into something new."
+        )
+    elif s1_is_word or s2_is_word:
+        word = s1 if s1_is_word else s2
+        sentence = s2 if s1_is_word else s1
+        return (
+            f"{word.capitalize()} — that's the key. And "
+            f"{sentence[0].lower()}{sentence[1:]} is where it takes you."
         )
     else:
-        freestyle = (
-            f"I love everything you're saying right now! "
-            f"I tried to find a song about {obj} but even Google was confused."
+        return (
+            f"Connect these: {s1[0].lower()}{s1[1:]} and "
+            f"{s2[0].lower()}{s2[1:]}. "
+            f"Same root, different branches."
         )
 
-    # Reset counter — clean slate, no grudges
+
+# ============================================================================
+# v4.3.0 ADDITIONS — Steps 4 helpers, Step 10, Clarification Counter
+# ============================================================================
+
+import re as _re_v43
+
+# --- Sentence Detection ---
+
+def _is_real_sentence(text: str) -> bool:
+    """
+    Returns True if text looks like a real English sentence.
+    Must have: 4+ words, at least one verb-like word, not all caps.
+    """
+    if not text or not text.strip():
+        return False
+    words = text.strip().split()
+    if len(words) < 4:
+        return False
+    if text == text.upper() and len(text) > 10:
+        return False
+    # Check for at least one common verb indicator
+    _verb_indicators = {
+        "is", "are", "was", "were", "be", "been", "being",
+        "has", "have", "had", "do", "does", "did",
+        "will", "would", "could", "should", "can", "may", "might",
+        "get", "got", "make", "made", "take", "took",
+        "go", "went", "come", "came", "see", "saw",
+        "know", "knew", "think", "thought", "say", "said",
+        "means", "works", "happens", "comes", "goes",
+    }
+    text_lower = text.lower()
+    has_verb = any(v in text_lower.split() for v in _verb_indicators)
+    # Also accept sentences ending with punctuation
+    has_punct = text.strip()[-1] in ".!?;:"
+    return has_verb or has_punct
+
+
+def _extract_best_sentence(text: str) -> str:
+    """
+    From a block of text, extract the single best sentence.
+    Prefers: longer sentences, sentences with structure, non-fragment.
+    """
+    if not text:
+        return ""
+    # Split on sentence boundaries
+    raw_sentences = _re_v43.split(r'(?<=[.!?])\s+', text.strip())
+    candidates = [s.strip() for s in raw_sentences if len(s.strip().split()) >= 4]
+    if not candidates:
+        return text.strip()
+    # Score each candidate
+    def _score(s):
+        score = len(s.split())  # longer is better
+        if _is_real_sentence(s):
+            score += 10
+        if any(c in s for c in ["—", ":", ";"]):
+            score += 3  # structural complexity bonus
+        return score
+    return max(candidates, key=_score)
+
+
+# --- Clarification Counter (Step 10) ---
+
+_clarification_counter: int = 0
+
+
+def get_clarification_counter() -> int:
+    return _clarification_counter
+
+
+def reset_clarification_counter() -> None:
+    global _clarification_counter
     _clarification_counter = 0
 
-    return {
-        "response": freestyle,
-        "type": "freestyle",
-        "counter": 0,
-        "internal_tag": "[MORON_OR_TROLL]",
+
+def clarify_or_freestyle(
+    stimulus: str,
+    domains: list = None,
+    excavated: dict = None,
+    fingerprint=None,
+    search_fn=None,
+) -> dict:
+    """
+    STEP 10: When the Kitchen is empty, she doesn't go silent.
+
+    Counter 0 -> Q1: "What did you mean by {object}?"
+    Counter 1 -> Q2: "Could you explain {object} a little further?"
+    Counter 2 -> Q3: "From my understanding, you're saying/asking {reconstruction}?"
+    Counter 3+ -> FREESTYLE: Song + [MORON_OR_TROLL] tag, counter resets.
+
+    Returns dict with keys: type, response, counter, internal_tag
+    """
+    global _clarification_counter
+
+    # Extract the object/subject from stimulus for the question
+    stim_clean = stimulus.strip()
+    _stop = {
+        "the", "a", "an", "is", "are", "was", "were", "be",
+        "to", "of", "in", "for", "on", "with", "at", "by",
+        "from", "and", "or", "but", "not", "it", "this", "that",
+        "what", "why", "how", "who", "when", "where", "which",
+        "do", "does", "did", "can", "could", "would", "should",
+        "i", "you", "he", "she", "we", "they", "my", "your",
+        "me", "him", "her", "us", "them", "its", "our", "their",
     }
+    words = [w for w in stim_clean.split() if w.lower().strip("?.,!") not in _stop]
+    obj = " ".join(words[:4]) if words else stim_clean[:30]
+
+    # Try Chomsky parse for Q3 reconstruction
+    reconstruction = ""
+    if CHOMSKY_AVAILABLE:
+        try:
+            from ChomskyAtTheBit import parse_question
+            parsed = parse_question(stim_clean)
+            if parsed and isinstance(parsed, dict):
+                reconstruction = parsed.get("paraphrase", parsed.get("normalized", ""))
+        except Exception:
+            pass
+    if not reconstruction:
+        reconstruction = stim_clean
+
+    if _clarification_counter == 0:
+        _clarification_counter = 1
+        return {
+            "type": "clarification",
+            "response": f"What did you mean by {obj}?",
+            "counter": 1,
+            "internal_tag": "",
+        }
+    elif _clarification_counter == 1:
+        _clarification_counter = 2
+        return {
+            "type": "clarification",
+            "response": f"Could you explain {obj} a little further?",
+            "counter": 2,
+            "internal_tag": "",
+        }
+    elif _clarification_counter == 2:
+        _clarification_counter = 3
+        return {
+            "type": "clarification",
+            "response": f"From my understanding, you're asking: {reconstruction}?",
+            "counter": 3,
+            "internal_tag": "",
+        }
+    else:
+        # FREESTYLE — she gives up asking, plays a song, tags internally
+        _clarification_counter = 0  # Reset
+
+        # Try to find a song about the object
+        song_line = ""
+        if search_fn:
+            try:
+                results = search_fn(f"{obj} song")
+                if results:
+                    song_line = f" Here, have a song about {obj}. 🎵"
+            except Exception:
+                pass
+
+        if not song_line:
+            song_line = f" You know what, I love everything you're saying right now! 🎵"
+
+        return {
+            "type": "freestyle",
+            "response": song_line.strip(),
+            "counter": 0,
+            "internal_tag": "[MORON_OR_TROLL]",
+        }
