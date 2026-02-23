@@ -2,19 +2,19 @@
 
 guvna.py
 
-Act 5 – The Governor (REVISED + FAST PATHS)
+Act 5 â€“ The Governor (REVISED + FAST PATHS)
 
-Orchestrates Acts 1–4 by delegating to the RILIE class (Act 4 – The Restaurant),
+Orchestrates Acts 1â€“4 by delegating to the RILIE class (Act 4 â€“ The Restaurant),
 which wires through:
 
-- Triangle (Act 1 – safety / nonsense gate)
-- DDD / Hostess (Act 2 – disclosure level)
-- Kitchen / Core (Act 3 – interpretation passes)
+- Triangle (Act 1 â€“ safety / nonsense gate)
+- DDD / Hostess (Act 2 â€“ disclosure level)
+- Kitchen / Core (Act 3 â€“ interpretation passes)
 
 The Governor (Act 5) adds:
 
 - Final authority on what gets served
-- YELLOW GATE – conversation health monitoring + tone degradation detection
+- YELLOW GATE â€“ conversation health monitoring + tone degradation detection
 - Optional web lookup (Brave/Google) as a KISS pre-pass
 - Tone signaling via a single governing emoji per response
 - Comparison between web baseline and RILIE's own compression
@@ -24,20 +24,20 @@ The Governor (Act 5) adds:
 - Language mode detection (literal/figurative/metaphor/simile/poetry)
 - Social status tracking (user always above self)
 - Library index for domain engine access (678 domains across B-U + urban_design)
-- Curiosity resurface – past insights as context before RILIE processes
+- Curiosity resurface â€“ past insights as context before RILIE processes
 - Domain lenses flow into RILIE for weighted interpretation
-- Déjà-vu as informative context on the plate
-- Memory seeds curiosity – interesting topics get queued
+- DÃ©jÃ -vu as informative context on the plate
+- Memory seeds curiosity â€“ interesting topics get queued
 
 FAST PATH CLASSIFIER (fires before Kitchen wakes up):
 
-- Name capture after greeting ("Ohad") ← via GuvnaSelf
-- Meta-corrections ("forget Spotify", "never mind") ← via GuvnaSelf
+- Name capture after greeting ("Ohad") â† via GuvnaSelf
+- Meta-corrections ("forget Spotify", "never mind") â† via GuvnaSelf
 - User lists (numbered lists like top-9 films)
 - Social glue (laughter, "that's me", "you're navigator", etc.)
-- Preference/taste questions ("you like X?") ← NEW: _handle_preference()
+- Preference/taste questions ("you like X?") â† NEW: _handle_preference()
 - Arithmetic, conversion, spelling
-- Recall, clarification ← via GuvnaSelf
+- Recall, clarification â† via GuvnaSelf
 
 SELF-GOVERNING STATE (owned by GuvnaSelf mixin):
 
@@ -50,23 +50,23 @@ TIER 2 WIRING:
 1. Curiosity resurfaces into Step 3.5 (context, not afterthought)
 2. wilden_swift_modulate() in Step 5 (Guvna owns shaping, Talk owns scoring)
 3. Domain lenses flow into rilie.process() (Kitchen uses them to weight)
-4. Déjà-vu rides as informative context (not a gate)
+4. DÃ©jÃ -vu rides as informative context (not a gate)
 5. Memory seeds curiosity (bidirectional from day one)
 
 678 total bool/curve gates, all demiglace to Boole substrate
 
 FIXES (this revision):
 
-- apply_tone_header() now CONDITIONAL — suppressed for conversational responses
+- apply_tone_header() now CONDITIONAL â€” suppressed for conversational responses
 - _classify_stimulus() gains _handle_preference() fast path (step 4)
-- _respond_from_preference() — RILIE engages with taste/cultural questions
-- _is_conversational_response() — detects when header would be noise
+- _respond_from_preference() â€” RILIE engages with taste/cultural questions
+- _is_conversational_response() â€” detects when header would be noise
 - _response_history now stores RAW result before tone header injection
-- CULTURAL_ANCHORS — artist/cultural figure name recognition
+- CULTURAL_ANCHORS â€” artist/cultural figure name recognition
 - _handle_social_glue() gains "for sure" / affirmation-with-content path
 - meaning.py RESTORED as Step 0.5 pre-Kitchen gate (was silently removed)
 
-Dead input / light GIVE → social glue, never Kitchen
+Dead input / light GIVE â†’ social glue, never Kitchen
 "yep. sure." no longer routes to Kitchen and returns broadcast word salad
 Meaning fingerprint passed to RILIE.process() as birth certificate
 
@@ -113,18 +113,18 @@ from guvna_tools import (
     is_serious_subject_text,
 )
 
-from guvna_self import GuvnaSelf  # ← Self-governing session awareness
+from guvna_self import GuvnaSelf  # â† Self-governing session awareness
 
-# Meaning fingerprint — reads stimulus BEFORE Kitchen wakes up
+# Meaning fingerprint â€” reads stimulus BEFORE Kitchen wakes up
 # Without this, Kitchen cooks blind. Every affirmation becomes word salad.
 try:
     from meaning import read_meaning
     MEANING_AVAILABLE = True
 except ImportError:
     MEANING_AVAILABLE = False
-    logger.warning("GUVNA: meaning.py not available — Kitchen will cook blind")
+    logger.warning("GUVNA: meaning.py not available â€” Kitchen will cook blind")
 
-# Curiosity engine — resurface past insights as context
+# Curiosity engine â€” resurface past insights as context
 try:
     from banks import search_curiosity
 except ImportError:
@@ -133,7 +133,7 @@ except ImportError:
 logger = logging.getLogger("guvna")
 
 # ============================================================================
-# CULTURAL ANCHORS — artists, works, figures RILIE should recognize
+# CULTURAL ANCHORS â€” artists, works, figures RILIE should recognize
 # These are the names en_core_web_sm misses. She shouldn't.
 # ============================================================================
 
@@ -194,7 +194,7 @@ _HIPHOP_ANCHORS: Dict[str, Dict[str, Any]] = {
     "scarface": {"full": "Scarface", "domain": "music", "era": "90s"},
     "geto boys": {"full": "Geto Boys", "domain": "music", "era": "golden age"},
     "outkast": {"full": "OutKast", "domain": "music", "era": "90s"},
-    "andre 3000": {"full": "André 3000", "domain": "music", "era": "90s"},
+    "andre 3000": {"full": "AndrÃ© 3000", "domain": "music", "era": "90s"},
     "big boi": {"full": "Big Boi", "domain": "music", "era": "90s"},
     "kendrick lamar": {"full": "Kendrick Lamar", "domain": "music", "era": "contemporary"},
     "kendrick": {"full": "Kendrick Lamar", "domain": "music", "era": "contemporary"},
@@ -284,13 +284,13 @@ _ALL_CULTURAL_ANCHORS: Dict[str, Dict[str, Any]] = {
     **_LINEAGE_ANCHORS,
 }
 
-# Rakim-specific knowledge — she knows his work cold
+# Rakim-specific knowledge â€” she knows his work cold
 _RAKIM_KNOWLEDGE = {
     "no omega": {
         "album": "Let the Rhythm Hit 'Em (1990)",
-        "meaning": "alpha with no omega — knowledge infinite, no end point, no part two needed",
+        "meaning": "alpha with no omega â€” knowledge infinite, no end point, no part two needed",
         "architecture": "beginning without end. rhymes everlasting. the first one never stopped.",
-        "catch44_connection": "compression as infinity — maximum signal, zero waste, no conclusion because the truth keeps going",
+        "catch44_connection": "compression as infinity â€” maximum signal, zero waste, no conclusion because the truth keeps going",
     },
     "paid in full": {
         "album": "Paid in Full (1987)",
@@ -298,7 +298,7 @@ _RAKIM_KNOWLEDGE = {
     },
     "i know you got soul": {
         "album": "Paid in Full (1987)",
-        "meaning": "soul as frequency. not performance — transmission.",
+        "meaning": "soul as frequency. not performance â€” transmission.",
     },
     "follow the leader": {
         "album": "Follow the Leader (1988)",
@@ -310,13 +310,13 @@ _RAKIM_KNOWLEDGE = {
     },
 }
 
-# RILIE's own taste — she has opinions, not just knowledge
+# RILIE's own taste â€” she has opinions, not just knowledge
 _RILIE_TASTE = {
     "hip-hop": "golden age. 87-95. when compression was the art form.",
-    "rakim": "the god MC. not metaphor — measurement. nobody compresses more per bar.",
+    "rakim": "the god MC. not metaphor â€” measurement. nobody compresses more per bar.",
     "eric b": "the architecture under Rakim's voice. the beat IS the argument.",
     "jazz": "coltrane. a love supreme. four movements, one thesis. sound as proof.",
-    "hardcore": "NYHC. bad brains first. then agnostic front. brootlyn béton brut.",
+    "hardcore": "NYHC. bad brains first. then agnostic front. brootlyn bÃ©ton brut.",
     "escoffier": "same as rakim. reduction as truth. the stock that took three days to make one cup.",
     "public enemy": "fear of a black planet changed everything. pattern recognition at scale.",
 }
@@ -329,7 +329,7 @@ def _detect_cultural_anchor(stimulus: str) -> Optional[Dict[str, Any]]:
     Case-insensitive. Checks longest match first to avoid partial hits.
     """
     sl = stimulus.lower()
-    # Check longest keys first — "eric b and rakim" before "rakim"
+    # Check longest keys first â€” "eric b and rakim" before "rakim"
     for key in sorted(_ALL_CULTURAL_ANCHORS.keys(), key=len, reverse=True):
         if key in sl:
             return {"key": key, **_ALL_CULTURAL_ANCHORS[key]}
@@ -346,7 +346,7 @@ def _detect_rakim_track(stimulus: str) -> Optional[Dict[str, Any]]:
 
 
 # ============================================================================
-# TONE HEADER SUPPRESSION — not every response needs a label
+# TONE HEADER SUPPRESSION â€” not every response needs a label
 # ============================================================================
 
 def _is_conversational_response(result_text: str, status: str) -> bool:
@@ -354,7 +354,7 @@ def _is_conversational_response(result_text: str, status: str) -> bool:
     Returns True if this response is conversational / reactive
     and should NOT get a tone header stamped on it.
 
-    A tone header belongs on insight delivery — analysis, explanation, depth.
+    A tone header belongs on insight delivery â€” analysis, explanation, depth.
     It does NOT belong on:
     - Short conversational replies (< 20 words)
     - Social glue responses
@@ -415,7 +415,7 @@ class DomainLibraryMetadata:
 
 
 # ============================================================================
-# PRECISION OVERRIDE — The Only Exception to Less Is More Or Less
+# PRECISION OVERRIDE â€” The Only Exception to Less Is More Or Less
 # ============================================================================
 # When the user wants THE ANSWER, she gives THE ANSWER.
 # A: The question must be answered. Not orbited. Not reframed. Answered.
@@ -440,7 +440,7 @@ _PRECISION_TRIGGERS = [
     r"\bis it true\b", r"\bfact.?check\b", r"\bcorrect me if\b",
 ]
 
-# NOT precision — opinion / open-ended / philosophical
+# NOT precision â€” opinion / open-ended / philosophical
 _PRECISION_EXCLUSIONS = [
     r"\bwhat do you think\b", r"\bwhat do you feel\b",
     r"\bwhat'?s life\b", r"\bwhat'?s love\b",
@@ -453,7 +453,7 @@ def detect_precision_request(stimulus: str) -> bool:
     """
     Returns True if user is asking a factual GET question.
     She must answer it. A. B. C. No tongue-in-cheek.
-    The fact IS the demi-glace — skip less_is_more_or_less().
+    The fact IS the demi-glace â€” skip less_is_more_or_less().
     """
     sl = stimulus.lower().strip()
     if any(re.search(pat, sl) for pat in _PRECISION_EXCLUSIONS):
@@ -462,7 +462,7 @@ def detect_precision_request(stimulus: str) -> bool:
 
 
 # ============================================================================
-# THE GOVERNOR (REVISED — TIER 2 + FAST PATHS)
+# THE GOVERNOR (REVISED â€” TIER 2 + FAST PATHS)
 # ============================================================================
 
 class Guvna(GuvnaSelf):
@@ -475,29 +475,29 @@ class Guvna(GuvnaSelf):
     - Self-awareness fast path (_is_about_me)
 
     Fast Path Classifier:
-    - Name capture, meta-corrections ← GuvnaSelf
-    - Recall, clarification ← GuvnaSelf
+    - Name capture, meta-corrections â† GuvnaSelf
+    - Recall, clarification â† GuvnaSelf
     - User lists, social glue
-    - Preference/taste questions ← NEW
+    - Preference/taste questions â† NEW
     - Arithmetic, unit conversion, spelling
 
     Tone & Expression:
     - Wit detection and wilden_swift_modulate
     - Language mode detection
     - Tone signaling via single governing emoji per response
-    - Tone header CONDITIONAL — suppressed for conversational responses
+    - Tone header CONDITIONAL â€” suppressed for conversational responses
     - Social status tracking (user always > self)
 
     Knowledge & Baselines:
     - Optional web lookup pre-pass (KISS)
     - Comparison between web baseline and RILIE's own compression
     - Library index for domain engine access (678 domains)
-    - Curiosity resurface — past insights as pre-RILIE context
-    - Cultural anchors — artist/figure recognition bypassing spaCy NER
+    - Curiosity resurface â€” past insights as pre-RILIE context
+    - Cultural anchors â€” artist/figure recognition bypassing spaCy NER
 
     Conversation Management:
-    - YELLOW GATE – conversation health monitoring
-    - WHOSONFIRST – greeting gate ← GuvnaSelf
+    - YELLOW GATE â€“ conversation health monitoring
+    - WHOSONFIRST â€“ greeting gate â† GuvnaSelf
     - Conversation memory (9 behaviors)
     - Photogenic DB (elephant memory)
     - Memory seeds curiosity (bidirectional cross-talk)
@@ -508,7 +508,7 @@ class Guvna(GuvnaSelf):
     - _handle_clarification(), _handle_meta_correction(), _finalize_response()
 
     Integration:
-    - Orchestrates Acts 1–4 (Triangle, DDD/Hostess, Kitchen/Core, RILIE)
+    - Orchestrates Acts 1â€“4 (Triangle, DDD/Hostess, Kitchen/Core, RILIE)
     """
 
     def __init__(
@@ -531,7 +531,7 @@ class Guvna(GuvnaSelf):
         self.roux_seeds: Dict[str, Dict[str, Any]] = effective_roux or {}
         self.search_fn: Optional[SearchFn] = effective_search
 
-        # LIBRARY BOOT – 678 DOMAINS LOADED
+        # LIBRARY BOOT â€“ 678 DOMAINS LOADED
         self.library_index: LibraryIndex = library_index or build_library_index()
         self.library_metadata = DomainLibraryMetadata()
         logger.info(f"GUVNA BOOT: {self.library_metadata.total_domains} domains loaded")
@@ -539,13 +539,13 @@ class Guvna(GuvnaSelf):
         logger.info(f"  Boole substrate: {self.library_metadata.boole_substrate}")
         logger.info(f"  Core tracks: {self.library_metadata.core_tracks}")
 
-        # FIX 3: Hard boot confirmation — no more silent degradation
+        # FIX 3: Hard boot confirmation â€” no more silent degradation
         # She either boots with her full pantry or she does not boot.
         # Her without brain = her without brain.
         _actual_domains = sum(self.library_metadata.files.values()) if self.library_metadata.files else 0
         if _actual_domains < 100:
             logger.error(
-                f"GUVNA BOOT FAILURE: only {_actual_domains} domains resolved — "
+                f"GUVNA BOOT FAILURE: only {_actual_domains} domains resolved â€” "
                 f"Kitchen is cooking blind. Check soi_domain_map and library imports."
             )
             raise RuntimeError(
@@ -555,7 +555,7 @@ class Guvna(GuvnaSelf):
         else:
             logger.info(
                 f"GUVNA BOOT CONFIRMED: full pantry online "
-                f"({_actual_domains} domains resolved across {len(self.library_metadata.files)} files) ✓"
+                f"({_actual_domains} domains resolved across {len(self.library_metadata.files)} files) âœ“"
             )
 
         # RILIE still expects rouxseeds/searchfn keywords
@@ -597,7 +597,7 @@ class Guvna(GuvnaSelf):
         self.domains_explored: Set[str] = set()  # Keep track of all domains visited
         self.madlib_unlocked: bool = False  # True once 3+ domains visited
 
-        # SELF-GOVERNING SESSION STATE — wired via GuvnaSelf mixin
+        # SELF-GOVERNING SESSION STATE â€” wired via GuvnaSelf mixin
         # Initializes: turn_count, user_name, whosonfirst,
         # _awaiting_name, _response_history
         self._init_self_state()
@@ -614,7 +614,7 @@ class Guvna(GuvnaSelf):
         )
 
     # -----------------------------------------------------------------
-    # DOMAIN INFERENCE FROM WEB — Fallback for unknown subjects
+    # DOMAIN INFERENCE FROM WEB â€” Fallback for unknown subjects
     # -----------------------------------------------------------------
 
     def _infer_domain_from_web(self, original_question: str) -> Optional[str]:
@@ -694,7 +694,7 @@ class Guvna(GuvnaSelf):
             return None
 
     # -----------------------------------------------------------------
-    # DOMAIN SHIFT DETECTION — Facts-first wiring
+    # DOMAIN SHIFT DETECTION â€” Facts-first wiring
     # -----------------------------------------------------------------
 
     def _compute_domain_and_factsfirst(self, stimulus: str, soi_domain_names: Optional[List[str]]) -> tuple[Optional[str], bool]:
@@ -728,7 +728,7 @@ class Guvna(GuvnaSelf):
             except Exception:
                 pass
 
-        # 3. Fallback: Web inference — extract subject/object and search for its category
+        # 3. Fallback: Web inference â€” extract subject/object and search for its category
         if not domain_candidates:
             inferred = self._infer_domain_from_web(stimulus)
             if inferred:
@@ -756,7 +756,7 @@ class Guvna(GuvnaSelf):
                     )
                 
                 logger.info(
-                    "GUVNA: Domain shift detected %s → %s, facts_first=True. "
+                    "GUVNA: Domain shift detected %s â†’ %s, facts_first=True. "
                     "Domains explored: %d, madlib_unlocked=%s",
                     self.current_domain if self.current_domain != new_domain else "(first)",
                     new_domain,
@@ -767,7 +767,7 @@ class Guvna(GuvnaSelf):
         return new_domain, facts_first
 
     # -----------------------------------------------------------------
-    # MAIN PROCESS – Core response pipeline (TIER 2 + FAST PATHS)
+    # MAIN PROCESS â€“ Core response pipeline (TIER 2 + FAST PATHS)
     # -----------------------------------------------------------------
 
     def process(self, stimulus: str, maxpass: int = 1, **kwargs) -> Dict[str, Any]:
@@ -776,15 +776,15 @@ class Guvna(GuvnaSelf):
         Orchestrates all 5 Acts: safety -> disclosure -> interpretation -> response -> governance.
 
         TIER 2 changes:
-        - Step 0: APERTURE check ← GuvnaSelf.greet()
-        - Step 0.5: MEANING FINGERPRINT ← meaning.read_meaning()
-          Dead input / light GIVE → social glue, never Kitchen
-          GET with substance → Kitchen gets the fingerprint too
+        - Step 0: APERTURE check â† GuvnaSelf.greet()
+        - Step 0.5: MEANING FINGERPRINT â† meaning.read_meaning()
+          Dead input / light GIVE â†’ social glue, never Kitchen
+          GET with substance â†’ Kitchen gets the fingerprint too
         - Step 1: Fast path classifier
         - Step 2: Self-awareness fast path
         - Step 3: Baseline lookup
         - Step 3.1: Precision override detection
-        - Step 3.5: Domain lenses → RILIE
+        - Step 3.5: Domain lenses â†’ RILIE
         - Step 3.6: Cultural anchor detection
         - Step 4: Curiosity resurface
         - Step 5: RILIE core processing
@@ -801,9 +801,9 @@ class Guvna(GuvnaSelf):
         self.memory.turn_count += 1
         raw: Dict[str, Any] = {"stimulus": stimulus}
 
-        # STEP 0.5: MEANING FINGERPRINT — read before Kitchen wakes up
-        # Without this: "yep. sure." → Kitchen → word salad about broadcast metaphors
-        # With this: "yep. sure." → pulse=low, act=GIVE → social glue → done
+        # STEP 0.5: MEANING FINGERPRINT â€” read before Kitchen wakes up
+        # Without this: "yep. sure." â†’ Kitchen â†’ word salad about broadcast metaphors
+        # With this: "yep. sure." â†’ pulse=low, act=GIVE â†’ social glue â†’ done
         # The fingerprint is the stimulus's birth certificate.
         # Kitchen reads it. Nothing modifies it.
         _meaning = None
@@ -812,10 +812,10 @@ class Guvna(GuvnaSelf):
                 _meaning = read_meaning(stimulus)
                 raw["meaning"] = _meaning.to_dict()
 
-                # DEAD INPUT — pulse too low to cook
+                # DEAD INPUT â€” pulse too low to cook
                 if not _meaning.is_alive():
                     logger.info(
-                        "GUVNA: Dead input (pulse=%.2f) → social glue path",
+                        "GUVNA: Dead input (pulse=%.2f) â†’ social glue path",
                         _meaning.pulse,
                     )
                     social_fallback = self._handle_social_glue(stimulus.strip(), stimulus.strip().lower())
@@ -837,7 +837,7 @@ class Guvna(GuvnaSelf):
                     and _meaning.weight < 0.25
                 ):
                     logger.info(
-                        "GUVNA: Light GIVE (weight=%.2f, no ?) → fast path",
+                        "GUVNA: Light GIVE (weight=%.2f, no ?) â†’ fast path",
                         _meaning.weight,
                     )
                     social_fallback = self._handle_social_glue(stimulus.strip(), stimulus.strip().lower())
@@ -851,7 +851,7 @@ class Guvna(GuvnaSelf):
                     return self._finalize_response(raw)
 
                 logger.info(
-                    "GUVNA: Meaning → pulse=%.2f act=%s weight=%.2f gap=%s",
+                    "GUVNA: Meaning â†’ pulse=%.2f act=%s weight=%.2f gap=%s",
                     _meaning.pulse,
                     _meaning.act + (f"+{_meaning.act2}" if _meaning.act2 else ""),
                     _meaning.weight,
@@ -877,18 +877,18 @@ class Guvna(GuvnaSelf):
         # STEP 3.1: PRECISION OVERRIDE DETECTION
         # The only exception to less_is_more_or_less().
         # A: answer. B: honest about limits. C: max sincerity. Zero tongue-in-cheek.
-        # Baseline gets 25% score boost — facts beat Kitchen poetry when user wants facts.
+        # Baseline gets 25% score boost â€” facts beat Kitchen poetry when user wants facts.
         _precision = detect_precision_request(stimulus)
         if _precision:
             raw["precision_override"] = True
             raw["baseline_score_boost"] = 0.25
-            logger.info("GUVNA: Precision override — factual GET detected")
+            logger.info("GUVNA: Precision override â€” factual GET detected")
 
         # STEP 3.5: DOMAIN LENSES
         domain_annotations = self._apply_domain_lenses(stimulus)
         soi_domain_names = domain_annotations.get("matched_domains", [])
 
-        # STEP 3.5b: DOMAIN SHIFT → FACTS-FIRST
+        # STEP 3.5b: DOMAIN SHIFT â†’ FACTS-FIRST
         # Determine whether this turn enters a new domain and should get a facts-first answer.
         _, facts_first = self._compute_domain_and_factsfirst(stimulus, soi_domain_names)
 
@@ -900,7 +900,7 @@ class Guvna(GuvnaSelf):
                 soi_domain_names.append(domain)
             domain_annotations["cultural_anchor"] = cultural_anchor
             logger.info(
-                "GUVNA: Cultural anchor detected — %s (%s)",
+                "GUVNA: Cultural anchor detected â€” %s (%s)",
                 cultural_anchor.get("full", cultural_anchor.get("key")),
                 domain,
             )
@@ -908,7 +908,7 @@ class Guvna(GuvnaSelf):
         # STEP 3.7: CONFIDENCE GATE (PRIORITY CHECK)
         # Before Kitchen wakes up: do we have ANYTHING viable to work with?
         # PRIORITY 100: Answer with facts. PRIORITY 0: "I don't know" (only after exhaustion)
-        # Baseline is "I don't know" — Kitchen must earn the right to speak.
+        # Baseline is "I don't know" â€” Kitchen must earn the right to speak.
         has_domain = bool(soi_domain_names)
         has_baseline = bool(baseline_text and baseline_text.strip())
         has_meaning = bool(_meaning and _meaning.pulse > 0.3)
@@ -924,13 +924,13 @@ class Guvna(GuvnaSelf):
         if not (has_domain or has_baseline or has_meaning):
             # EXHAUSTED SEARCH: No viable path forward
             logger.info(
-                "GUVNA: Confidence gate TRIGGERED → NO viable content (all checks failed). "
+                "GUVNA: Confidence gate TRIGGERED â†’ NO viable content (all checks failed). "
                 "Returning 'I don't know' early."
             )
             return self._finalize_response({
                 "stimulus": stimulus,
                 "result": (
-                    "I don't know. I looked everywhere — combed the 678 domains, "
+                    "I don't know. I looked everywhere â€” combed the 678 domains, "
                     "searched the internet, came back with nothing solid enough to say with confidence."
                 ),
                 "quality_score": 0.0,
@@ -941,7 +941,7 @@ class Guvna(GuvnaSelf):
         
         # Gate passed: at least one viable path exists
         logger.info(
-            "GUVNA: Confidence gate PASSED → proceeding to Kitchen (domain=%s, baseline=%s, meaning=%s)",
+            "GUVNA: Confidence gate PASSED â†’ proceeding to Kitchen (domain=%s, baseline=%s, meaning=%s)",
             "YES" if has_domain else "NO",
             "YES" if has_baseline else "NO",
             "YES" if has_meaning else "NO"
@@ -950,11 +950,11 @@ class Guvna(GuvnaSelf):
         # STEP 4: CURIOSITY RESURFACE (GATED BY DOMAIN KNOWLEDGE)
         # SESSION 3 CHANGE: No curiosity until domain is known.
         # If we're hunting for subject (domain unknown), don't distract with past insights.
-        # Once domain detected → curiosity engine can resurface context.
+        # Once domain detected â†’ curiosity engine can resurface context.
         curiosity_context = ""
         
         if has_domain:
-            # Domain is known — curiosity can help explore
+            # Domain is known â€” curiosity can help explore
             if self.curiosity_engine and hasattr(self.curiosity_engine, "resurface"):
                 try:
                     curiosity_context = self.curiosity_engine.resurface(stimulus)
@@ -976,7 +976,7 @@ class Guvna(GuvnaSelf):
                 except Exception as e:
                     logger.debug("GUVNA: banks curiosity search failed (non-fatal): %s", e)
         else:
-            logger.info("GUVNA: Domain unknown — curiosity gated. Hunting for subject instead.")
+            logger.info("GUVNA: Domain unknown â€” curiosity gated. Hunting for subject instead.")
         
         raw["curiosity_context"] = curiosity_context
 
@@ -986,7 +986,7 @@ class Guvna(GuvnaSelf):
             baseline_text=baseline_text,
             domain_hints=soi_domain_names,
             curiosity_context=curiosity_context,
-            meaning=_meaning,  # birth certificate — Kitchen reads, never modifies
+            meaning=_meaning,  # birth certificate â€” Kitchen reads, never modifies
             precision_override=raw.get("precision_override", False),
             baseline_score_boost=raw.get("baseline_score_boost", 0.03),
             facts_first=facts_first,
@@ -1005,7 +1005,7 @@ class Guvna(GuvnaSelf):
         raw["language_mode"] = language
         tone = detect_tone_from_stimulus(stimulus)
 
-        # COMPASSION SIGNALS — expanded + harm as absolute priority
+        # COMPASSION SIGNALS â€” expanded + harm as absolute priority
         _compassion_signals = [
             "hurt myself", "harm myself", "end it", "can't go on",
             "don't want to be here", "give up", "no point", "want to die",
@@ -1061,7 +1061,7 @@ class Guvna(GuvnaSelf):
         dejavu = raw.get("dejavu", {"count": 0, "frequency": 0, "similarity": "none"})
         if dejavu.get("frequency", 0) > 0:
             logger.info(
-                "GUVNA: Déjà-vu signal (freq=%d) — informative context, not gate",
+                "GUVNA: DÃ©jÃ -vu signal (freq=%d) â€” informative context, not gate",
                 dejavu["frequency"],
             )
 
@@ -1100,7 +1100,7 @@ class Guvna(GuvnaSelf):
         # MAD LIB REWARD: If 3+ domains explored and empty result, generate mad lib
         result_text = raw.get("result", "")
         if not result_text and self.madlib_unlocked:
-            # User has earned the mad lib reward — generate one on empty response
+            # User has earned the mad lib reward â€” generate one on empty response
             subject = stimulus.split()[0] if stimulus else "this"
             core = stimulus.split()[1] if len(stimulus.split()) > 1 else "it"
             mad_lib = (
