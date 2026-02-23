@@ -591,7 +591,8 @@ class RILIE:
         # QUALITY GATE 1: catch Kitchen word-salad before serving
         shaped = _scrub_repetition(shaped)
         if not shaped or not shaped.strip():
-            shaped = ohad_redirect("")
+            # Courtesy exit: Kitchen produced nothing — return "I don't know"
+            shaped = "I don't know."
             raw["status"] = "COURTESYEXIT"
 
         # QUALITY SIGNAL: MEASURESTICK (informer, not gate)
