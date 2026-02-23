@@ -1,2 +1,2 @@
-from guvna_1-2 import *
-from guvna_2-2 import *
+from guvna_12 import *
+from guvna_22 import *
