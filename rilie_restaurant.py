@@ -555,20 +555,21 @@ class RILIE:
 
         # ------------------------------------------------------------------
         # Speech Pipeline — transform Kitchen's semantic output into speech
+        # (Disabled: Speech pipeline module not available)
         # ------------------------------------------------------------------
-        if SPEECH_PIPELINE_AVAILABLE:
-            try:
-                raw = process_kitchen_output(
-                    kitchen_result=raw,
-                    stimulus=original_question,
-                    disclosure_level=disclosure.value,
-                    exchange_count=self.conversation.exchange_count,
-                )
-            except Exception as e:
-                logger.warning(
-                    "Speech pipeline failed: %s — using raw Kitchen output",
-                    e,
-                )
+        # if SPEECH_PIPELINE_AVAILABLE:
+        #     try:
+        #         raw = process_kitchen_output(
+        #             kitchen_result=raw,
+        #             stimulus=original_question,
+        #             disclosure_level=disclosure.value,
+        #             exchange_count=self.conversation.exchange_count,
+        #         )
+        #     except Exception as e:
+        #         logger.warning(
+        #             "Speech pipeline failed: %s — using raw Kitchen output",
+        #             e,
+        #         )
 
         # ------------------------------------------------------------------
         # Normal path — finalize and record
