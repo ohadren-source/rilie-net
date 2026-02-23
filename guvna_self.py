@@ -50,6 +50,16 @@ from guvna_tools import (
     TONE_EMOJIS,
 )
 
+# Less Is More Or Less + Precision Override — imported from rilie_innercore
+try:
+    from rilie_innercore import less_is_more_or_less
+    LIMO_AVAILABLE = True
+except ImportError:
+    LIMO_AVAILABLE = False
+    def less_is_more_or_less(text: str) -> str:  # type: ignore
+        return text  # graceful degradation — transform unavailable
+
+
 logger = logging.getLogger("guvna_self")
 
 DEFAULT_NAME = "Mate"
@@ -297,7 +307,17 @@ class GuvnaSelf:
         """
         final = {
             "stimulus": raw.get("stimulus", ""),
-            "result": raw.get("result", ""),
+            # ── LESS IS MORE OR LESS + PRECISION OVERRIDE ──────────────────
+            # The universal transform runs on everything.
+            # The ONLY exception: precision_override — the fact IS the demi-glace.
+            # A: answer. B: honest about limits. C: max sincerity. Zero tongue-in-cheek.
+            "result": (
+                raw.get("result", "")
+                if raw.get("precision_override")
+                else less_is_more_or_less(raw.get("result", ""))
+                if LIMO_AVAILABLE
+                else raw.get("result", "")
+            ),
             "status": raw.get("status", "OK"),
             "tone": raw.get("tone", "insightful"),
             "tone_emoji": raw.get("tone_emoji", TONE_EMOJIS.get("insightful", "💡")),

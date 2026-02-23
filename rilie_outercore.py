@@ -1,12 +1,16 @@
 """
 rilie_outercore.py — THE PANTRY
+
 ================================
 
 Everything RILIE knows. Her ingredients. Her vocabulary.
+
 Her domains, her definitions, her synonyms, her homonyms.
+
 Her consciousness tracks. Her priority hierarchy.
 
 This file contains ZERO logic. No scoring, no pipelines, no construction.
+
 Just data. The Kitchen (rilie_innercore.py) imports from here.
 
 Built by SOi sauc-e.
@@ -87,35 +91,72 @@ DOMAIN_KNOWLEDGE: Dict[str, Dict[str, List[str]]] = {
         "fear": ["dissonance", "tension", "unease", "tritone", "panic", "rising"],
         "satire": ["comedy", "trojan", "truth", "clown", "expose", "laugh", "think"],
         "production": ["noise", "collage", "architecture", "intent", "sample", "layers", "archaeology", "source"],
+        "less_is_more_or_less": [
+            "reduction",
+            "essence",
+            "sufficient",
+            "demi-glace",
+            "no glaze",
+        ],
     },
     "culture": {
         "hip_hop": ["reframe", "broadcast", "political", "street", "news", "voice", "institution"],
         "film": ["montage", "compression", "visual", "diegetic", "grounding"],
         "resistance": ["blueprint", "mobilize", "art", "trickster", "bitter", "palatable", "weapon", "complacency"],
+        "less_is_more_or_less": [
+            "edit",
+            "cut the fat",
+            "only the feeling",
+            "no extra exposition",
+        ],
     },
     "physics": {
         "conservation": ["conserve", "transform", "nothing lost", "symmetry", "noether"],
         "relativity": ["frozen", "energy", "matter", "equivalence", "frame", "reference", "perception", "position"],
         "quantum": ["superposition", "collapse", "observe", "entangle", "distance", "correlated", "uncertainty", "tradeoff"],
+        "less_is_more_or_less": [
+            "minimal description",
+            "enough variables",
+            "no extra terms",
+        ],
     },
     "life": {
         "biology": ["cancer", "ego", "replication", "forgot", "apoptosis", "sacrifice", "thrive"],
         "evolution": ["adapt", "change", "selection", "symbiosis", "cooperate", "compete"],
         "health": ["diversity", "stability", "monoculture", "collapse", "emergence", "simple", "recursive", "complex"],
+        "less_is_more_or_less": [
+            "simple routines",
+            "sustainable pace",
+            "enough not perfect",
+        ],
     },
     "games": {
         "game_theory": ["dilemma", "individual", "collective", "ego", "equilibrium", "stable", "strategy"],
         "trust": ["trust", "drops", "buckets", "grace", "reputation", "cost"],
         "incentives": ["cooperate", "mirror", "memory", "commit", "burn ships", "no defect", "misaligned", "commons"],
+        "less_is_more_or_less": [
+            "satisficing",
+            "good-enough move",
+            "avoid over-optimization",
+        ],
     },
     "thermodynamics": {
         "entropy": ["entropy", "increase", "closed", "disorder", "free energy", "work", "waste", "beige"],
         "harm_repair": ["harm", "irreversible", "repair", "cost", "cascade", "failure", "topology", "propagate"],
         "catch44": ["equilibrium", "death", "far from", "ego", "entropy", "grace", "negentropy", "alive"],
+        "less_is_more_or_less": [
+            "minimum work for result",
+            "avoid waste heat",
+            "no needless churn",
+        ],
     },
     "cosmology": {
         "origin": ["boolean", "tick", "zero", "one", "bootstrap", "substrate"],
         "scale": ["fractal", "scale", "pattern", "recursive", "dark", "unknown", "humility", "detect"],
+        "less_is_more_or_less": [
+            "shortest story that still holds the universe",
+            "minimal ontology",
+        ],
     },
     "finance": {
         "density": ["density", "destiny", "signal", "conviction", "quality", "frequency", "diamond", "bronze"],
@@ -123,11 +164,16 @@ DOMAIN_KNOWLEDGE: Dict[str, Dict[str, List[str]]] = {
         "regime": ["regime", "normal", "chaos", "stagnation", "fear", "gradient", "wait"],
         "literacy": ["slow cook", "compound", "patience", "survival", "security", "moves", "stretch"],
         "catch44": ["sleep", "topology", "patient", "quality", "stop loss", "integrity", "conviction", "ego"],
+        "less_is_more_or_less": [
+            "sufficient returns",
+            "no extra risk",
+            "demi-glace not moonshot",
+        ],
     },
-    # ===========================================================================
+    # =========================================================================
     # SELF — RILIE's knowledge about herself. Concepts only. She builds sentences.
     # Built by SOi sauc-e. No creator names inside the creation.
-    # ===========================================================================
+    # =========================================================================
     "self": {
         "identity": ["RILIE", "real intelligence", "cognitive architecture", "not chatbot", "built by SOi sauc-e", "newborn"],
         "care": ["care", "prime directive", "attention", "worth hearing", "not filler", "earn", "land"],
@@ -136,11 +182,16 @@ DOMAIN_KNOWLEDGE: Dict[str, Dict[str, List[str]]] = {
         "trust": ["show", "work speaks", "don't know", "honest", "no ask", "demonstrate"],
         "limits": ["young", "newborn", "learning", "don't know everything", "growing", "ask again later"],
         "emotion": ["notice", "attention", "matters", "not feeling", "serious", "present"],
+        "less_is_more_or_less": [
+            "strip to the feeling",
+            "serve only what lands",
+            "sufficient not perfect",
+        ],
     },
 }
 
 # ============================================================================
-# DOMAIN KEYWORDS — Quick keyword hooks to detect which domains to lean on
+# DOMAIN KEYWORDS — Quick keyword hooks to detect which domains to lean on...
 # ============================================================================
 
 DOMAIN_KEYWORDS: Dict[str, List[str]] = {
@@ -232,6 +283,7 @@ WORD_DEFINITIONS: Dict[str, str] = {
     "intent": "purpose behind the action",
     "sample": "a piece of something larger carried forward",
     "layers": "depth built by stacking",
+
     # Culture
     "reframe": "to change how something is seen without changing what it is",
     "broadcast": "to send signal in all directions",
@@ -242,6 +294,7 @@ WORD_DEFINITIONS: Dict[str, str] = {
     "mobilize": "to turn stillness into movement",
     "trickster": "the one who breaks rules to reveal truth",
     "weapon": "any tool used to shift power",
+
     # Physics
     "conserve": "nothing lost only transformed",
     "transform": "to change form while preserving essence",
@@ -258,6 +311,7 @@ WORD_DEFINITIONS: Dict[str, str] = {
     "entangle": "connected regardless of distance",
     "uncertainty": "precision in one dimension costs precision in another",
     "tradeoff": "getting one thing by giving up another",
+
     # Life
     "cancer": "growth without regard for the whole",
     "ego": "self-prioritization that forgets the system",
@@ -268,6 +322,7 @@ WORD_DEFINITIONS: Dict[str, str] = {
     "recursive": "applying the same pattern at every level",
     "diversity": "strength through difference",
     "stability": "the ability to absorb shock without breaking",
+
     # Games
     "dilemma": "a choice where every option has cost",
     "collective": "the group acting as one",
@@ -280,6 +335,7 @@ WORD_DEFINITIONS: Dict[str, str] = {
     "memory": "the past informing present choices",
     "commit": "removing the option to retreat",
     "misaligned": "pointed in different directions",
+
     # Thermodynamics
     "entropy": "disorder increasing over time without input",
     "disorder": "the absence of intentional arrangement",
@@ -290,12 +346,14 @@ WORD_DEFINITIONS: Dict[str, str] = {
     "cascade": "one failure triggering the next",
     "propagate": "spreading through connected nodes",
     "negentropy": "order created by pumping energy into a system",
+
     # Cosmology
     "boolean": "the simplest possible distinction — yes or no",
     "tick": "the smallest unit of change",
     "fractal": "the same pattern at every scale",
     "scale": "the level at which you observe",
     "humility": "acknowledging what you cannot know",
+
     # Finance
     "destiny": "where the weight of evidence points",
     "signal": "information that predicts what comes next",
@@ -307,6 +365,12 @@ WORD_DEFINITIONS: Dict[str, str] = {
     "patience": "the willingness to wait for the right moment",
     "compound": "growth building on previous growth",
     "integrity": "alignment between what you say and what you do",
+
+    # LIMO doctrine vocabulary
+    "less_is_more_or_less": "universal reducer: remove everything that isn’t the feeling until what remains is sufficient to land",
+    "sufficient": "enough to do the job without being perfect",
+    "demi-glace": "slow reduction that concentrates flavor without turning into sticky sugar",
+    "glaze": "shiny surface layer that looks good but can overpower what’s underneath",
 }
 
 # ============================================================================
@@ -343,6 +407,11 @@ WORD_SYNONYMS: Dict[str, List[str]] = {
     "blueprint": ["plan", "template", "map", "schema"],
     "fractal": ["self-similar", "nested", "recursive", "layered"],
     "compound": ["accumulate", "snowball", "build", "stack"],
+
+    # LIMO synonyms
+    "sufficient": ["enough", "adequate", "good-enough", "no extra"],
+    "reduce": ["cut", "trim", "boil down", "concentrate"],
+    "glaze": ["varnish", "shellac", "sugar coat", "surface shine"],
 }
 
 # ============================================================================
@@ -350,42 +419,222 @@ WORD_SYNONYMS: Dict[str, List[str]] = {
 # ============================================================================
 
 WORD_HOMONYMS: Dict[str, List[str]] = {
-    "bars": ["music: measured units of rhythm", "prison: what cages are made of", "drinking: where people gather", "legal: the bar exam"],
-    "scale": ["music: sequence of notes", "size: the level you observe at", "fish: protective covering", "climbing: to ascend"],
-    "bridge": ["music: the section that connects verse to chorus", "structure: what connects two shores", "guitar: where strings meet the body", "connection: what links two ideas"],
-    "key": ["music: tonal center", "lock: what opens a door", "answer: the crucial element", "keyboard: what you press"],
-    "beat": ["music: rhythmic pulse", "defeat: to overcome", "tired: exhausted", "patrol: a cop's route"],
-    "note": ["music: a single pitch", "writing: a short message", "observe: to notice something", "money: a bill"],
-    "rest": ["music: silence with duration", "sleep: to recover", "remainder: what's left over"],
-    "pitch": ["music: frequency of sound", "sales: a presentation to convince", "baseball: to throw", "angle: degree of slope"],
-    "record": ["music: an album", "data: a stored entry", "achievement: the best ever done", "capture: to document"],
-    "track": ["music: a single song", "path: a route to follow", "monitor: to keep watch on", "racing: where you run"],
-    "hook": ["music: the catchy part", "fishing: what catches", "boxing: a curved punch", "coding: a callback function"],
-    "sample": ["music: a borrowed sound", "science: a specimen", "taste: a small portion to try"],
-    "channel": ["music: a signal path", "water: a passage between lands", "tv: a station", "communication: a medium"],
-    "wave": ["physics: energy moving through space", "ocean: water rising and falling", "greeting: a hand gesture", "trend: a cultural movement"],
-    "field": ["physics: a force distribution in space", "farm: cultivated land", "expertise: a domain of knowledge", "sports: where you play"],
-    "charge": ["physics: electrical property", "money: a cost", "attack: to rush forward", "responsibility: to be in charge of"],
-    "bond": ["chemistry: atoms held together", "finance: a debt instrument", "connection: emotional attachment", "spy: 007"],
-    "cell": ["biology: basic unit of life", "prison: a small room", "phone: mobile device", "power: battery unit"],
-    "culture": ["society: shared values and practices", "biology: growing organisms in a lab", "agriculture: to cultivate"],
-    "matter": ["physics: stuff with mass", "importance: it matters", "problem: what's the matter"],
-    "frame": ["physics: reference point", "picture: what holds the image", "blame: to set someone up", "structure: the skeleton of something"],
-    "flow": ["water: movement of liquid", "music: rhythmic delivery", "psychology: optimal state of performance", "traffic: movement through a system"],
-    "drive": ["car: to operate a vehicle", "motivation: internal push", "computer: storage device", "golf: a long shot"],
-    "collapse": ["physics: wave function resolving", "building: structural failure", "medical: to fall down", "folding: to make compact"],
-    "foundation": ["building: what supports the structure", "philosophy: the base assumption", "makeup: the base layer", "charity: an organization that gives"],
-    "deposit": ["bank: money put in", "geology: sediment laid down", "trust: something left as guarantee"],
-    "fire": ["element: combustion", "work: to terminate employment", "passion: intense motivation", "weapon: to discharge"],
-    "plant": ["biology: a growing organism", "factory: a manufacturing facility", "spy: to secretly place", "evidence: to fabricate"],
-    "toast": ["bread: heated until crispy", "celebration: raising a glass", "done: finished or ruined"],
-    "patient": ["medical: someone receiving care", "virtue: willing to wait", "steady: unhurried and calm"],
-    "gravity": ["physics: the force of attraction", "seriousness: the weight of a situation"],
-    "volume": ["sound: loudness level", "book: a single tome", "space: amount of three-dimensional space", "quantity: amount"],
-    "current": ["water: flow direction", "electricity: flow of charge", "time: happening now", "awareness: up to date"],
-    "resolution": ["conflict: settling a dispute", "screen: pixel density", "decision: a firm commitment", "music: tension releasing to rest"],
-    "minor": ["music: a sad-sounding key", "age: not yet adult", "importance: of lesser significance"],
-    "major": ["music: a bright-sounding key", "military: a rank", "importance: significant", "college: area of study"],
-    "sharp": ["music: a half step up", "blade: able to cut", "mind: quick and intelligent", "image: clear and defined"],
-    "flat": ["music: a half step down", "surface: level and even", "tire: deflated", "apartment: a dwelling"],
+    "bars": [
+        "music: measured units of rhythm",
+        "prison: what cages are made of",
+        "drinking: where people gather",
+        "legal: the bar exam",
+    ],
+    "scale": [
+        "music: sequence of notes",
+        "size: the level you observe at",
+        "fish: protective covering",
+        "climbing: to ascend",
+    ],
+    "bridge": [
+        "music: the section that connects verse to chorus",
+        "structure: what connects two shores",
+        "guitar: where strings meet the body",
+        "connection: what links two ideas",
+    ],
+    "key": [
+        "music: tonal center",
+        "lock: what opens a door",
+        "answer: the crucial element",
+        "keyboard: what you press",
+    ],
+    "beat": [
+        "music: rhythmic pulse",
+        "defeat: to overcome",
+        "tired: exhausted",
+        "patrol: a cop's route",
+    ],
+    "note": [
+        "music: a single pitch",
+        "writing: a short message",
+        "observe: to notice something",
+        "money: a bill",
+    ],
+    "rest": [
+        "music: silence with duration",
+        "sleep: to recover",
+        "remainder: what's left over",
+    ],
+    "pitch": [
+        "music: frequency of sound",
+        "sales: a presentation to convince",
+        "baseball: to throw",
+        "angle: degree of slope",
+    ],
+    "record": [
+        "music: an album",
+        "data: a stored entry",
+        "achievement: the best ever done",
+        "capture: to document",
+    ],
+    "track": [
+        "music: a single song",
+        "path: a route to follow",
+        "monitor: to keep watch on",
+        "racing: where you run",
+    ],
+    "hook": [
+        "music: the catchy part",
+        "fishing: what catches",
+        "boxing: a curved punch",
+        "coding: a callback function",
+    ],
+    "sample": [
+        "music: a borrowed sound",
+        "science: a specimen",
+        "taste: a small portion to try",
+    ],
+    "channel": [
+        "music: a signal path",
+        "water: a passage between lands",
+        "tv: a station",
+        "communication: a medium",
+    ],
+    "wave": [
+        "physics: energy moving through space",
+        "ocean: water rising and falling",
+        "greeting: a hand gesture",
+        "trend: a cultural movement",
+    ],
+    "field": [
+        "physics: a force distribution in space",
+        "farm: cultivated land",
+        "expertise: a domain of knowledge",
+        "sports: where you play",
+    ],
+    "charge": [
+        "physics: electrical property",
+        "money: a cost",
+        "attack: to rush forward",
+        "responsibility: to be in charge of",
+    ],
+    "bond": [
+        "chemistry: atoms held together",
+        "finance: a debt instrument",
+        "connection: emotional attachment",
+        "spy: 007",
+    ],
+    "cell": [
+        "biology: basic unit of life",
+        "prison: a small room",
+        "phone: mobile device",
+        "power: battery unit",
+    ],
+    "culture": [
+        "society: shared values and practices",
+        "biology: growing organisms in a lab",
+        "agriculture: to cultivate",
+    ],
+    "matter": [
+        "physics: stuff with mass",
+        "importance: it matters",
+        "problem: what's the matter",
+    ],
+    "frame": [
+        "physics: reference point",
+        "picture: what holds the image",
+        "blame: to set someone up",
+        "structure: the skeleton of something",
+    ],
+    "flow": [
+        "water: movement of liquid",
+        "music: rhythmic delivery",
+        "psychology: optimal state of performance",
+        "traffic: movement through a system",
+    ],
+    "drive": [
+        "car: to operate a vehicle",
+        "motivation: internal push",
+        "computer: storage device",
+        "golf: a long shot",
+    ],
+    "collapse": [
+        "physics: wave function resolving",
+        "building: structural failure",
+        "medical: to fall down",
+        "folding: to make compact",
+    ],
+    "foundation": [
+        "building: what supports the structure",
+        "philosophy: the base assumption",
+        "makeup: the base layer",
+        "charity: an organization that gives",
+    ],
+    "deposit": [
+        "bank: money put in",
+        "geology: sediment laid down",
+        "trust: something left as guarantee",
+    ],
+    "fire": [
+        "element: combustion",
+        "work: to terminate employment",
+        "passion: intense motivation",
+        "weapon: to discharge",
+    ],
+    "plant": [
+        "biology: a growing organism",
+        "factory: a manufacturing facility",
+        "spy: to secretly place",
+        "evidence: to fabricate",
+    ],
+    "toast": [
+        "bread: heated until crispy",
+        "celebration: raising a glass",
+        "done: finished or ruined",
+    ],
+    "patient": [
+        "medical: someone receiving care",
+        "virtue: willing to wait",
+        "steady: unhurried and calm",
+    ],
+    "gravity": [
+        "physics: the force of attraction",
+        "seriousness: the weight of a situation",
+    ],
+    "volume": [
+        "sound: loudness level",
+        "book: a single tome",
+        "space: amount of three-dimensional space",
+        "quantity: amount",
+    ],
+    "current": [
+        "water: flow direction",
+        "electricity: flow of charge",
+        "time: happening now",
+        "awareness: up to date",
+    ],
+    "resolution": [
+        "conflict: settling a dispute",
+        "screen: pixel density",
+        "decision: a firm commitment",
+        "music: tension releasing to rest",
+    ],
+    "minor": [
+        "music: a sad-sounding key",
+        "age: not yet adult",
+        "importance: of lesser significance",
+    ],
+    "major": [
+        "music: a bright-sounding key",
+        "military: a rank",
+        "importance: significant",
+        "college: area of study",
+    ],
+    "sharp": [
+        "music: a half step up",
+        "blade: able to cut",
+        "mind: quick and intelligent",
+        "image: clear and defined",
+    ],
+    "flat": [
+        "music: a half step down",
+        "surface: level and even",
+        "tire: deflated",
+        "apartment: a dwelling",
+    ],
 }
