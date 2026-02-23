@@ -5,13 +5,11 @@ Act 5 – The Governor (Core)
 
 Orchestrates Acts 1–4 by delegating to the RILIE class (Act 4 – The Restaurant),
 which wires through:
-
 - Triangle (Act 1 – safety / nonsense gate)
 - DDD / Hostess (Act 2 – disclosure level)
 - Kitchen / Core (Act 3 – interpretation passes)
 
 The Governor (Act 5) adds:
-
 - Final authority on what gets served
 - YELLOW GATE – conversation health monitoring + tone degradation detection
 - Optional web lookup (Brave/Google) as a KISS pre-pass
@@ -54,7 +52,7 @@ from guvna_tools import (
     detect_wit,
     detect_language_mode,
     wilden_swift_modulate,  # Guvna owns modulation
-    wilden_swift,           # backwards-compatible wrapper
+    wilden_swift,  # backwards-compatible wrapper
     _is_about_me,
     load_charculterie_manifesto,
     detect_tone_from_stimulus,
@@ -63,6 +61,7 @@ from guvna_tools import (
     TONE_LABELS,
     is_serious_subject_text,
 )
+
 from guvna_self import GuvnaSelf  # Self-governing session awareness
 
 logger = logging.getLogger("guvna")
@@ -83,10 +82,10 @@ try:
 except ImportError:
     search_curiosity = None
 
-
 # ============================================================================ #
 # DOMAIN LIBRARY METADATA
 # ============================================================================ #
+
 
 @dataclass
 class DomainLibraryMetadata:
@@ -120,6 +119,7 @@ class DomainLibraryMetadata:
             "urban_design": 35,
         }
     )
+
     boole_substrate: str = "All domains reduce to bool/curve gates"
     core_tracks: List[int] = field(default_factory=lambda: [0, 2, 5, 23, 37, 67])
 
@@ -160,17 +160,14 @@ _PRECISION_EXCLUSIONS = [
 def detect_precision_request(stimulus: str) -> bool:
     """
     Returns True if user is asking a factual GET question.
-
     She must answer it. A. B. C. No tongue-in-cheek.
     The fact IS the demi-glace; skip less_is_more_or_less.
     """
     import re
 
     sl = stimulus.lower().strip()
-
     if any(re.search(pat, sl) for pat in _PRECISION_EXCLUSIONS):
         return False
-
     return any(re.search(pat, sl) for pat in _PRECISION_TRIGGERS)
 
 
@@ -178,10 +175,10 @@ def detect_precision_request(stimulus: str) -> bool:
 # GUVNA CLASS
 # ============================================================================ #
 
+
 class Guvna(GuvnaSelf):
     """
     The Governor (Act 5) sits above The Restaurant (RILIE) and provides:
-
     - Final authority on what gets served
     - Ethical oversight via CATCH44DNA
     - Conversation memory and health tracking
@@ -206,7 +203,6 @@ class Guvna(GuvnaSelf):
         # LIBRARY BOOT – 678 DOMAINS LOADED
         self.library_index: LibraryIndex = library_index or build_library_index()
         self.library_metadata = DomainLibraryMetadata()
-
         logger.info(f"GUVNA BOOT: {self.library_metadata.total_domains} domains loaded")
         logger.info(f" Files: {len(self.library_metadata.files)} libraries")
         logger.info(f" Boole substrate: {self.library_metadata.boole_substrate}")
@@ -293,7 +289,6 @@ class Guvna(GuvnaSelf):
         self.self_state.constitution_loaded = self.self_state.constitution_flags.get(
             "loaded", False
         )
-
         logger.info(
             "GUVNA: Charculterie Manifesto loaded"
             if self.self_state.constitution_loaded
@@ -307,18 +302,14 @@ class Guvna(GuvnaSelf):
     def _infer_domain_from_web(self, original_question: str) -> Optional[str]:
         """
         Extract subject/object from question using Chomsky.
-
         Search web for: "What subject/category/field/discipline does [concept] belong to?"
         Parse result and match against 678 domain names/keywords dynamically.
-
         Returns domain name if match found, None otherwise.
         """
         logger.info("GUVNA: _infer_domain_from_web called with: %s", original_question)
-
         if not self.search_fn:
             logger.info("GUVNA: search_fn is None, skipping web inference")
             return None
-
         logger.info("GUVNA: search_fn available, proceeding with web inference")
 
         # Use Chomsky to extract subject/object
@@ -329,7 +320,6 @@ class Guvna(GuvnaSelf):
             if not parsed:
                 logger.info("GUVNA: Chomsky returned None/empty")
                 return None
-
             subject = parsed.get("subject", "")
             obj = parsed.get("object", "")
             concept = subject or obj or original_question.strip()
@@ -349,17 +339,18 @@ class Guvna(GuvnaSelf):
 
         query = f"what subject category field discipline does {concept} belong to"
         logger.info("GUVNA: Searching web for: %s", query)
-
         try:
             results = self.search_fn(query)
             logger.info(
-                "GUVNA: Web search returned %d results", len(results) if results else 0
+                "GUVNA: Web search returned %d results",
+                len(results) if results else 0,
             )
             if not results:
                 logger.info("GUVNA: Web search returned empty, no domain inference")
                 return None
-
-            first_result = results[0].get("snippet", "") or results[0].get("title", "")
+            first_result = results[0].get("snippet", "") or results[0].get(
+                "title", ""
+            )
             first_result_lower = first_result.lower()
             logger.info("GUVNA: First result snippet: %s", first_result[:100])
 
@@ -400,7 +391,6 @@ class Guvna(GuvnaSelf):
         """
         Determine the effective domain for this turn and whether this is a 'new domain'
         that should trigger facts-first behavior.
-
         Returns: (domain_name, facts_first_flag)
 
         Domain precedence:
@@ -455,11 +445,9 @@ class Guvna(GuvnaSelf):
     def process(self, stimulus: str, maxpass: int = 1, **kwargs) -> Dict[str, Any]:
         """
         Main entry point for conversation.
-
         Orchestrates all 5 Acts: safety -> disclosure -> interpretation -> response -> governance.
 
         Steps:
-
         - Step 0: APERTURE check → GuvnaSelf.greet()
         - Step 0.5: MEANING FINGERPRINT → meaning.read_meaning()
         - Step 1: Fast path classifier (via guvna_22)
@@ -468,18 +456,16 @@ class Guvna(GuvnaSelf):
         - Step 3.1: Precision override detection
         - Step 3.5: Domain lenses → RILIE
         - Step 3.5b: Domain shift → facts-first
-        - RIVER: early lookup telemetry
+        - RIVER: mandatory first read (lookup telemetry, speaks once, exits)
         - Step 3.7: Confidence gate
         - Step 4: Curiosity resurface
         - Step 5: RILIE core processing
         - Step 6–10: Governor oversight, memory, ethics, finalize
 
         kwargs accepted:
-
         - reference_context: Optional[Dict] from session.resolve_reference()
-        - debug_river: Optional[bool] — if True, River also short-circuits and responds alone
+        - debug_river: Optional[bool] — kept for compatibility, but River always runs
         """
-
         self.turn_count += 1
         self.memory.turn_count += 1
 
@@ -576,35 +562,32 @@ class Guvna(GuvnaSelf):
             stimulus, soi_domain_names
         )
 
-        # RIVER — FIRST READ (lookup + say what she found)
+        # RIVER — MANDATORY FIRST READ (lookup + say what she found, then exit)
+        river_payload: Optional[Dict[str, Any]] = None
         try:
-            river_payload = None
             if hasattr(self, "guvna_river"):
-                # Always run River for telemetry; may short-circuit if debug_river=True
                 river_payload = self.guvna_river(
                     stimulus=stimulus,
                     meaning=_meaning,
                     get_baseline=self._get_baseline,
                     apply_domain_lenses=self._apply_domain_lenses,
                     compute_domain_and_factsfirst=self._compute_domain_and_factsfirst,
-                    debug_mode=bool(kwargs.get("debug_river", False)),
+                    debug_mode=True,  # always run River in this season
                 )
                 if river_payload is not None:
-                    # Store what River saw in raw for future introspection
                     raw["river"] = river_payload
         except Exception as e:
             logger.warning("GUVNA: River failed (non-fatal): %s", e)
             river_payload = None
 
-        # If debug_river=True and River returned a payload, serve River and stop
-        if river_payload is not None and bool(kwargs.get("debug_river", False)):
+        if river_payload is not None:
+            # Short‑circuit the turn: River looked it up and said what she found.
             return self._finalize_response(river_payload)
 
         # STEP 3.7: CONFIDENCE GATE (PRIORITY CHECK)
         has_domain = bool(soi_domain_names)
         has_baseline = bool(baseline_text and baseline_text.strip())
         has_meaning = bool(_meaning and _meaning.pulse > 0.3)
-
         logger.info(
             "GUVNA CONFIDENCE GATE: has_domain=%s (%s), has_baseline=%s (len=%d), has_meaning=%s (pulse=%.2f)",
             has_domain,
@@ -677,7 +660,9 @@ class Guvna(GuvnaSelf):
 
         raw["curiosity_context"] = curiosity_context
 
-        # STEP 5: RILIE CORE PROCESSING — unchanged
+        # STEP 5: RILIE CORE PROCESSING — this path is currently unreachable
+        # while River short-circuits earlier, but left intact for when you
+        # later relax the River gate.
         rilie_result = self.rilie.process(
             stimulus=stimulus,
             baselinetext=baseline_text,
