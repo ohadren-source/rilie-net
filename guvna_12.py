@@ -772,6 +772,8 @@ class Guvna(GuvnaSelf):
             domain_hints=soi_domain_names,
             curiosity_context=curiosity_context,
             meaning=_meaning,  # birth certificate — Kitchen reads, never modifies
+            precision_override=raw.get("precision_override", False),
+            baseline_score_boost=raw.get("baseline_score_boost", 0.03),
         )
         if not rilie_result:
             rilie_result = {}

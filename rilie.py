@@ -814,6 +814,8 @@ class RILIE:
         domain_hints: Optional[List[str]] = None,
         curiosity_context: str = "",
         meaning: Optional[Any] = None,
+        precision_override: bool = False,
+        baseline_score_boost: float = 0.03,
     ) -> Dict[str, Any]:
         """
         Public entrypoint.
@@ -833,12 +835,17 @@ class RILIE:
             meaning: MeaningFingerprint pre-computed by Guvna Step 0.5.
                      If provided, used directly — no re-read. Birth certificate.
                      Type: Optional[MeaningFingerprint]. Read-only downstream.
+            precision_override: bool. If True, user wants THE ANSWER (factual GET).
+                                Bypass less_is_more_or_less(). Fact IS the demi-glace.
+                                A: answer. B: honest about limits. C: max sincerity.
+            baseline_score_boost: float. Multiplier boost for baseline score.
+                                  Default 0.03 (3% edge). Precision sets to 0.25 (25%).
 
         Returns dict with:
             stimulus, result, quality_score, priorities_met, anti_beige_score,
             status, depth, pass, disclosure_level, triangle_reason (if any),
             tangents (for curiosity engine), person_context (bool),
-            banks_hits (count of prior knowledge found).
+            banks_hits (count of prior knowledge found), precision_override, baseline_score_boost.
         """
         stimulus = stimulus or ""
         stimulus = stimulus.strip()
@@ -1157,6 +1164,8 @@ class RILIE:
             max_pass=maxpass_int,
             prior_responses=self.conversation.response_history,
             baseline_text=baseline_text,
+            precision_override=precision_override,
+            baseline_score_boost=baseline_score_boost,
         )
 
         status = str(raw.get("status", "OK") or "OK").upper()
@@ -1473,7 +1482,8 @@ class RILIE:
             reframed = f"[REFRAME: previous explanation didn't land] {stimulus}"
             try:
                 raw = run_pass_pipeline(
-                    reframed, disclosure_level="open", max_pass=2
+                    reframed, disclosure_level="open", max_pass=2,
+                    precision_override=False, baseline_score_boost=0.03
                 )
                 result = raw.get("result", "")
                 if result and result.strip():
@@ -1489,7 +1499,8 @@ class RILIE:
             )
             try:
                 raw = run_pass_pipeline(
-                    reframed, disclosure_level="open", max_pass=3
+                    reframed, disclosure_level="open", max_pass=3,
+                    precision_override=False, baseline_score_boost=0.03
                 )
                 result = raw.get("result", "")
                 if result and result.strip():
@@ -1503,7 +1514,8 @@ class RILIE:
             reframed = f"[DIFFERENT ANGLE: user repeating] {stimulus}"
             try:
                 raw = run_pass_pipeline(
-                    reframed, disclosure_level="open", max_pass=2
+                    reframed, disclosure_level="open", max_pass=2,
+                    precision_override=False, baseline_score_boost=0.03
                 )
                 result = raw.get("result", "")
                 if result and result.strip():
