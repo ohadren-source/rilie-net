@@ -24,6 +24,7 @@ from rilie_foundation import (
     _maybe_lookup_unknown_reference,
     _measurestick,
     _store_measurestick_signal,
+    triangle_check,
     ConversationState,
     PersonModel,
     SearchFn,
