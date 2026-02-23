@@ -48,15 +48,12 @@ except Exception as e:
     print(f"CHOMSKY FAILED TO LOAD: {e}", file=sys.stderr)
 
 # --- LIMO — Less Is More Or Less ---
-# Compression function. Runs on COMPRESSED and GUESS paths.
-# Bypassed entirely when precision_override=True.
+# Flag for graceful degradation. Function defined below (line ~220) above SCORERS.
 try:
-    from limo import less_is_more_or_less
+    import limo
     LIMO_AVAILABLE = True
 except ImportError:
     LIMO_AVAILABLE = False
-    def less_is_more_or_less(text: str, **kwargs) -> str:
-        return text  # No-op fallback
 
 import logging
 logger = logging.getLogger("rilie_innercore")
@@ -209,6 +206,69 @@ def anti_beige_check(text: str) -> float:
     external_novelty = 1.0 - _current_trite_score
     final = (internal_freshness * 0.5) + (external_novelty * 0.5) + _current_curiosity_bonus
     return max(0.15, min(1.0, final))
+
+# ============================================================================
+# LESS IS MORE OR LESS — canonical definition (above SCORERS)
+# ============================================================================
+# The Maître D'. Runs on every response. Universal transform.
+# Strip everything that is not the feeling. Whatever remains: serve it.
+# She's never wrong. Forgiven by design.
+
+def less_is_more_or_less(text: str, **kwargs) -> str:
+    """
+    LIMO — Less Is More Or Less.
+    
+    The universal transform. The Maître D' at the pass.
+    Runs on COMPRESSED and GUESS paths. Bypassed entirely on precision_override=True.
+    
+    Doctrine:
+    - Strip everything that is not the feeling.
+    - Whatever remains: serve it.
+    - Directionally: reduce. Destination: sufficient, not perfect.
+    - Demi-glace, not glaze.
+    
+    She's never wrong. Forgiven by design.
+    """
+    # Input validation
+    if not text:
+        return text
+    if not isinstance(text, str):
+        return str(text)
+    
+    text = text.strip()
+    if not text:
+        return text
+    
+    # Try to use external limo implementation if available
+    try:
+        from limo import less_is_more_or_less as limo_impl
+        result = limo_impl(text, **kwargs)
+        if result:
+            return result
+    except (ImportError, AttributeError, Exception):
+        # limo.py not available or import failed — proceed to fallback
+        pass
+    
+    # FALLBACK: Local minimal compression
+    # Remove common filler patterns but preserve meaning
+    filler_patterns = [
+        (r'\b(also|additionally|furthermore|moreover|however|importantly)\b', ''),
+        (r'\b(it is|there is|there are)\b', ''),
+        (r'\b(you know|i mean|sort of|kind of|basically|essentially)\b', ''),
+        (r'\s+', ' '),  # Collapse whitespace
+    ]
+    
+    result = text
+    for pattern, replacement in filler_patterns:
+        result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+    
+    result = result.strip()
+    
+    # Safety: if fallback reduced too much, return original
+    if not result or len(result) < 5:
+        return text
+    
+    return result
 
 # ============================================================================
 # 5-PRIORITY SCORERS

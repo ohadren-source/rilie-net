@@ -33,6 +33,7 @@ from rilie_innercore_12 import (
     construct_blend,
     extract_curiosity_context,
     strip_curiosity_context,
+    less_is_more_or_less,
     Interpretation,
     logger,
     CHOMSKY_AVAILABLE,
@@ -62,6 +63,7 @@ __all__ = [
     "anti_beige_check",
     "construct_response",
     "construct_blend",
+    "less_is_more_or_less",  # LIMO canonical export
     # domains / pipeline
     "detect_domains",
     "excavate_domains",

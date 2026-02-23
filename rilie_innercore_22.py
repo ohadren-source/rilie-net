@@ -1,4 +1,6 @@
 from typing import List, Dict, Optional  # and any others you use
+import re
+import random
 
 from rilie_innercore_12 import (
     Interpretation,
@@ -7,7 +9,38 @@ from rilie_innercore_12 import (
     compute_trite_score,
     set_trite_score,
     set_curiosity_bonus,
+    less_is_more_or_less,
+    LIMO_AVAILABLE,
+    CHOMSKY_AVAILABLE,
+    SCORERS,
+    WEIGHTS,
+    construct_response,
+    construct_blend,
+    anti_beige_check,
+    detect_question_type,
+    logger,
 )
+
+# --- The Pantry (rilie_outercore.py) ---
+from rilie_outercore import (
+    DOMAIN_KNOWLEDGE,
+    DOMAIN_KEYWORDS,
+    WORD_DEFINITIONS,
+    WORD_SYNONYMS,
+    WORD_HOMONYMS,
+)
+
+# --- Chompky — grammar brain ---
+try:
+    from ChomskyAtTheBit import (
+        parse_question,
+        extract_holy_trinity_for_roux,
+        infer_time_bucket,
+        resolve_identity,
+    )
+except Exception:
+    extract_holy_trinity_for_roux = None
+    parse_question = None
 
 # ============================================================================
 # DOMAIN DETECTION & EXCAVATION
