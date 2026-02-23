@@ -7,32 +7,18 @@ rilie_innercore_22.py — THE KITCHEN PIPELINE (v4.3.0)
 Extended pipeline: detect_domains, excavate_domains, generate_9_interpretations,
 _apply_limo, run_pass_pipeline.
 
-This is where the cooking happens. Domain detection, excavation,
-interpretation generation, scoring, and the final pass pipeline.
-
 CHANGES FROM v4.2.0 (v4.3.0):
 
 - run_pass_pipeline() REWRITTEN to wire in Steps 6, 8, 9, 10:
 
-  Step 6: parse_baseline_results() — Google snippets get meaning-parsed
-          before comparison. No more raw text dumps. Structured data.
+  Step 6: parse_baseline_results() — Google snippets get meaning-parsed.
+  Step 8: Explicit superiority comparison — Kitchen vs parsed baseline.
+  Step 9: direct_answer_gate() — GET questions with clear objects.
+  Step 10: clarify_or_freestyle() — When Kitchen empty, she asks (3x)
+           then freestyles + [MORON_OR_TROLL] tag. Counter resets on clarity.
 
-  Step 8: Explicit superiority comparison — Kitchen result vs parsed baseline.
-          Binary: is the Kitchen sentence actually BETTER than baseline?
-          Not a keyword score. Not a boost multiplier. A real comparison.
-
-  Step 9: direct_answer_gate() — GET questions with clear objects get
-          direct answers. No philosophy. No orbiting. Fires first.
-
-  Step 10: wild_guess() — When Kitchen is empty (MISE_EN_PLACE), instead
-           of silence, take a swing from whatever she has.
-
-- New status: DIRECT_ANSWER (from Step 9 gate)
-- New status: WILD_GUESS (from Step 10 swing)
-- MISE_EN_PLACE now only fires when wild_guess also returns nothing.
-
-- All other functions (detect_domains, excavate_domains,
-  generate_9_interpretations, _apply_limo, _build_debug_audit) PRESERVED.
+- New statuses: DIRECT_ANSWER, CLARIFICATION, FREESTYLE, BASELINE_WIN
+- MISE_EN_PLACE now only fires when clarify_or_freestyle also returns nothing.
 
 """
 
@@ -58,7 +44,9 @@ from rilie_innercore_12 import (
     anti_beige_check,
     detect_question_type,
     logger,
-    wild_guess,
+    clarify_or_freestyle,
+    get_clarification_counter,
+    reset_clarification_counter,
 )
 
 # --- The Pantry (rilie_outercore.py) ---
@@ -172,7 +160,7 @@ def excavate_domains(stimulus: str, domains: List[str]) -> Dict[str, List[str]]:
                     parts.append("also: " + ", ".join(synonyms[:4]))
                 if homonyms:
                     parts.append("other meanings: " + "; ".join(homonyms[:3]))
-                enriched.append(" — ".join(parts))
+                enriched.append(" \u2014 ".join(parts))
             else:
                 enriched.append(item)
         excavated[domain] = enriched
@@ -343,10 +331,6 @@ def generate_9_interpretations(
 def _apply_limo(text: str, precision_override: bool = False) -> str:
     """
     Run LIMO compression on a response text.
-    Rules:
-    - precision_override=True -> skip entirely. Fact IS the demi-glace.
-    - LIMO_AVAILABLE=False -> pass through unchanged (graceful fallback)
-    - Otherwise: compress. Maximum signal, zero waste.
     """
     if precision_override:
         return text
@@ -361,9 +345,6 @@ def _apply_limo(text: str, precision_override: bool = False) -> str:
 
 # ============================================================================
 # STEP 8 — SUPERIORITY COMPARISON (v4.3.0)
-# ============================================================================
-# Binary: is the Kitchen sentence actually BETTER than the parsed baseline?
-# Not a keyword score. Not a boost. A real comparison.
 # ============================================================================
 
 def _is_kitchen_superior(
@@ -384,13 +365,10 @@ def _is_kitchen_superior(
     if not kitchen_text or not kitchen_text.strip():
         return False
 
-    # Import sentence checker from innercore_12
     from rilie_innercore_12 import _is_real_sentence
 
-    # Kitchen coherence
     kitchen_coherent = _is_real_sentence(kitchen_text)
 
-    # Best baseline sentence
     baseline_text = ""
     baseline_relevance = 0.0
     if parsed_baseline:
@@ -399,7 +377,6 @@ def _is_kitchen_superior(
         baseline_relevance = top.get("relevance", 0.0)
 
     if not baseline_text:
-        # No baseline to compare against — Kitchen wins by default
         return True
 
     baseline_coherent = _is_real_sentence(baseline_text)
@@ -439,7 +416,6 @@ def _is_kitchen_superior(
     kitchen_platitude = sum(1 for m in _PLATITUDE_MARKERS if m in kitchen_text.lower())
     baseline_platitude = sum(1 for m in _PLATITUDE_MARKERS if m in baseline_text.lower())
 
-    # Kitchen word count (substance indicator)
     kitchen_word_count = len(kitchen_text.split())
     baseline_word_count = len(baseline_text.split())
 
@@ -447,23 +423,20 @@ def _is_kitchen_superior(
     kitchen_score = 0.0
     baseline_score = 0.0
 
-    # Coherence (both passed if we're here, but real sentence = bonus)
     if kitchen_coherent:
         kitchen_score += 2.0
     if baseline_coherent:
         baseline_score += 2.0
 
-    # Relevance
     kitchen_score += kitchen_overlap * 3.0
     baseline_score += baseline_overlap * 3.0
 
-    # Substance (penalize platitudes, reward length up to a point)
     kitchen_score -= kitchen_platitude * 1.5
     baseline_score -= baseline_platitude * 1.5
     kitchen_score += min(kitchen_word_count / 20.0, 1.5)
     baseline_score += min(baseline_word_count / 20.0, 1.5)
 
-    # Originality bonus for Kitchen (she cooked it, baseline is regurgitation)
+    # Originality bonus for Kitchen (she cooked it)
     kitchen_score += 0.5
 
     return kitchen_score >= baseline_score
@@ -487,22 +460,22 @@ def run_pass_pipeline(
     Run interpretation passes. Called only at OPEN or FULL disclosure.
 
     v4.3.0 PIPELINE:
-
-    1. Parse stimulus with meaning.py → get fingerprint
+    1. Parse stimulus with meaning.py -> get fingerprint
     2. Step 9 EARLY EXIT: if GET + clear object, try direct_answer_gate first
-    3. Step 6: parse baseline results → structured comparison data
-    4. Domain detection + excavation → internal ingredients
-    5. Generate 9 interpretations → Kitchen candidates
+    3. Step 6: parse baseline results -> structured comparison data
+    4. Domain detection + excavation -> internal ingredients
+    5. Generate 9 interpretations -> Kitchen candidates
     6. Step 8: superiority comparison — Kitchen vs parsed baseline
-    7. Step 10: if Kitchen empty, wild_guess instead of silence
+    7. Step 10: if Kitchen empty, clarify_or_freestyle instead of silence
 
-    STATUS CODES (updated):
+    STATUS CODES:
     - COMPRESSED: Kitchen cooked, served early (shallow question)
     - GUESS: Kitchen's best candidate after all passes
     - DIRECT_ANSWER: Step 9 gate fired — factual GET answered directly
-    - WILD_GUESS: Step 10 — Kitchen empty but she took a swing
+    - CLARIFICATION: Step 10 — asking for clarity (counter 0-2)
+    - FREESTYLE: Step 10 — all 3 clarifications failed, song + [MORON_OR_TROLL]
     - BASELINE_WIN: Step 8 — baseline was genuinely superior
-    - BASELINE_FALLBACK: absolute last resort — Kitchen AND wild_guess empty
+    - BASELINE_FALLBACK: absolute last resort
     - MISE_EN_PLACE: true silence — nothing worked at all
     """
 
@@ -526,13 +499,14 @@ def run_pass_pipeline(
     # ================================================================
     # STEP 6: Parse baseline results (v4.3.0)
     # ================================================================
-    # Give baseline snippets a birth certificate — same parse as stimulus.
     parsed_baseline: List[Dict] = []
     stimulus_fingerprint = None
 
     if MEANING_AVAILABLE:
         try:
             stimulus_fingerprint = read_meaning(clean_stimulus)
+            # Stimulus parsed successfully — reset clarification counter
+            reset_clarification_counter()
         except Exception:
             pass
 
@@ -557,7 +531,7 @@ def run_pass_pipeline(
         try:
             direct = direct_answer_gate(
                 stimulus_fingerprint=stimulus_fingerprint,
-                kitchen_result="",  # Kitchen hasn't cooked yet
+                kitchen_result="",
                 parsed_baseline=parsed_baseline,
                 raw_baseline_text=baseline_text,
             )
@@ -683,7 +657,6 @@ def run_pass_pipeline(
         filtered = [
             i for i in nine
             if (i.overall_score > (
-                # FIX 5: factual domains get a lower gate
                 0.04 if any(d in domains for d in ["music", "culinary", "science", "mathematics"])
                 else (0.06 if current_pass == 1 else 0.09)
             ) or i.count_met >= 1)
@@ -785,13 +758,9 @@ def run_pass_pipeline(
         # STEP 8: Is Kitchen actually superior to parsed baseline?
         # ============================================================
         kitchen_text = best_global.text
-
-        # Run LIMO first (same as before)
         kitchen_text = _apply_limo(kitchen_text, precision_override=precision_override)
 
-        # Check superiority
         if parsed_baseline and not _is_kitchen_superior(kitchen_text, parsed_baseline, clean_stimulus):
-            # Baseline is genuinely better. Serve it.
             best_baseline_sentence = parsed_baseline[0].get("sentence", "")
             if best_baseline_sentence and len(best_baseline_sentence.split()) >= 5:
                 logger.info(
@@ -821,7 +790,7 @@ def run_pass_pipeline(
                 }
 
         # ============================================================
-        # STEP 9 (post-Kitchen): Re-check direct answer gate with Kitchen result
+        # STEP 9 (post-Kitchen): Re-check direct answer gate
         # ============================================================
         if FOUNDATION_STEPS_AVAILABLE and stimulus_fingerprint:
             try:
@@ -832,7 +801,6 @@ def run_pass_pipeline(
                     raw_baseline_text=baseline_text,
                 )
                 if direct and direct.strip() and direct != kitchen_text:
-                    # Gate found a more direct answer than Kitchen produced
                     logger.info("STEP 9 (post): direct answer gate improved result")
                     debug_audit = _build_debug_audit(
                         clean_stimulus, domains, best_global, _debug_all_candidates,
@@ -885,41 +853,50 @@ def run_pass_pipeline(
         }
 
     # ==================================================================
-    # STEP 10: Wild guess — Kitchen is empty but she's not silent
+    # STEP 10: Clarify or freestyle — Kitchen is empty, she asks
     # ==================================================================
-    guess_text = wild_guess(
+    clarify_result = clarify_or_freestyle(
         stimulus=clean_stimulus,
         domains=domains,
         excavated=excavated,
         fingerprint=stimulus_fingerprint,
+        search_fn=None,  # Wired by Guvna if available
     )
-    if guess_text and guess_text.strip():
-        logger.info("STEP 10: wild_guess produced a response")
-        guess_text = _apply_limo(guess_text, precision_override=precision_override)
+
+    if clarify_result and clarify_result.get("response"):
+        status = "CLARIFICATION" if clarify_result["type"] == "clarification" else "FREESTYLE"
+        logger.info(
+            "STEP 10: %s (counter=%d, tag=%s)",
+            status,
+            clarify_result.get("counter", 0),
+            clarify_result.get("internal_tag", ""),
+        )
         debug_audit = _build_debug_audit(
             clean_stimulus, domains, None, _debug_all_candidates,
-            _debug_dejavu_killed, _debug_passes, "WILD_GUESS"
+            _debug_dejavu_killed, _debug_passes, status
         )
         return {
             "stimulus": clean_stimulus,
-            "result": guess_text,
-            "quality_score": 0.2,
+            "result": clarify_result["response"],
+            "quality_score": 0.2 if status == "CLARIFICATION" else 0.1,
             "priorities_met": 0,
             "anti_beige_score": 0.3,
-            "status": "WILD_GUESS",
+            "status": status,
             "depth": max_pass - 1,
             "pass": max_pass,
             "disclosure_level": disclosure_level,
             "trite_score": trite,
             "curiosity_informed": bool(curiosity_ctx),
             "domains_used": domains,
-            "domain": "wild_guess",
-            "limo_applied": LIMO_AVAILABLE and not precision_override,
+            "domain": "clarification",
+            "limo_applied": False,
             "precision_override": precision_override,
+            "clarification_counter": clarify_result.get("counter", 0),
+            "internal_tag": clarify_result.get("internal_tag", ""),
             "debug_audit": debug_audit,
         }
 
-    # Absolute fallback — Kitchen AND wild_guess empty. Baseline parachute.
+    # Absolute fallback — Kitchen AND clarification empty. Baseline parachute.
     clean_bl = _clean_baseline(baseline_text)
     if clean_bl:
         debug_audit = _build_debug_audit(
@@ -1016,7 +993,7 @@ def _build_debug_audit(
         if winner.domain:
             reasons.append(f"Domain: {winner.domain}")
         if not reasons:
-            reasons.append("Last resort — all others worse or blocked")
+            reasons.append("Last resort \u2014 all others worse or blocked")
         audit["defense"] = reasons
     else:
         audit["winner"] = None
