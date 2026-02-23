@@ -3,6 +3,7 @@ import re
 import random
 
 from rilie_innercore_12 import (
+    QuestionType,
     Interpretation,
     extract_curiosity_context,
     strip_curiosity_context,
