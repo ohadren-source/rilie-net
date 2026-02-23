@@ -15,11 +15,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 from rilie_foundation import (
-    ...
-)
-
-
-from rilie_foundation import (
     extract_tangents,
     _fix_mojibake,
     hash_stimulus,
