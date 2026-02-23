@@ -1,5 +1,13 @@
 from typing import List, Dict, Optional  # and any others you use
-from rilie_innercore_12 import Interpretation
+
+from rilie_innercore_12 import (
+    Interpretation,
+    extract_curiosity_context,
+    strip_curiosity_context,
+    compute_trite_score,
+    set_trite_score,
+    set_curiosity_bonus,
+)
 
 # ============================================================================
 # DOMAIN DETECTION & EXCAVATION
