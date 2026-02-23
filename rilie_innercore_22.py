@@ -1,3 +1,5 @@
+from typing import List, Dict, Optional  # and any others you use
+
 # ============================================================================
 # DOMAIN DETECTION & EXCAVATION
 # ============================================================================
