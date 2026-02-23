@@ -617,7 +617,11 @@ def run_pass_pipeline(
         if current_pass <= 2 and question_type in {
             QuestionType.UNKNOWN, QuestionType.CHOICE, QuestionType.DEFINITION,
         }:
-            compressed_text = _apply_limo(best.text, precision_override=precision_override)
+            # Facts-first / precisionoverride: do NOT compress, serve full sentence.
+            if precision_override and question_type == QuestionType.DEFINITION:
+                compressed_text = best.text
+            else:
+                compressed_text = _apply_limo(best.text, precision_override=precision_override)
             return {
                 "stimulus": clean_stimulus, "result": compressed_text,
                 "quality_score": best.overall_score,

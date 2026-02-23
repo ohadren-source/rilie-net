@@ -590,6 +590,9 @@ class Guvna(GuvnaSelf):
         self.social_state = SocialState()
         self.dna = CATCH44DNA()
 
+        # Domain state: track the last active domain for facts-first behavior
+        self.current_domain: Optional[str] = None
+
         # SELF-GOVERNING SESSION STATE — wired via GuvnaSelf mixin
         # Initializes: turn_count, user_name, whosonfirst,
         # _awaiting_name, _response_history
@@ -605,6 +608,60 @@ class Guvna(GuvnaSelf):
             if self.self_state.constitution_loaded
             else "GUVNA: Charculterie Manifesto not found (using defaults)"
         )
+
+    # -----------------------------------------------------------------
+    # DOMAIN SHIFT DETECTION — Facts-first wiring
+    # -----------------------------------------------------------------
+
+    def _compute_domain_and_factsfirst(self, stimulus: str, soi_domain_names: Optional[List[str]]) -> tuple[Optional[str], bool]:
+        """
+        Determine the effective domain for this turn and whether this is a 'new domain'
+        that should trigger facts-first behavior.
+
+        Returns: (domain_name, facts_first_flag)
+        
+        Domain precedence:
+        1. SOi domain names from apply_domain_lenses() (678-domain library)
+        2. Fallback: InnerCore DOMAIN_KEYWORDS detection
+        
+        Facts-first triggers when:
+        - new_domain differs from current_domain (domain shift)
+        - OR self.current_domain is None (first domain ever)
+        """
+        sl = (stimulus or "").lower().strip()
+
+        # 1. Prefer SOi domain names from apply_domain_lenses
+        domain_candidates: List[str] = []
+        if soi_domain_names:
+            domain_candidates.extend(d for d in soi_domain_names if d)
+
+        # 2. Fallback: use InnerCore DOMAIN_KEYWORDS via lightweight import
+        if not domain_candidates:
+            try:
+                from rilie_innercore_22 import detect_domains  # type: ignore
+                inner_domains = detect_domains(sl) or []
+                domain_candidates.extend(inner_domains)
+            except Exception:
+                pass
+
+        new_domain: Optional[str] = None
+        if domain_candidates:
+            # Pick the first as the canonical domain label for this turn
+            new_domain = domain_candidates[0]
+
+        facts_first = False
+        if new_domain:
+            if self.current_domain is None or self.current_domain != new_domain:
+                # Domain shift (or first domain ever): facts-first plate
+                facts_first = True
+                self.current_domain = new_domain
+                logger.info(
+                    "GUVNA: Domain shift detected %s → %s, facts_first=True",
+                    self.current_domain if self.current_domain != new_domain else "(first)",
+                    new_domain,
+                )
+        # If no domain detected, leave current_domain unchanged and facts_first False
+        return new_domain, facts_first
 
     # -----------------------------------------------------------------
     # MAIN PROCESS – Core response pipeline (TIER 2 + FAST PATHS)
@@ -728,6 +785,10 @@ class Guvna(GuvnaSelf):
         domain_annotations = self._apply_domain_lenses(stimulus)
         soi_domain_names = domain_annotations.get("matched_domains", [])
 
+        # STEP 3.5b: DOMAIN SHIFT → FACTS-FIRST
+        # Determine whether this turn enters a new domain and should get a facts-first answer.
+        _, facts_first = self._compute_domain_and_factsfirst(stimulus, soi_domain_names)
+
         # STEP 3.6: CULTURAL ANCHOR DETECTION
         cultural_anchor = _detect_cultural_anchor(stimulus)
         if cultural_anchor:
@@ -774,6 +835,7 @@ class Guvna(GuvnaSelf):
             meaning=_meaning,  # birth certificate — Kitchen reads, never modifies
             precision_override=raw.get("precision_override", False),
             baseline_score_boost=raw.get("baseline_score_boost", 0.03),
+            facts_first=facts_first,
         )
         if not rilie_result:
             rilie_result = {}

@@ -137,6 +137,7 @@ class RILIE:
         meaning: Optional[Any] = None,
         precision_override: bool = False,
         baseline_score_boost: float = 0.03,
+        facts_first: bool = False,
     ) -> Dict[str, Any]:
         """
         Public entrypoint.
@@ -161,6 +162,10 @@ class RILIE:
                                 A: answer. B: honest about limits. C: max sincerity.
             baseline_score_boost: float. Multiplier boost for baseline score.
                                   Default 0.03 (3% edge). Precision sets to 0.25 (25%).
+            facts_first: bool. If True, this is a new domain entry.
+                        Guvna detected domain shift. Set precisionoverride semantics:
+                        serve full substrate-level facts, no compression.
+                        Reused via: precisionoverride = precisionoverride or facts_first
 
         Returns dict with:
             stimulus, result, quality_score, priorities_met, anti_beige_score,
@@ -485,7 +490,7 @@ class RILIE:
             max_pass=maxpass_int,
             prior_responses=self.conversation.response_history,
             baseline_text=baseline_text,
-            precision_override=precision_override,
+            precision_override=precision_override or facts_first,
             baseline_score_boost=baseline_score_boost,
         )
 
