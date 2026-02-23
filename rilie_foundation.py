@@ -1,57 +1,88 @@
 """
-rilie.py — THE RESTAURANT (v4.2.0)
+
+rilie_foundation.py — THE RESTAURANT (v4.3.0)
+
 =================================
 
 Imports the Bouncer, the Hostess, the Kitchen, and the Speech Pipeline.
+
 Wires them together. Serves the meal.
 
 DIGNITY PROTOCOL (Restaurant Edition):
+
 - Every safe, parsable human stimulus must be treated as worthy of thought.
+
 - The Bouncer (Triangle) only blocks grave danger or nonsense.
+
 - The Kitchen pass pipeline judges the QUALITY OF HER OWN RESPONSES,
   never the worth of the person.
 
 ARCHITECTURE (v4.1.1 — Guvna integration complete):
-  1. Triangle (Bouncer) — safety gate
-  2. Person Model — passive observation
-  3. Banks — search own knowledge
-  4. DDD (Hostess) — sequential TASTE/OPEN disclosure
-     - TASTE (turns 1-2): amuse-bouche templates, no Kitchen
-     - OPEN (turn 3+): Kitchen cooks, speech pipeline speaks
-  5. Kitchen (rilie_core) — interpretation pipeline
-  6. Speech Pipeline (speech_integration) — transforms meaning into speech
-     - response_generator: acknowledges + structures
-     - speech_coherence: validates clarity
-     - chomsky_speech_engine: grammatical transformation
-  7. Tangent Extraction — feeds curiosity engine
+
+1. Triangle (Bouncer) — safety gate
+2. Person Model — passive observation
+3. Banks — search own knowledge
+4. DDD (Hostess) — sequential TASTE/OPEN disclosure
+   - TASTE (turns 1-2): amuse-bouche templates, no Kitchen
+   - OPEN (turn 3+): Kitchen cooks, speech pipeline speaks
+5. Kitchen (rilie_core) — interpretation pipeline
+6. Speech Pipeline (speech_integration) — transforms meaning into speech
+   - response_generator: acknowledges + structures
+   - speech_coherence: validates clarity
+   - chomsky_speech_engine: grammatical transformation
+7. Tangent Extraction — feeds curiosity engine
 
 MEASURESTICK (replaces YARDSTICK v4.1):
-  Not a gate. A quality SIGNAL. Three dimensions:
-  - Relevance: token overlap with stimulus (did she stay on target?)
-  - Originality: inverse Google hits (low hits = her own voice = good)
-  - Coherence: word variety ratio (real thought vs word salad)
-  RILIE's voice ALWAYS serves first. Baseline only wins if she produced
-  genuine nothing AND Chomsky flagged structural failure simultaneously.
-  Signal stored in banks_measurestick for learning, not punishment.
+
+Not a gate. A quality SIGNAL. Three dimensions:
+
+- Relevance: token overlap with stimulus (did she stay on target?)
+- Originality: inverse Google hits (low hits = her own voice = good)
+- Coherence: word variety ratio (real thought vs word salad)
+
+RILIE's voice ALWAYS serves first. Baseline only wins if she produced
+genuine nothing AND Chomsky flagged structural failure simultaneously.
+
+Signal stored in banks_measurestick for learning, not punishment.
+
+CHANGES FROM v4.2.0 (v4.3.0):
+
+- parse_baseline_results() — NEW (Step 6). Takes raw Google snippets, runs
+  meaning.read_meaning() on each, extracts subject/object/operator, and
+  constructs a coherent sentence from the best structured result.
+  Uses the same parse the stimulus got — birth certificate for baseline too.
+
+- direct_answer_gate() — NEW (Step 9). When the MeaningFingerprint says
+  act=="GET" and the object is clear, this function picks the most direct
+  answer from Kitchen result vs baseline and returns it. No philosophy.
+  No orbiting. Direct question → direct answer.
+
+- Zero breakage: both new functions are additive. No existing signatures change.
 
 CHANGES FROM v4.1.1 (v4.2.0):
-  - PersonModel.observe() — expanded music interest signals to 60+ artist names
-    and genre keywords. Catches "lil vert", "dick dale", "coltrane", etc.
-    Previously only caught generic vocabulary ("music", "hip-hop", "vinyl").
-  - _maybe_lookup_unknown_reference() — new function. When stimulus looks like
-    an unknown proper noun / artist name and Kitchen has no baseline to work from,
-    RILIE searches for it automatically before cooking. She doesn't hallucinate.
-    She doesn't go silent. She googles it.
-    Fires on: name-prefix patterns ("lil X", "young X", "dj X"),
-    capitalized non-first tokens, "and no X?" Rakim track patterns.
-    Skips known vocabulary. Skips long queries (> 8 words already have signal).
+
+- PersonModel.observe() — expanded music interest signals to 60+ artist names
+  and genre keywords. Catches "lil vert", "dick dale", "coltrane", etc.
+  Previously only caught generic vocabulary ("music", "hip-hop", "vinyl").
+
+- _maybe_lookup_unknown_reference() — new function. When stimulus looks like
+  an unknown proper noun / artist name and Kitchen has no baseline to work from,
+  RILIE searches for it automatically before cooking. She doesn't hallucinate.
+  She doesn't go silent. She googles it.
+
+  Fires on: name-prefix patterns ("lil X", "young X", "dj X"),
+  capitalized non-first tokens, "and no X?" Rakim track patterns.
+  Skips known vocabulary. Skips long queries (> 8 words already have signal).
+
   - Wired into process() between curiosity context and Kitchen call.
 
 CHANGES FROM v4.1 (v4.1.1):
-  - process() now accepts domain_hints and curiosity_context from Guvna
-  - Curiosity context: Guvna-resurfaced takes priority, Banks is fallback
-  - domain_hints accepted for future Kitchen weighting (no-op for now)
-  - Zero breakage: both new params have defaults, all callers still work
+
+- process() now accepts domain_hints and curiosity_context from Guvna
+- Curiosity context: Guvna-resurfaced takes priority, Banks is fallback
+- domain_hints accepted for future Kitchen weighting (no-op for now)
+- Zero breakage: both new params have defaults, all callers still work
+
 """
 
 import re
@@ -110,6 +141,7 @@ class PersonModel:
     - If she knows you care about food, she leans into nourishing metaphors.
     - If she detects family context, she handles with extra care.
     """
+
     name: Optional[str] = None
     interests: List[str] = field(default_factory=list)
     expertise_signals: List[str] = field(default_factory=list)
@@ -393,19 +425,16 @@ def _scrub_repetition(text: str) -> str:
     """
     if not text or not text.strip():
         return text
-
     words = text.split()
     deduped: List[str] = []
     for w in words:
         if not deduped or w.lower() != deduped[-1].lower():
             deduped.append(w)
     cleaned = " ".join(deduped)
-
     if len(words) > 5:
         ratio = 1.0 - (len(deduped) / len(words))
         if ratio > 0.4:
             return ""
-
     return cleaned
 
 
@@ -458,8 +487,8 @@ def _maybe_lookup_unknown_reference(stimulus: str, search_fn: SearchFn) -> str:
     3. No obvious keyword match to known vocabulary (not already a domain hit)
 
     Returns: snippet text to use as baseline_text, or "" if no lookup needed.
-
     She doesn't hallucinate. She doesn't go silent. She looks it up.
+
     Bad markers from Guvna's baseline filter are reused here.
     """
     if not stimulus or not stimulus.strip():
@@ -568,12 +597,406 @@ def _maybe_lookup_unknown_reference(stimulus: str, search_fn: SearchFn) -> str:
                     snippet[:60],
                 )
                 return snippet
-
     except Exception as e:
         logger.debug("RILIE unknown reference lookup error: %s", e)
 
     return ""
 
+
+# ============================================================================
+# STEP 6 — PARSE BASELINE RESULTS (v4.3.0)
+# ============================================================================
+# Takes raw Google snippets, runs meaning.read_meaning() on each to extract
+# subject/object/operator. Returns structured list with parsed fields and
+# a constructed coherent sentence from the best result.
+#
+# This is the missing link: Google results were raw text dumped into baseline.
+# Now they get the same birth-certificate parse the stimulus gets.
+# ============================================================================
+
+def parse_baseline_results(
+    snippets: List[Dict[str, str]],
+    stimulus_fingerprint: Optional[Any] = None,
+) -> List[Dict[str, Any]]:
+    """
+    STEP 6: Parse Google results into subject/object/operator.
+
+    For each snippet:
+    1. Run meaning.read_meaning() to get its fingerprint
+    2. Extract subject (object field), operator (act field)
+    3. Score relevance against the stimulus fingerprint
+    4. Build a coherent sentence from the best-structured result
+
+    Args:
+        snippets: List of {"title": str, "link": str, "snippet": str}
+                  Raw Google results from Guvna's search.
+        stimulus_fingerprint: Optional MeaningFingerprint of the original
+                              stimulus. Used to score relevance of each snippet.
+
+    Returns:
+        List of parsed results, sorted best-first. Each entry:
+        {
+            "subject": str,        # what the snippet is about
+            "object": str,         # irreducible object from meaning parse
+            "operator": str,       # GET/GIVE/SHOW — what the snippet does
+            "pulse": float,        # is this snippet alive?
+            "weight": float,       # how substantial is it?
+            "sentence": str,       # constructed coherent sentence
+            "relevance": float,    # how relevant to the stimulus (0-1)
+            "raw_snippet": str,    # original text for fallback
+            "source_title": str,   # title from Google result
+        }
+    """
+    if not snippets:
+        return []
+
+    parsed: List[Dict[str, Any]] = []
+
+    # Stopwords for relevance scoring
+    _stop = {
+        "the", "a", "an", "is", "are", "was", "were", "be", "been",
+        "to", "of", "in", "for", "on", "with", "at", "by", "from",
+        "and", "or", "but", "not", "it", "this", "that", "i", "you",
+    }
+
+    # Get stimulus content words for relevance scoring
+    stim_words: set = set()
+    stim_object: str = ""
+    if stimulus_fingerprint and hasattr(stimulus_fingerprint, "object"):
+        stim_object = stimulus_fingerprint.object or ""
+    if stimulus_fingerprint and hasattr(stimulus_fingerprint, "to_dict"):
+        # Use the object as a relevance anchor
+        stim_words = {stim_object} if stim_object and stim_object != "unknown" else set()
+
+    for item in snippets:
+        snippet_text = item.get("snippet", "")
+        title = item.get("title", "")
+        if not snippet_text or not snippet_text.strip():
+            continue
+
+        # Clean snippet — strip HTML artifacts
+        clean = re.sub(r"<[^>]+>", "", snippet_text).strip()
+        clean = re.sub(r"\s+", " ", clean)
+        if len(clean.split()) < 4:
+            continue
+
+        # Run meaning parse on the snippet
+        if MEANING_AVAILABLE:
+            try:
+                fp = read_meaning(clean)
+                subject = fp.object if fp.object != "unknown" else _extract_subject_simple(clean)
+                obj = fp.object
+                operator = fp.act
+                pulse = fp.pulse
+                weight = fp.weight
+            except Exception:
+                subject = _extract_subject_simple(clean)
+                obj = subject
+                operator = "GIVE"
+                pulse = 0.5
+                weight = 0.3
+        else:
+            subject = _extract_subject_simple(clean)
+            obj = subject
+            operator = "GIVE"
+            pulse = 0.5
+            weight = 0.3
+
+        # Skip dead snippets
+        if pulse <= 0.15:
+            continue
+
+        # Relevance: how much does this snippet's content overlap
+        # with the stimulus object/subject?
+        snippet_words = set(
+            re.sub(r"[^a-zA-Z0-9]", " ", clean.lower()).split()
+        ) - _stop
+        relevance = 0.0
+
+        if stim_object and stim_object != "unknown":
+            # Direct object match — strongest signal
+            if stim_object in clean.lower():
+                relevance = 0.9
+            elif obj == stim_object:
+                relevance = 0.8
+            else:
+                # Word overlap fallback
+                if stim_words:
+                    relevance = len(snippet_words & stim_words) / max(len(stim_words), 1)
+                else:
+                    relevance = 0.3  # no stimulus object — moderate default
+
+        # Also check title for relevance
+        if stim_object and stim_object in title.lower():
+            relevance = max(relevance, 0.85)
+
+        # Construct a coherent sentence from this snippet
+        sentence = _construct_sentence_from_snippet(clean, subject, obj, operator)
+
+        parsed.append({
+            "subject": subject,
+            "object": obj,
+            "operator": operator,
+            "pulse": round(pulse, 3),
+            "weight": round(weight, 3),
+            "sentence": sentence,
+            "relevance": round(relevance, 3),
+            "raw_snippet": clean,
+            "source_title": title,
+        })
+
+    # Sort by relevance (highest first), then by pulse
+    parsed.sort(key=lambda x: (x["relevance"], x["pulse"]), reverse=True)
+
+    return parsed
+
+
+def _extract_subject_simple(text: str) -> str:
+    """
+    Simple subject extraction when meaning.py is not available.
+    Grabs the first substantial noun-like token.
+    """
+    _stop = {
+        "the", "a", "an", "is", "are", "was", "were", "be", "been",
+        "to", "of", "in", "for", "on", "with", "at", "by", "from",
+        "and", "or", "but", "not", "it", "this", "that",
+    }
+    words = text.split()
+    for w in words:
+        clean = re.sub(r"[^a-zA-Z]", "", w).lower()
+        if clean and clean not in _stop and len(clean) > 2:
+            return clean
+    return "unknown"
+
+
+def _construct_sentence_from_snippet(
+    snippet: str,
+    subject: str,
+    obj: str,
+    operator: str,
+) -> str:
+    """
+    Build a coherent sentence from a parsed snippet.
+
+    Not a template. Not mad-libs. Actual sentence construction:
+    1. If the snippet is already a complete sentence, clean and return it.
+    2. If it's a fragment, wrap it with the subject as anchor.
+    3. Cut at sentence boundary — never serve half a thought.
+    """
+    if not snippet:
+        return ""
+
+    # Split into sentences
+    sentences = re.split(r'(?<=[.!?])\s+', snippet.strip())
+
+    # Find the best sentence — one that contains the subject or object
+    best = ""
+    best_score = -1
+
+    for sent in sentences:
+        sent = sent.strip()
+        if len(sent) < 10:
+            continue
+        score = 0
+        sl = sent.lower()
+        # Contains subject?
+        if subject and subject != "unknown" and subject in sl:
+            score += 3
+        # Contains object?
+        if obj and obj != "unknown" and obj in sl:
+            score += 2
+        # Is a complete sentence? (has a verb-like word)
+        _verb_signals = {"is", "are", "was", "were", "has", "have", "does",
+                         "can", "will", "means", "refers", "describes",
+                         "involves", "includes", "represents", "creates"}
+        if any(v in sl.split() for v in _verb_signals):
+            score += 2
+        # Ends with punctuation?
+        if sent[-1] in ".!?":
+            score += 1
+        if score > best_score:
+            best_score = score
+            best = sent
+
+    if best:
+        # Clean up the sentence
+        best = best.strip()
+        # Ensure it starts with a capital
+        if best and not best[0].isupper():
+            best = best[0].upper() + best[1:]
+        # Ensure it ends with punctuation
+        if best and best[-1] not in ".!?":
+            best += "."
+        return best
+
+    # Fallback: take the first complete-ish sentence from the snippet
+    first = sentences[0].strip() if sentences else snippet.strip()
+    if len(first) > 200:
+        # Cut at last sentence boundary before 200 chars
+        cut = first[:200]
+        for sep in (". ", "! ", "? "):
+            idx = cut.rfind(sep)
+            if idx > 50:
+                first = cut[:idx + 1]
+                break
+        else:
+            first = cut.rsplit(" ", 1)[0] + "."
+    return first
+
+
+# ============================================================================
+# STEP 9 — DIRECT ANSWER GATE (v4.3.0)
+# ============================================================================
+# When the MeaningFingerprint says act=="GET" and the object is clear,
+# this picks the most direct answer. No philosophy. No orbiting.
+# Direct question → direct answer.
+#
+# Priority order:
+# A. Parsed baseline sentence that directly addresses the object → use it
+# B. Kitchen result that contains the object → use it
+# C. Raw baseline snippet that mentions the object → clean and use it
+# D. None of the above → return None (let normal pipeline continue)
+# ============================================================================
+
+def direct_answer_gate(
+    stimulus_fingerprint: Optional[Any],
+    kitchen_result: str,
+    parsed_baseline: List[Dict[str, Any]],
+    raw_baseline_text: str = "",
+) -> Optional[str]:
+    """
+    STEP 9: Direct questions get direct answers.
+
+    If the stimulus is a GET (question) and the object is clear,
+    find the most direct answer and return it. Skip philosophy.
+
+    Args:
+        stimulus_fingerprint: MeaningFingerprint from meaning.read_meaning().
+                              If None or not a GET, returns None immediately.
+        kitchen_result: The Kitchen's cooked response text.
+        parsed_baseline: Output from parse_baseline_results() — structured
+                         baseline with sentences, subjects, relevance scores.
+        raw_baseline_text: Fallback raw baseline text from Guvna.
+
+    Returns:
+        str: The direct answer to serve. Or None if this gate doesn't fire
+             (non-GET stimulus, unclear object, or no good answer found).
+    """
+    # Gate check: only fires on GET with a clear object
+    if not stimulus_fingerprint:
+        return None
+    if not hasattr(stimulus_fingerprint, "act"):
+        return None
+    if stimulus_fingerprint.act != "GET":
+        return None
+
+    obj = getattr(stimulus_fingerprint, "object", "unknown")
+    if not obj or obj == "unknown":
+        return None
+
+    logger.info("DIRECT_ANSWER_GATE: firing for GET object='%s'", obj)
+
+    # --- A. Best parsed baseline sentence ---
+    # parse_baseline_results already sorted by relevance.
+    # Take the top result if it's relevant enough.
+    if parsed_baseline:
+        top = parsed_baseline[0]
+        if top["relevance"] >= 0.5 and top["sentence"]:
+            sentence = top["sentence"].strip()
+            if len(sentence.split()) >= 5 and obj in sentence.lower():
+                logger.info(
+                    "DIRECT_ANSWER_GATE: using parsed baseline (relevance=%.2f)",
+                    top["relevance"],
+                )
+                return sentence
+
+    # --- B. Kitchen result that contains the object ---
+    if kitchen_result and kitchen_result.strip():
+        kl = kitchen_result.lower()
+        if obj in kl and _is_coherent_sentence(kitchen_result):
+            logger.info("DIRECT_ANSWER_GATE: Kitchen result contains object, using it")
+            return kitchen_result.strip()
+
+    # --- C. Raw baseline snippet mentioning the object ---
+    if raw_baseline_text and raw_baseline_text.strip():
+        bl = raw_baseline_text.strip()
+        if obj in bl.lower():
+            # Extract the sentence containing the object
+            direct = _extract_sentence_about(bl, obj)
+            if direct and len(direct.split()) >= 5:
+                logger.info("DIRECT_ANSWER_GATE: using raw baseline sentence about '%s'", obj)
+                return direct
+
+    # --- D. Parsed baseline — accept lower relevance if it's the only option ---
+    if parsed_baseline:
+        for entry in parsed_baseline:
+            if entry["relevance"] >= 0.3 and entry["sentence"]:
+                sentence = entry["sentence"].strip()
+                if len(sentence.split()) >= 5:
+                    logger.info(
+                        "DIRECT_ANSWER_GATE: fallback to parsed baseline (relevance=%.2f)",
+                        entry["relevance"],
+                    )
+                    return sentence
+
+    # Gate didn't fire — no direct answer found. Let normal pipeline continue.
+    logger.info("DIRECT_ANSWER_GATE: no direct answer found, passing through")
+    return None
+
+
+def _is_coherent_sentence(text: str) -> bool:
+    """
+    Quick check: is this text a real sentence or template garbage?
+    A coherent sentence has:
+    - At least 5 words
+    - At least one verb-like word
+    - Unique word ratio > 0.5 (not word salad)
+    """
+    if not text or not text.strip():
+        return False
+    words = text.strip().split()
+    if len(words) < 5:
+        return False
+    # Unique word ratio
+    unique = len(set(w.lower() for w in words))
+    if unique / len(words) < 0.5:
+        return False
+    # Has a verb?
+    _verbs = {
+        "is", "are", "was", "were", "has", "have", "does", "do",
+        "can", "will", "would", "could", "should", "may", "means",
+        "refers", "involves", "includes", "creates", "represents",
+        "uses", "makes", "takes", "gives", "shows", "works",
+    }
+    word_set = set(w.lower().rstrip(".,!?") for w in words)
+    if not word_set & _verbs:
+        return False
+    return True
+
+
+def _extract_sentence_about(text: str, subject: str) -> str:
+    """
+    From a block of text, extract the sentence that best addresses
+    the given subject. Returns the cleanest sentence containing it.
+    """
+    if not text or not subject:
+        return ""
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    sl = subject.lower()
+    for sent in sentences:
+        if sl in sent.lower() and len(sent.split()) >= 5:
+            sent = sent.strip()
+            if sent and not sent[0].isupper():
+                sent = sent[0].upper() + sent[1:]
+            if sent and sent[-1] not in ".!?":
+                sent += "."
+            return sent
+    return ""
+
+
+# ============================================================================
+# MEASURESTICK — quality signal (informer, not gate)
+# ============================================================================
 
 def _measurestick(response: str, stimulus: str, search_fn) -> Dict[str, Any]:
     """
@@ -581,21 +1004,24 @@ def _measurestick(response: str, stimulus: str, search_fn) -> Dict[str, Any]:
     Informs the Governor. RILIE's voice is protected.
 
     Three dimensions measured:
-    A. RELEVANCE   — does the response contain tokens from the stimulus?
-                     Low relevance = she drifted. High = she's on target.
+
+    A. RELEVANCE — does the response contain tokens from the stimulus?
+       Low relevance = she drifted. High = she's on target.
+
     B. ORIGINALITY — how many Google results for this exact phrase?
-                     Low results = original voice. High = baseline regurgitation.
-    C. COHERENCE   — does the response have enough word variety to be a real thought?
-                     Low = word salad. High = real sentence.
+       Low results = original voice. High = baseline regurgitation.
+
+    C. COHERENCE — does the response have enough word variety to be a real thought?
+       Low = word salad. High = real sentence.
 
     Returns dict with scores + recommendation. Guvna decides what to do with it.
     RILIE's own voice ALWAYS gets a chance to serve first.
     """
     result = {
         "relevance": 0.0,
-        "originality": 1.0,   # default: assume original
+        "originality": 1.0,  # default: assume original
         "coherence": 0.0,
-        "google_hits": -1,    # -1 = not checked
+        "google_hits": -1,   # -1 = not checked
         "recommendation": "SERVE",  # SERVE | ANNOTATE | PREFER_BASELINE
         "reason": "",
     }
@@ -621,7 +1047,7 @@ def _measurestick(response: str, stimulus: str, search_fn) -> Dict[str, Any]:
     snippet = response.strip()
     if len(snippet) > 60:
         snippet = snippet[:60].rsplit(" ", 1)[0]
-    snippet = re.sub(r"[—–\"\'\\(\\)\\[\\]]", " ", snippet)
+    snippet = re.sub(r"[—–\"\'\\\(\\\)\\\[\\\]]", " ", snippet)
     snippet = re.sub(r"\s+", " ", snippet).strip()
 
     if snippet and len(snippet) >= 10 and search_fn:
@@ -629,6 +1055,7 @@ def _measurestick(response: str, stimulus: str, search_fn) -> Dict[str, Any]:
             hits = search_fn(f'"{snippet}"')
             google_hits = len(hits) if hits and isinstance(hits, list) else 0
             result["google_hits"] = google_hits
+
             # Low hits = original voice = high originality score
             if google_hits == 0:
                 result["originality"] = 1.0   # nobody has said this — pure RILIE
@@ -661,7 +1088,7 @@ def _measurestick(response: str, stimulus: str, search_fn) -> Dict[str, Any]:
         result["reason"] = f"on target (relevance={result['relevance']})"
     else:
         result["recommendation"] = "ANNOTATE"
-        result["reason"] = f"low signal — annotate but serve"
+        result["reason"] = "low signal — annotate but serve"
 
     return result
 
@@ -684,7 +1111,6 @@ def _store_measurestick_signal(
         if not conn:
             return
         cur = conn.cursor()
-
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS banks_measurestick (
@@ -702,7 +1128,6 @@ def _store_measurestick_signal(
             )
             """
         )
-
         cur.execute(
             """INSERT INTO banks_measurestick
                (stimulus, rilie_response, baseline_response,
@@ -721,7 +1146,6 @@ def _store_measurestick_signal(
                 measure.get("reason", ""),
             ),
         )
-
         conn.commit()
         cur.close()
         conn.close()
@@ -733,5 +1157,3 @@ def _store_measurestick_signal(
         )
     except Exception as e:
         logger.debug("MEASURESTICK storage error: %s", e)
-
-
