@@ -49,7 +49,6 @@ from rilie_ddd import (
 from rilie_innercore import (
     CHOMSKY_AVAILABLE,
     LIMO_AVAILABLE,
-    SPEECH_PIPELINE_AVAILABLE,
     Interpretation,
     anti_beige_check,
     construct_response,
