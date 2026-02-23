@@ -796,14 +796,10 @@ class Guvna(GuvnaSelf):
 
         kwargs accepted:
         - reference_context: Optional[Dict] from session.resolve_reference()
-        - debug_domains: bool — if True, short-circuit after baseline + domains and emit a debug snapshot
         """
         self.turn_count += 1
         self.memory.turn_count += 1
         raw: Dict[str, Any] = {"stimulus": stimulus}
-
-        # DEBUG FLAG: domain/baseline snapshot without waking Kitchen
-        debug_domains: bool = bool(kwargs.get("debug_domains"))
 
         # STEP 0.5: MEANING FINGERPRINT â€” read before Kitchen wakes up
         # Without this: "yep. sure." â†’ Kitchen â†’ word salad about broadcast metaphors
@@ -894,9 +890,7 @@ class Guvna(GuvnaSelf):
 
         # STEP 3.5b: DOMAIN SHIFT â†’ FACTS-FIRST
         # Determine whether this turn enters a new domain and should get a facts-first answer.
-        new_domain, facts_first = self._compute_domain_and_factsfirst(
-            stimulus, soi_domain_names
-        )
+        _, facts_first = self._compute_domain_and_factsfirst(stimulus, soi_domain_names)
 
         # STEP 3.6: CULTURAL ANCHOR DETECTION
         cultural_anchor = _detect_cultural_anchor(stimulus)
@@ -910,36 +904,6 @@ class Guvna(GuvnaSelf):
                 cultural_anchor.get("full", cultural_anchor.get("key")),
                 domain,
             )
-
-
-        # DEBUG SHORT-CIRCUIT: baseline + domains snapshot
-        if debug_domains:
-            has_baseline = bool(baseline_text and baseline_text.strip())
-            has_meaning = bool(_meaning and _meaning.pulse > 0.0)
-            searched = bool(baseline.get("raw_results"))
-            debug_str = (
-                "[DEBUG_DOMAINS] "
-                f"searched={searched}, "
-                f"has_baseline={has_baseline}, "
-                f"baseline_source={baseline.get('source', '')!r}, "
-                f"domains={soi_domain_names or []}, "
-                f"new_domain={new_domain!r}, "
-                f"facts_first={facts_first}, "
-                f"meaning_pulse={getattr(_meaning, 'pulse', 0.0):.2f}, "
-                f"meaning_act={getattr(_meaning, 'act', None)!r}"
-            )
-            debug_payload: Dict[str, Any] = {
-                "stimulus": stimulus,
-                "result": debug_str,
-                "status": "DEBUG_DOMAINS",
-                "tone": "neutral",
-                "baseline": baseline,
-                "baseline_used": has_baseline,
-                "domain_annotations": domain_annotations,
-                "soi_domains": soi_domain_names,
-                "meaning": raw.get("meaning"),
-            }
-            return self._finalize_response(debug_payload)
 
         # STEP 3.7: CONFIDENCE GATE (PRIORITY CHECK)
         # Before Kitchen wakes up: do we have ANYTHING viable to work with?
