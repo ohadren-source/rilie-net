@@ -7,34 +7,49 @@ All supporting helper functions and utilities live in rilie_foundation.py.
 This shim exposes RILIE for import via rilie.py.
 """
 
-
-
 from __future__ import annotations
 
+import re
 import logging
+
 logger = logging.getLogger(__name__)
 
-import re
-
+# Foundation: core utilities and models
 from rilie_foundation import (
-    extract_tangents,
-    _fix_mojibake,
-    hash_stimulus,
-    _scrub_repetition,
-    _extract_original_question,
-    _search_banks_if_available,
-    _maybe_lookup_unknown_reference,
-    _measurestick,
-    _store_measurestick_signal,
-    triangle_check,
-    ConversationState,
     PersonModel,
     SearchFn,
+    _extract_original_question,
+    _fix_mojibake,
+    _maybe_lookup_unknown_reference,
+    _measurestick,
+    _scrub_repetition,
+    _search_banks_if_available,
+    _store_measurestick_signal,
+    extract_tangents,
+    hash_stimulus,
 )
 
-# ============================================================================
-# THE RESTAURANT
-# ============================================================================
+# Triangle: Gate 0 safety checks
+from rilie_triangle import (
+    triangle_check,
+)
+
+# DDD: Hostess & conversation state (TASTE bypassed)
+from rilie_ddd import (
+    ConversationState,
+    DisclosureLevel,
+    build_dejavu_response,
+    shape_for_disclosure,
+)
+
+# InnerCore: Kitchen & pipeline (through shim)
+from rilie_innercore import (
+    Interpretation,
+    anti_beige_check,
+    construct_response,
+    less_is_more_or_less,
+    run_pass_pipeline,
+)
 
 class RILIE:
     """
