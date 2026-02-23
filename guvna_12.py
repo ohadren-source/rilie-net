@@ -610,6 +610,68 @@ class Guvna(GuvnaSelf):
         )
 
     # -----------------------------------------------------------------
+    # DOMAIN INFERENCE FROM WEB — Fallback for unknown subjects
+    # -----------------------------------------------------------------
+
+    def _infer_domain_from_web(self, original_question: str) -> Optional[str]:
+        """
+        Extract subject/object from question using Chomsky.
+        Search web for: "What subject/category/field/discipline does [concept] belong to?"
+        Parse result and match against 678 domain names/keywords dynamically.
+        
+        Returns domain name if match found, None otherwise.
+        """
+        if not self.search_fn:
+            return None
+        
+        # Use Chomsky to extract subject/object
+        try:
+            from ChomskyAtTheBit import extract_holy_trinity_for_roux
+            parsed = extract_holy_trinity_for_roux(original_question)
+            if not parsed:
+                return None
+            
+            subject = parsed.get("subject", "")
+            obj = parsed.get("object", "")
+            concept = subject or obj or original_question.strip()
+            
+        except Exception:
+            concept = original_question.strip()
+        
+        if not concept:
+            return None
+        
+        # Search for subject/category/field/discipline of this concept
+        query = f"what subject category field discipline does {concept} belong to"
+        try:
+            results = self.search_fn(query)
+            if not results:
+                return None
+            
+            first_result = results[0].get("snippet", "") or results[0].get("title", "")
+            first_result_lower = first_result.lower()
+            
+            # Dynamically check if any 678 domain keywords appear in the result
+            try:
+                from rilie_innercore_12 import DOMAIN_KEYWORDS
+                
+                for domain, keywords in DOMAIN_KEYWORDS.items():
+                    for keyword in keywords:
+                        if keyword.lower() in first_result_lower:
+                            logger.info(
+                                "GUVNA: Web inference matched domain=%s via keyword=%s",
+                                domain, keyword
+                            )
+                            return domain
+            except Exception:
+                pass
+            
+            return None
+        except Exception as e:
+            logger.debug("GUVNA: Web inference search failed: %s", e)
+            return None
+
+    # -----------------------------------------------------------------
     # DOMAIN SHIFT DETECTION — Facts-first wiring
     # -----------------------------------------------------------------
 
@@ -643,6 +705,12 @@ class Guvna(GuvnaSelf):
                 domain_candidates.extend(inner_domains)
             except Exception:
                 pass
+
+        # 3. Fallback: Web inference — extract subject/object and search for its category
+        if not domain_candidates:
+            inferred = self._infer_domain_from_web(stimulus)
+            if inferred:
+                domain_candidates.append(inferred)
 
         new_domain: Optional[str] = None
         if domain_candidates:
