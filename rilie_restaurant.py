@@ -9,8 +9,11 @@ This shim exposes RILIE for import via rilie.py.
 
 from __future__ import annotations
 
-import re
+import hashlib
 import logging
+import re
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +47,19 @@ from rilie_ddd import (
 
 # InnerCore: Kitchen & pipeline (through shim)
 from rilie_innercore import (
+    CHOMSKY_AVAILABLE,
+    LIMO_AVAILABLE,
+    SPEECH_PIPELINE_AVAILABLE,
     Interpretation,
     anti_beige_check,
     construct_response,
     less_is_more_or_less,
     run_pass_pipeline,
 )
+
+# ============================================================================
+# THE RESTAURANT
+# ============================================================================
 
 class RILIE:
     """
