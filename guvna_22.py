@@ -922,20 +922,96 @@ def _respond_from_self(self: "Guvna", stimulus: str) -> Dict[str, Any]:
 
 
 def _apply_domain_lenses(self: "Guvna", stimulus: str) -> Dict[str, Any]:
+    """
+    Extract domain signals from a raw stimulus string.
+
+    Pipeline:
+    1. InnerCore keyword detector (rilie_innercore_22.detect_domains) — fastest,
+       no network, covers the 678-domain vocabulary directly.
+    2. SOI library (get_tracks_for_domains) — called with detected DOMAIN NAME
+       KEYS, NOT the raw sentence.  The function expects domain-name strings,
+       not prose — that was the original bug.
+    3. Web inference fallback (_infer_domain_from_web) — fires only when both
+       InnerCore and SOI return nothing.
+
+    Returns {"matched_domains": [...], "count": int, "boole_substrate": str}
+    """
     domain_annotations: Dict[str, Any] = {}
+    sl = (stimulus or "").lower().strip()
+
+    # ── STEP 1: InnerCore keyword detector ──────────────────────────────────
+    # Primary excavation tool.  Reads raw sentence, maps keywords → domain
+    # names from the 678-domain vocabulary.  Returns e.g. ["computerscience",
+    # "linguistics_cognition"] — NOT prose.
+    inner_domains: List[str] = []
     try:
-        domains = get_tracks_for_domains([stimulus])
-        if domains:
-            domain_annotations["matched_domains"] = [
-                d.get("domain", "") for d in domains
-            ]
-            domain_annotations["count"] = len(domains)
-            domain_annotations["boole_substrate"] = "All domains reduce to bool/curve"
+        from rilie_innercore_22 import detect_domains  # type: ignore
+        inner_domains = detect_domains(sl) or []
+        if inner_domains:
+            logger.info(
+                "GUVNA _apply_domain_lenses: InnerCore found %d domains: %s",
+                len(inner_domains),
+                inner_domains,
+            )
     except Exception as e:
-        logger.debug("Domain lens error: %s", e)
+        logger.debug("GUVNA _apply_domain_lenses: InnerCore unavailable: %s", e)
+
+    # ── STEP 2: SOI library lookup ───────────────────────────────────────────
+    # FIX: pass domain NAME STRINGS (from InnerCore), not the raw stimulus.
+    # Original bug was get_tracks_for_domains([stimulus]) — a sentence as input
+    # — which returned nothing because it expects domain keys like "physics".
+    soi_tracks: List[Any] = []
+    if inner_domains:
+        try:
+            soi_tracks = get_tracks_for_domains(inner_domains) or []
+        except Exception as e:
+            logger.debug("GUVNA _apply_domain_lenses: SOI lookup failed: %s", e)
+
+    soi_domain_names: List[str] = [
+        d.get("domain", "")
+        for d in soi_tracks
+        if isinstance(d, dict) and d.get("domain")
+    ]
+
+    # Merge: InnerCore names first (stimulus-derived), then SOI extras.
+    # Dedupe while preserving order.
+    seen: set = set()
+    merged: List[str] = []
+    for name in inner_domains + soi_domain_names:
+        if name and name not in seen:
+            seen.add(name)
+            merged.append(name)
+
+    # ── STEP 3: Web inference fallback ──────────────────────────────────────
+    # Only fires when neither InnerCore nor SOI found anything.
+    if not merged and hasattr(self, "_infer_domain_from_web"):
+        try:
+            inferred = self._infer_domain_from_web(stimulus)
+            if inferred:
+                merged.append(inferred)
+                logger.info(
+                    "GUVNA _apply_domain_lenses: web inference → %s", inferred
+                )
+        except Exception as e:
+            logger.debug(
+                "GUVNA _apply_domain_lenses: web inference failed: %s", e
+            )
+
+    if merged:
+        domain_annotations["matched_domains"] = merged
+        domain_annotations["count"] = len(merged)
+        domain_annotations["boole_substrate"] = "All domains reduce to bool/curve"
+        logger.info(
+            "GUVNA _apply_domain_lenses(%r) → %s", stimulus[:60], merged
+        )
+    else:
+        domain_annotations["matched_domains"] = []
+        domain_annotations["count"] = 0
+        logger.info(
+            "GUVNA _apply_domain_lenses(%r) → NO DOMAINS FOUND", stimulus[:60]
+        )
 
     return domain_annotations
-
 
 def _get_baseline(self: "Guvna", stimulus: str) -> Dict[str, Any]:
     baseline = {"text": "", "source": "", "raw_results": []}
