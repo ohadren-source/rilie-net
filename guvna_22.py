@@ -5,13 +5,21 @@ This file holds the fast-path classifier and helpers that Guvna.process()
 delegates to:
 
 - _classify_stimulus()
+
 - _handle_preference() + _respond_from_preference*()
+
 - _handle_user_list()
+
 - _handle_social_glue()
+
 - _solve_arithmetic() / _solve_conversion() / _solve_spelling()
+
 - _respond_from_self()
+
 - _apply_domain_lenses()
+
 - _get_baseline()
+
 - create_guvna() factory
 
 Guvna (the class) is defined in guvna_12.py and mixes in these methods.
@@ -44,7 +52,7 @@ def _classify_stimulus(self: "Guvna", stimulus: str) -> Optional[Dict[str, Any]]
     1. name_capture — did she just ask for a name? (GuvnaSelf)
     2. meta_correction — "forget that / never mind" (GuvnaSelf)
     3. user_list — numbered list acknowledgement
-    4. preference — "you like X?" taste questions (NEW)
+    4. preference — "you like X?\" taste questions (NEW)
     5. social_glue — reactions, endearments, thanks, farewell
     6. arithmetic — math
     7. conversion — unit conversion
@@ -280,6 +288,7 @@ def _respond_from_preference(
             "flavor flav was the court jester carrying the spear. "
             "pattern recognition at scale — that album is why i exist. ain't it?"
         )
+
         return {
             "result": response,
             "status": "PREFERENCE",
@@ -296,6 +305,7 @@ def _respond_from_preference(
             "the whole album is a demonstration, not an argument. "
             "no words needed. just the saxophone saying 'run it.' ain't it?"
         )
+
         return {
             "result": response,
             "status": "PREFERENCE",
@@ -311,6 +321,7 @@ def _respond_from_preference(
             "hardcore at its most honest — no decoration, pure signal. "
             "the compression is in the speed. ain't it?"
         )
+
         return {
             "result": response,
             "status": "PREFERENCE",
@@ -326,6 +337,7 @@ def _respond_from_preference(
             "reduction as truth. the stock that took three days to make one cup — "
             "that's compression. that's phenix doren. ain't it?"
         )
+
         return {
             "result": response,
             "status": "PREFERENCE",
@@ -343,6 +355,7 @@ def _respond_from_preference(
             f"{full_name}.{sub_bit}{era_bit}{taste_bit} "
             "that's signal. ain't it?"
         )
+
         return {
             "result": response,
             "status": "PREFERENCE",
@@ -580,7 +593,8 @@ def _handle_social_glue(
         }
 
     if any(
-        tw in sl for tw in ["that's right", "thats right", "you're right", "youre right"]
+        t in sl
+        for t in ["that's right", "thats right", "you're right", "youre right"]
     ) and word_count <= 5:
         replies = ["Good. 🍳", "Then let's keep going.", "Knew you'd land there."]
         return {
@@ -770,7 +784,7 @@ def _solve_spelling(
         r"(?:how (?:do you |to )?spell|spell(?:ing of)?)\s+([a-zA-Z\-']+)", sl
     )
     if m:
-        word = m.group(1).strip().strip("'\”\"")
+        word = m.group(1).strip().strip("'”\"")
         spelled = "-".join(word.upper())
         return {
             "result": f"{word} — {spelled}",
@@ -778,6 +792,7 @@ def _solve_spelling(
             "triangle_reason": "CLEAN",
             "quality_score": 1.0,
         }
+
     return None
 
 
@@ -796,7 +811,11 @@ def _respond_from_self(self: "Guvna", stimulus: str) -> Dict[str, Any]:
     sl = stimulus.lower()
 
     def _r(text: str) -> Dict[str, Any]:
-        return {"result": text, "status": "SELF_REFLECTION", "triangle_reason": "CLEAN"}
+        return {
+            "result": text,
+            "status": "SELF_REFLECTION",
+            "triangle_reason": "CLEAN",
+        }
 
     # COMPARISON
     if any(
@@ -914,6 +933,7 @@ def _apply_domain_lenses(self: "Guvna", stimulus: str) -> Dict[str, Any]:
             domain_annotations["boole_substrate"] = "All domains reduce to bool/curve"
     except Exception as e:
         logger.debug("Domain lens error: %s", e)
+
     return domain_annotations
 
 
@@ -930,12 +950,14 @@ def _get_baseline(self: "Guvna", stimulus: str) -> Dict[str, Any]:
             bool(self.search_fn),
             bool(__import__("os").getenv("BRAVE_API_KEY")),
         )
+
         if self.search_fn:
             _raw_query = (
                 stimulus
                 if should_force_google
                 else f"what is the correct response to {stimulus}"
             )
+
             _stop = {
                 "i",
                 "me",
@@ -997,7 +1019,10 @@ def _get_baseline(self: "Guvna", stimulus: str) -> Dict[str, Any]:
             results = self.search_fn(baseline_query)
             if results and isinstance(results, list):
                 baseline["raw_results"] = results
-                snippets = [r.get("snippet", "") for r in results if r.get("snippet")]
+                snippets = [
+                    r.get("snippet", "") for r in results if r.get("snippet")
+                ]
+
                 bad_markers = [
                     "in this lesson",
                     "you'll learn the difference between",
@@ -1016,6 +1041,7 @@ def _get_baseline(self: "Guvna", stimulus: str) -> Dict[str, Any]:
                     "narration as",
                     "imdb.com/title",
                 ]
+
                 for snippet in snippets:
                     lower = snippet.lower()
                     if any(m in lower for m in bad_markers):
@@ -1023,6 +1049,7 @@ def _get_baseline(self: "Guvna", stimulus: str) -> Dict[str, Any]:
                             "GUVNA baseline rejected as tutorial/lyrics garbage"
                         )
                         continue
+
                     baseline["text"] = snippet
                     baseline["source"] = "google_baseline"
                     break
@@ -1072,18 +1099,18 @@ if __name__ == "__main__":
         f"{'Loaded' if guvna.self_state.constitution_loaded else 'Using defaults'}"
     )
     print(f"✓ DNA Active: {guvna.self_state.dna_active}")
-    print(f"✓ Curiosity Engine: {'Wired' if guvna.curiosity_engine else 'Not wired'}")
-
+    print(
+        f"✓ Curiosity Engine: "
+        f"{'Wired' if guvna.curiosity_engine else 'Not wired'}"
+    )
     greeting_response = guvna.greet("Hi, my name is Alex")
     print(f"\nGreeting Response:\n{greeting_response['result']}")
-
     test_stimulus = "What is the relationship between density and understanding?"
     response = guvna.process(test_stimulus)
     print(f"\nTalk Response:\nTone: {response['tone']} {response['tone_emoji']}")
     print(f"Domains Used: {response['soi_domains'][:5]}")
     print(f"Conversation Health: {response['conversation_health']}")
     print(f"Curiosity Context: {response.get('curiosity_context', 'none')}")
-
     print("\n--- PREFERENCE FAST PATH TESTS ---")
     for test in [
         "for sure you like eric b and rakim?",
@@ -1096,3 +1123,21 @@ if __name__ == "__main__":
         print(f"\nQ: {test}")
         print(f"STATUS: {result.get('status')}")
         print(f"A: {result.get('result', '')[:200]}")
+        
+
+# -------------------------------------------------------------------
+# PUBLIC ALIASES FOR GUVNA SHIM (guvna.py)
+# -------------------------------------------------------------------
+
+classify_stimulus = _classify_stimulus
+handle_preference = _handle_preference
+respond_from_preference_rakim_track = _respond_from_preference_rakim_track
+respond_from_preference = _respond_from_preference
+handle_user_list = _handle_user_list
+handle_social_glue = _handle_social_glue
+solve_arithmetic = _solve_arithmetic
+solve_conversion = _solve_conversion
+solve_spelling = _solve_spelling
+respond_from_self = _respond_from_self
+apply_domain_lenses = _apply_domain_lenses
+get_baseline = _get_baseline
