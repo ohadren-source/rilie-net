@@ -381,6 +381,68 @@ class Guvna(GuvnaSelf):
 
         return None
 
+
+def _superpose_domains(self, stimulus: str) -> list[str]:
+    """
+    Superposition step: gather domain signals from
+    - SOI library (get_tracks_for_domains)
+    - InnerCore keyword detector
+    - Web inference mapped back into the 678-domain vocabulary
+
+    Then deduplicate while preserving order.
+    """
+    sl = (stimulus or "").lower().strip()
+    domains: list[str] = []
+
+    # 1) SOI lenses (Library / 678 domains)
+    try:
+        from soi_domain_map import get_tracks_for_domains
+        soi_domains = get_tracks_for_domains([stimulus]) or []
+        domains.extend(
+            d.get("domain", "")
+            for d in soi_domains
+            if isinstance(d, dict) and d.get("domain")
+        )
+    except Exception as e:
+        logger.debug(
+            "GUVNA: SOI domain lookup failed in _superpose_domains: %s", e
+        )
+
+    # 2) InnerCore keyword detector
+    try:
+        from rilie_innercore_22 import detect_domains  # type: ignore
+        inner = detect_domains(sl) or []
+        domains.extend(inner)
+    except Exception as e:
+        logger.debug(
+            "GUVNA: InnerCore detect_domains failed in _superpose_domains: %s", e
+        )
+
+    # 3) Web inference mapped back into the 678-domain vocabulary
+    try:
+        inferred = self._infer_domain_from_web(stimulus)
+        if inferred:
+            domains.append(inferred)
+    except Exception as e:
+        logger.debug(
+            "GUVNA: web inference failed in _superpose_domains: %s", e
+        )
+
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    out: list[str] = []
+    for d in domains:
+        if d and d not in seen:
+            seen.add(d)
+            out.append(d)
+
+    logger.info(
+        "GUVNA: _superpose_domains(%r) -> %s", stimulus[:80], out
+    )
+    return out
+
+
+
     # -------------------------------------------------------------------------
     # DOMAIN SHIFT DETECTION — Facts-first wiring
     # -------------------------------------------------------------------------
