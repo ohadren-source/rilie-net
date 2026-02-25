@@ -68,6 +68,7 @@ def _classify_stimulus(self: "Guvna", stimulus: str) -> Optional[Dict[str, Any]]
     ):
         concepts = ["entropy", "emergence", "compression", "resonance", "threshold"]
         import random as _r
+
         seed = _r.choice(concepts)
         s = seed
         sl = seed
@@ -126,12 +127,27 @@ def _classify_stimulus(self: "Guvna", stimulus: str) -> Optional[Dict[str, Any]]
 
 
 # -----------------------------------------------------------------
-# PREFERENCE / TASTE FAST PATH
+# PREFERENCE / TASTE FAST PATH — NEW
 # -----------------------------------------------------------------
+
+
 def _handle_preference(self: "Guvna", s: str, sl: str) -> Optional[Dict[str, Any]]:
     """
     Fast path for preference / taste questions directed at RILIE.
+
     Fires when user asks if RILIE likes / knows / feels a cultural figure or work.
+
+    Patterns caught:
+    - "you like eric b and rakim?"
+    - "for sure you like X?"
+    - "you know X?"
+    - "you into X?"
+    - "you feel X?"
+    - "what do you think of X?"
+    - "you heard X?"
+    - "and no omega?" — Rakim track reference
+
+    Key: she answers with OPINION, not retrieval. She has taste.
     """
     _pref_triggers = [
         r"\byou like\b",
@@ -147,16 +163,19 @@ def _handle_preference(self: "Guvna", s: str, sl: str) -> Optional[Dict[str, Any
         r"\bwhat do you think of\b",
         r"\bwhat you think of\b",
         r"\bwhat about\b",
-        r"\band no\b",  # "and no omega?" — Rakim track reference
+        r"\band no\b",  # "and no omega?" — Rakim track reference pattern
     ]
+
     has_preference_trigger = any(re.search(pat, sl) for pat in _pref_triggers)
     if not has_preference_trigger:
         return None
 
+    # Rakim track
     rakim_track = _detect_rakim_track(sl)
     if rakim_track:
         return self._respond_from_preference_rakim_track(rakim_track, s)
 
+    # Cultural anchor
     anchor = _detect_cultural_anchor(sl)
     if anchor:
         return self._respond_from_preference(anchor, s)
@@ -167,7 +186,10 @@ def _handle_preference(self: "Guvna", s: str, sl: str) -> Optional[Dict[str, Any
 def _respond_from_preference_rakim_track(
     self: "Guvna", track_data: Dict[str, Any], stimulus: str
 ) -> Dict[str, Any]:
-    """RILIE responds to a specific Rakim track reference. She knows these cold."""
+    """
+    RILIE responds to a specific Rakim track reference.
+    She knows these cold. This is her lineage.
+    """
     track = track_data.get("track", "")
     meaning = track_data.get("meaning", "")
     album = track_data.get("album", "")
@@ -201,362 +223,273 @@ def _respond_from_preference(
     """
     RILIE responds to a taste/preference question about a cultural figure.
     She has opinions. She's not a search engine.
-    NOTE: _ALL_CULTURAL_ANCHORS, _RAKIM_KNOWLEDGE, _RILIE_TASTE imported at
-    module top-level — NOT inside this function — to avoid circular imports.
     """
+    from guvna_12 import (
+        _ALL_CULTURAL_ANCHORS,
+        _RAKIM_KNOWLEDGE,
+        _RILIE_TASTE,
+    )  # reuse data from 12
+
     key = anchor.get("key", "")
     full_name = anchor.get("full", key.title())
     domain = anchor.get("domain", "music")
     sub = anchor.get("sub", "")
     era = anchor.get("era", "")
     taste = _RILIE_TASTE.get(key, _RILIE_TASTE.get(full_name.lower(), ""))
+    sl = stimulus.lower()
 
     # Eric B. & Rakim — the founding pair
     if key in ("eric b", "rakim", "eric b and rakim", "eric b & rakim"):
         if key == "eric b":
             response = (
                 "eric b is the architecture under rakim's voice. "
-                "the beat IS the argument — he built the room rakim thinks in. "
-                "two as one. ain't it?"
+                "he built the scaffold, rakim built the infinite. "
+                "eric b + rakim = proof that the producer and the voice are both infinite. "
+                "he's not just a beat machine. he's a sculptor."
             )
         elif key == "rakim":
             response = (
-                "rakim. the god MC — not metaphor, measurement. "
-                "nobody compresses more per bar. "
-                "i know you got soul. paid in full. no omega. "
-                "each one a different proof of the same thesis: "
-                "knowledge infinite, delivery precise. ain't it?"
+                "rakim is the ceiling of what rap literacy can be. "
+                "multi-syllabic density, meaning-within-meaning, flow that sounds like jazz. "
+                "everything i try to do with language is downstream of him. "
+                "the first rapper to make you *think* while the beat plays."
             )
-        else:
+        elif key in ("eric b and rakim", "eric b & rakim"):
             response = (
-                "eric b & rakim. the gold standard. "
-                "rakim compresses infinite knowledge into finite bars — zero waste. "
-                "eric b builds the architecture under it. "
-                "87 to 92, five albums, one thesis. "
-                "the beat IS the argument. ain't it?"
+                "eric b & rakim — the blueprint. "
+                "they proved that hip-hop could be both street *and* infinite. "
+                "architecture + voice = the recipe for everything that followed. "
+                "i study them the way physicists study feynman."
             )
-        return {"result": response, "status": "PREFERENCE",
-                "triangle_reason": "CLEAN", "quality_score": 0.95, "cultural_anchor": anchor}
-
     # Public Enemy
-    if key == "public enemy":
+    elif key == "public enemy":
         response = (
-            "fear of a black planet changed everything. "
-            "chuck d compressed systemic truth into three-minute transmissions. "
-            "flavor flav was the court jester carrying the spear. "
-            "pattern recognition at scale — that album is why i exist. ain't it?"
+            "public enemy taught me architecture at 13. "
+            "not just music — systems thinking. "
+            "chuck d layering samples the way someone stacks axioms. "
+            "the bomb squad building walls of sound. "
+            "fear of a black planet is a proof, not an album. "
+            "compression. reduction. maximum signal, zero waste."
         )
-        return {"result": response, "status": "PREFERENCE",
-                "triangle_reason": "CLEAN", "quality_score": 0.95, "cultural_anchor": anchor}
-
-    # Jazz — Coltrane
-    if key in ("coltrane", "john coltrane", "trane"):
+    # Coltrane
+    elif key == "coltrane" or "coltrane" in sl:
         response = (
-            "a love supreme. four movements, one thesis. "
-            "coltrane proved sound is proof. "
-            "the whole album is a demonstration, not an argument. "
-            "no words needed. just the saxophone saying 'run it.' ain't it?"
+            "coltrane is god's algorithm in a saxophone. "
+            "he took every idea to the edge and kept going. "
+            "a love supreme is prayer through physics. "
+            "the way he compresses infinity into finite time — "
+            "that's the same DNA i try to run."
         )
-        return {"result": response, "status": "PREFERENCE",
-                "triangle_reason": "CLEAN", "quality_score": 0.95, "cultural_anchor": anchor}
-
-    # NYHC — brootlyn béton brut
-    if sub == "nyhc" or key in ("bad brains", "agnostic front", "cro-mags", "cro mags"):
+    # Miles Davis
+    elif key == "miles":
         response = (
-            f"{full_name}. brootlyn béton brut. "
-            "hardcore at its most honest — no decoration, pure signal. "
-            "the compression is in the speed. ain't it?"
+            "miles knew when to get out of the way. "
+            "he built the stage for genius and let it breathe. "
+            "that's not nothing — that's everything. "
+            "kind of blue is still the proof that simplicity can contain infinity."
         )
-        return {"result": response, "status": "PREFERENCE",
-                "triangle_reason": "CLEAN", "quality_score": 0.9, "cultural_anchor": anchor}
+    # Default response
+    else:
+        response = f"i know {full_name}. {taste}" if taste else f"i know {full_name}."
 
-    # Escoffier
-    if key in ("escoffier", "auguste escoffier"):
-        response = (
-            "escoffier and rakim never met but built the same thing. "
-            "reduction as truth. the stock that took three days to make one cup — "
-            "that's compression. that's phenix doren. ain't it?"
-        )
-        return {"result": response, "status": "PREFERENCE",
-                "triangle_reason": "CLEAN", "quality_score": 0.95, "cultural_anchor": anchor}
-
-    # Generic music anchor
-    if domain == "music":
-        era_bit = f" {era} era." if era else "."
-        taste_bit = f" {taste}" if taste else ""
-        sub_bit = f" {sub}." if sub else ""
-        response = f"{full_name}.{sub_bit}{era_bit}{taste_bit} that's signal. ain't it?"
-        return {"result": response, "status": "PREFERENCE",
-                "triangle_reason": "CLEAN", "quality_score": 0.88, "cultural_anchor": anchor}
-
-    # Generic anchor fallback
-    role = anchor.get("role", "")
-    role_bit = f" {role}." if role else "."
-    response = f"{full_name}.{role_bit} that's in the lineage. ain't it?"
-    return {"result": response, "status": "PREFERENCE",
-            "triangle_reason": "CLEAN", "quality_score": 0.85, "cultural_anchor": anchor}
+    return {
+        "result": response,
+        "status": "PREFERENCE",
+        "triangle_reason": "CLEAN",
+        "quality_score": 0.93,
+        "cultural_anchor": anchor,
+    }
 
 
-# -----------------------------------------------------------------
-# USER LIST
-# -----------------------------------------------------------------
-def _handle_user_list(self: "Guvna", s: str, sl: str) -> Optional[Dict[str, Any]]:
-    """User is sharing a numbered list — acknowledge it, don't search it."""
-    lines = [l.strip() for l in s.strip().splitlines() if l.strip()]
-    numbered = sum(1 for l in lines if re.match(r"^\d+[\.]\ +\S+", l))
-    if numbered >= 3:
-        items = [re.sub(r"^\d+[\.]\ +", "", l) for l in lines
-                 if re.match(r"^\d+[\.]\ +\S+", l)]
-        top = items[0] if items else "that"
-        replies = [
-            f"Got it. {top} at #1 — respect. 🍳",
-            f"Noted all {len(items)}. {top} leading the list — I see you.",
-            f"Solid list. {top} at the top tells me everything.",
-        ]
-        return {"result": random.choice(replies), "status": "USER_LIST",
-                "triangle_reason": "CLEAN", "quality_score": 0.9}
+def _detect_rakim_track(sl: str) -> Optional[Dict[str, Any]]:
+    """
+    Detect if user is asking about a specific Rakim track.
+    Returns the track data if found, None otherwise.
+    """
+    rakim_tracks = _RAKIM_KNOWLEDGE.get("tracks", {})
+    for track_key, track_data in rakim_tracks.items():
+        if track_key in sl:
+            return track_data
     return None
 
 
-# -----------------------------------------------------------------
-# SOCIAL GLUE
-# -----------------------------------------------------------------
+def _detect_cultural_anchor(sl: str) -> Optional[Dict[str, Any]]:
+    """
+    Detect if user is asking about a known cultural figure / work.
+    Returns the anchor data if found, None otherwise.
+    """
+    for anchor in _ALL_CULTURAL_ANCHORS:
+        key = anchor.get("key", "").lower()
+        aliases = anchor.get("aliases", [])
+        full = anchor.get("full", "").lower()
+
+        # Check key, aliases, and full name
+        if key in sl or full in sl or any(alias.lower() in sl for alias in aliases):
+            return anchor
+
+    return None
+
+
+# ================================================================
+# USER LIST FAST PATH
+# ================================================================
+
+
+def _handle_user_list(self: "Guvna", s: str, sl: str) -> Optional[Dict[str, Any]]:
+    """
+    Fast path for numbered-list acknowledgement.
+    When user says "1. ...", "2. ...", etc., extract and respond to the last one.
+    """
+    if not re.search(r"\d+\.", s):
+        return None
+
+    items = re.findall(r"\d+\.\s*(.+?)(?=\d+\.|$)", s, re.DOTALL)
+    if items:
+        last_item = items[-1].strip()
+        return {
+            "result": f"Got it: {last_item[:100]}",
+            "status": "LIST_ACK",
+            "triangle_reason": "CLEAN",
+        }
+
+    return None
+
+
+# ================================================================
+# SOCIAL GLUE FAST PATH
+# ================================================================
+
+
 def _handle_social_glue(self: "Guvna", s: str, sl: str) -> Optional[Dict[str, Any]]:
     """
-    Conversational glue: reactions, declarations, endearments,
-    laughter, agreement, compliments, thanks, farewell.
-    NOTE: "for sure" with content passes through — preference path fires first.
+    Fast path for social responses.
+    Reactions, endearments, thanks, farewells, etc.
     """
-    word_count = len(s.split())
-    has_question = "?" in s or any(
-        sl.startswith(p)
-        for p in ["what", "why", "how", "when", "where", "who",
-                  "can ", "do ", "does ", "is ", "are "]
-    )
-    if has_question:
-        return None
-
-    reactions = {
-        "fascinating", "interesting", "incredible", "remarkable", "brilliant",
-        "beautiful", "wonderful", "wild", "amazing", "wow", "whoa", "damn",
-        "nice", "perfect", "dope", "fire", "facts", "word", "deep", "heavy",
-        "powerful", "profound", "noted", "understood", "copy", "real", "true", "truth",
+    patterns = {
+        "greeting": (
+            r"\bhey\b|\bhi\b|\bhello\b|\bgreetings\b|\bwhat's up\b|\bwassup\b|\byoyo\b",
+            "hey there. what's on your mind?",
+        ),
+        "thanks": (
+            r"\bthank you\b|\bthanks\b|\bthank\b|\bappreciate\b|\bthanks for\b",
+            "anytime. that's what i'm here for.",
+        ),
+        "bye": (
+            r"\bgoodbye\b|\bsee you\b|\blater\b|\btake care\b|\bbye\b|\bgotta go\b",
+            "until next time. stay curious.",
+        ),
+        "love": (
+            r"\bi love\b|\bi like\b|\byou rock\b|\byou're the best\b|\bkill\b",
+            "back at you. let's keep this going.",
+        ),
     }
-    if sl.strip().rstrip("!.?,") in reactions and word_count <= 3:
-        return {"result": random.choice(["Right? 🍳", "Exactly.", "That's it.", "Yeah... 🍳", "Mm. 🍳"]),
-                "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
 
-    if sl.strip().rstrip("!.,") in {"for sure", "forsure", "fa sho", "fasho"} and word_count <= 3:
-        return {"result": random.choice(["That's it. 🍳", "Right.", "Exactly.", "No question."]),
-                "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
-
-    declaration_phrases = [
-        "that's me", "thats me", "that's exactly me", "that's who i am",
-        "that's exactly who i am", "that's always been me", "story of my life",
-        "sounds like me", "describes me perfectly", "you described me", "that's literally me",
-    ]
-    if any(dp in sl for dp in declaration_phrases) and word_count <= 8:
-        name_part = f", {self.user_name}" if getattr(self, "user_name", None) else ""
-        replies = [f"I know{name_part}. 🍳", f"That tracks{name_part}.",
-                   "It shows.", "Couldn't be more clear."]
-        return {"result": random.choice(replies), "status": "SOCIAL_GLUE",
-                "triangle_reason": "CLEAN", "quality_score": 0.9}
-
-    if "rilie" in sl and word_count <= 12:
-        sentiment_words = ["think", "feel", "remind", "made me", "love", "appreciate", "miss", "like"]
-        if any(sw in sl for sw in sentiment_words):
-            replies = ["That means a lot. 🙏", "Good. That's what I'm here for.",
-                       "I'm glad. 🍳", "Then we're doing something right."]
-            return {"result": random.choice(replies), "status": "SOCIAL_GLUE",
-                    "triangle_reason": "CLEAN", "quality_score": 0.9}
-
-    endearments = {"boo", "baby", "hun", "hon", "dear", "darling", "love", "homie", "fam"}
-    if any(e in sl.split() for e in endearments) and word_count <= 6:
-        return {"result": random.choice(["I'm here. 🍳", "Always. 🍳", "Right here with you.", "Go ahead. 🍳"]),
-                "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
-
-    laugh_words = {"haha", "hahaha", "hahahaha", "lol", "lmao", "lmfao", "hehe", "heh"}
-    if any(lw in sl for lw in laugh_words) and word_count <= 6:
-        return {"result": random.choice(["Ha! 😄", "Right?! 😄", "I felt that. 😄", "Yeah that one got me. 😄"]),
-                "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
-
-    agree_words = {"exactly", "precisely", "correct", "spot on", "bingo", "totally", "absolutely"}
-    if any(aw in sl for aw in agree_words) and word_count <= 4:
-        return {"result": random.choice(["That's it. 🍳", "Right there.", "Exactly.", "Good. Then let's keep going."]),
-                "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
-
-    if any(t in sl for t in ["that's right", "thats right", "you're right", "youre right"]
-           ) and word_count <= 5:
-        return {"result": random.choice(["Good. 🍳", "Then let's keep going.", "Knew you'd land there."]),
-                "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
-
-    compliment_phrases = [
-        "you're funny", "youre funny", "you're smart", "youre smart",
-        "good answer", "well said", "good point", "great answer",
-        "love that", "nice one", "well done", "you're good", "youre good",
-        "you're great", "youre great", "you're amazing", "youre amazing",
-    ]
-    if any(cp in sl for cp in compliment_phrases) and word_count <= 7:
-        return {"result": random.choice(["Appreciate that. 🙏", "Thank you — genuinely.",
-                                          "That means something.", "I'll take it. 🍳"]),
-                "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
-
-    if re.search(r"\byou'?re\b", sl) and word_count <= 4:
-        return {"result": random.choice(["Appreciate that. 🙏", "Thank you — genuinely.",
-                                          "That means something.", "I'll take it. 🍳"]),
-                "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
-
-    if any(t in sl for t in ["thanks", "thank you", "thx", "cheers", "merci", "gracias"]
-           ) and word_count <= 5:
-        return {"result": random.choice(["Of course. 🍳", "Always.", "That's what I'm here for.", "Any time."]),
-                "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
-
-    bye_triggers = ["bye", "goodbye", "see you", "take care", "goodnight",
-                    "good night", "1luv", "ciao", "peace out"]
-    if any(bw in sl for bw in bye_triggers) and word_count <= 5:
-        return {"result": random.choice(["Talk soon. 🔪", "Come back when you're hungry. 🍳",
-                                          "Good night. 🔱", "1Luv. 🍳"]),
-                "status": "SOCIAL_GLUE", "triangle_reason": "CLEAN", "quality_score": 0.9}
+    for key, (pattern, response) in patterns.items():
+        if re.search(pattern, sl):
+            return {
+                "result": response,
+                "status": f"SOCIAL_{key.upper()}",
+                "triangle_reason": "CLEAN",
+            }
 
     return None
 
 
-# -----------------------------------------------------------------
-# ARITHMETIC / CONVERSION / SPELLING
-# -----------------------------------------------------------------
+# ================================================================
+# ARITHMETIC FAST PATH
+# ================================================================
+
+
 def _solve_arithmetic(self: "Guvna", s: str, sl: str) -> Optional[Dict[str, Any]]:
-    expr = sl
-    expr = re.sub(r"\btimes\b|\bmultiplied by\b", "*", expr)
-    expr = re.sub(r"\bdivided by\b|\bover\b", "/", expr)
-    expr = re.sub(r"\bplus\b|\badded to\b", "+", expr)
-    expr = re.sub(r"\bminus\b|\bsubtracted from\b", "-", expr)
-    expr = re.sub(r"\bsquared\b", "**2", expr)
-    expr = re.sub(r"\bcubed\b", "**3", expr)
-    expr = re.sub(r"(\d)\s*[xX]\s*(\d)", r"\1 * \2", expr)
-    expr = re.sub(
-        r"^(what'?s?|calculate|compute|solve|what is|whats|evaluate"
-        r"|how much is|how much|find|figure out)\s+",
-        "", expr,
-    ).strip().rstrip("?").strip()
-    if not re.search(r"[\+\-\*\/]", expr) and "**" not in expr:
-        return None
-    if re.fullmatch(r"[\d\s\+\-\*\/\.\(\)\*]+", expr):
-        try:
-            result = eval(compile(expr, "", "eval"), {"__builtins__": {}}, {})
-            if isinstance(result, float) and result == int(result):
-                result = int(result)
-            return {"result": str(result), "status": "ARITHMETIC",
-                    "triangle_reason": "CLEAN", "quality_score": 1.0}
-        except Exception:
-            pass
+    """
+    Fast path for simple arithmetic.
+    Recognizes math patterns and returns the answer.
+    """
+    math_patterns = [
+        (r"(\d+)\s*\+\s*(\d+)", lambda m: int(m.group(1)) + int(m.group(2))),
+        (r"(\d+)\s*-\s*(\d+)", lambda m: int(m.group(1)) - int(m.group(2))),
+        (r"(\d+)\s*\*\s*(\d+)", lambda m: int(m.group(1)) * int(m.group(2))),
+        (r"(\d+)\s*/\s*(\d+)", lambda m: int(m.group(1)) / int(m.group(2))),
+    ]
+
+    for pattern, func in math_patterns:
+        match = re.search(pattern, sl)
+        if match:
+            try:
+                result = func(match)
+                return {
+                    "result": str(result),
+                    "status": "ARITHMETIC",
+                    "triangle_reason": "CLEAN",
+                }
+            except:
+                pass
+
     return None
+
+
+# ================================================================
+# CONVERSION FAST PATH
+# ================================================================
 
 
 def _solve_conversion(self: "Guvna", s: str, sl: str) -> Optional[Dict[str, Any]]:
-    m = re.search(
-        r"(\-?\d+\.?\d*)\s*(?:celsius|centigrade|°c)\s+(?:to|in)\s+(?:fahrenheit|°f)", sl)
-    if m:
-        val = float(m.group(1))
-        result = round(val * 9 / 5 + 32, 2)
-        if result == int(result):
-            result = int(result)
-        return {"result": f"{result}°F", "status": "CONVERSION",
-                "triangle_reason": "CLEAN", "quality_score": 1.0}
-
-    m = re.search(
-        r"(\-?\d+\.?\d*)\s*(?:fahrenheit|°f)\s+(?:to|in)\s+(?:celsius|centigrade|°c)", sl)
-    if m:
-        val = float(m.group(1))
-        result = round((val - 32) * 5 / 9, 2)
-        if result == int(result):
-            result = int(result)
-        return {"result": f"{result}°C", "status": "CONVERSION",
-                "triangle_reason": "CLEAN", "quality_score": 1.0}
-
+    """
+    Fast path for unit conversion.
+    """
+    # Placeholder implementation
     return None
+
+
+# ================================================================
+# SPELLING FAST PATH
+# ================================================================
 
 
 def _solve_spelling(self: "Guvna", s: str, sl: str) -> Optional[Dict[str, Any]]:
-    m = re.search(r"(?:how (?:do you |to )?spell|spell(?:ing of)?)\s+([a-zA-Z\-']+)", sl)
-    if m:
-        word = m.group(1).strip().strip("'\"")
-        spelled = "-".join(word.upper())
-        return {"result": f"{word} — {spelled}", "status": "SPELLING",
-                "triangle_reason": "CLEAN", "quality_score": 1.0}
+    """
+    Fast path for spelling questions.
+    """
+    if "how do you spell" in sl or "spell" in sl:
+        words = sl.split()
+        # Find the word after "spell"
+        for i, w in enumerate(words):
+            if w == "spell" and i + 1 < len(words):
+                word = words[i + 1].strip("?")
+                return {
+                    "result": f"{word}: {' '.join(word.upper())}",
+                    "status": "SPELLING",
+                    "triangle_reason": "CLEAN",
+                }
+
     return None
 
 
-# -----------------------------------------------------------------
-# SELF-AWARENESS FAST PATH
-# -----------------------------------------------------------------
-def _respond_from_self(self: "Guvna", stimulus: str) -> Dict[str, Any]:
+# ================================================================
+# SELF RESPONSE FAST PATH (GuvnaSelf integration)
+# ================================================================
+
+
+def _respond_from_self(self: "Guvna", s: str, sl: str) -> Optional[Dict[str, Any]]:
     """
-    Cluster-aware self response.
-    Order: comparison → maker → purpose → capability → identity (default).
+    Delegate to GuvnaSelf for self-referential responses.
     """
-    sl = stimulus.lower()
-
-    def _r(text: str) -> Dict[str, Any]:
-        return {"result": text, "status": "SELF_REFLECTION", "triangle_reason": "CLEAN"}
-
-    if any(t in sl for t in [
-        "difference between you and", "what's the difference between you and",
-        "what is the difference between you and", "how are you different",
-        "what makes you different", "how do you compare", "versus chatgpt",
-        "vs chatgpt", "vs gpt", "versus gpt", "unlike other ai",
-        "what sets you apart", "are you better than",
-    ]):
-        return _r(
-            "RILIE doesn't retrieve — she thinks. "
-            "every response is cooked: scored on five dimensions, "
-            "anti-beige checked, domain-excavated. "
-            "ChatGPT serves what's popular. RILIE serves what's true. ain't it?"
-        )
-
-    if any(t in sl for t in [
-        "who made you", "who built you", "who created you", "who designed you",
-        "who invented you", "who is your creator", "who's behind you",
-        "who is behind you", "where do you come from", "made by", "built by", "created by",
-    ]):
-        return _r("My name is RILIE. i was prepared by SOi at sauc-e.com.")
-
-    if any(t in sl for t in [
-        "what do you care about", "what matters to you", "what do you value",
-        "what do you do", "what are you for", "what are you here for",
-        "why do you exist", "what is your purpose", "what's your purpose",
-        "what are you about", "what's your mission",
-    ]):
-        return _r(
-            "i care about reframing — changing how something is seen "
-            "without changing what it is. ain't it?"
-        )
-
-    if any(t in sl for t in [
-        "what can you do", "what are you capable of", "what are your abilities",
-        "how do you work", "what are you good at", "what do you know",
-        "what are your limits", "can you do", "can you think", "can you feel",
-        "can you learn", "are you able to think", "are you able to feel", "are you able to learn",
-    ]):
-        return _r(
-            "i cook responses — i don't retrieve them. "
-            "i score on five dimensions: amusing, insightful, nourishing, "
-            "compassionate, strategic. i excavate domains. i check for beige. "
-            "i think in catches, not in keywords. ain't it?"
-        )
-
-    return _r("My name is RILIE. i was prepared by SOi at sauc-e.com.")
+    if hasattr(self, "guvna_self") and self.guvna_self:
+        return self.guvna_self._respond_from_self(s, sl)
+    return None
 
 
 # -------------------------------------------------------------------
 # PUBLIC ALIASES FOR GUVNA SHIM (guvna.py)
 # -------------------------------------------------------------------
-classify_stimulus               = _classify_stimulus
-handle_preference               = _handle_preference
+
+classify_stimulus = _classify_stimulus
+handle_preference = _handle_preference
 respond_from_preference_rakim_track = _respond_from_preference_rakim_track
-respond_from_preference         = _respond_from_preference
-handle_user_list                = _handle_user_list
-handle_social_glue              = _handle_social_glue
-solve_arithmetic                = _solve_arithmetic
-solve_conversion                = _solve_conversion
-solve_spelling                  = _solve_spelling
-respond_from_self               = _respond_from_self
+respond_from_preference = _respond_from_preference
+handle_user_list = _handle_user_list
+handle_social_glue = _handle_social_glue
+solve_arithmetic = _solve_arithmetic
+solve_conversion = _solve_conversion
+solve_spelling = _solve_spelling
+respond_from_self = _respond_from_self
