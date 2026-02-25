@@ -223,4 +223,4 @@ if __name__ == "__main__":
 # PUBLIC ALIASES FOR GUVNA SHIM (guvna.py)
 # -------------------------------------------------------------------
 apply_domain_lenses = _apply_domain_lenses
-get_base
+get_baseline
