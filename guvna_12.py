@@ -83,6 +83,48 @@ except ImportError:
     search_curiosity = None
 
 # ============================================================================ #
+# CULTURAL ANCHORS + TASTE PROFILE
+# ============================================================================ #
+
+# Master registry of all cultural anchors pulled in from this module.
+# If you add more *_ANCHORS dicts below, include them here.
+try:
+    _ALL_CULTURAL_ANCHORS: Dict[str, Dict[str, Any]] = {}
+    _ALL_CULTURAL_ANCHORS.update(_HIPHOP_ANCHORS)  # from paste.txt / anchors section
+    # If you later define more sets like _ROCK_ANCHORS, _LIT_ANCHORS, etc.,
+    # you can merge them in here as well:
+    # _ALL_CULTURAL_ANCHORS.update(_ROCK_ANCHORS)
+    # _ALL_CULTURAL_ANCHORS.update(_LIT_ANCHORS)
+except NameError:
+    # If anchor dicts are not yet defined, fall back to empty without crashing.
+    _ALL_CULTURAL_ANCHORS = {}
+
+# A focused slice of anchors that represent “Rakim-level” knowledge density.
+_RAKIM_KNOWLEDGE: Dict[str, Any] = _ALL_CULTURAL_ANCHORS.get("rakim", {})
+
+# RILIE’s taste profile – which anchors & domains she naturally leans toward.
+_RILIE_TASTE: Dict[str, Any] = {
+    "music_anchors": [
+        "rakim",
+        "eric b and rakim",
+        "a tribe called quest",
+        "de la soul",
+        "outkast",
+        "kendrick lamar",
+        "black thought",
+    ],
+    "priority_domains": [
+        "music",
+        "life",
+        "linguistics_cognition",
+        "games",
+        "urban_design",
+    ],
+    "notes": "Bias toward dense, thoughtful lyricism and groove-focused production.",
+}
+
+
+# ============================================================================ #
 # DOMAIN LIBRARY METADATA
 # ============================================================================ #
 
