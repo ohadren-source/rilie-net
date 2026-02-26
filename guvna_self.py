@@ -59,6 +59,15 @@ except ImportError:
     def less_is_more_or_less(text: str) -> str:  # type: ignore
         return text  # graceful degradation — transform unavailable
 
+# Chomsky — the grammar brain. Used for name extraction (regex + spaCy NER).
+try:
+    from ChomskyAtTheBit import extract_customer_name as _chomsky_extract_name
+    CHOMSKY_AVAILABLE = True
+except ImportError:
+    CHOMSKY_AVAILABLE = False
+    def _chomsky_extract_name(stimulus: str) -> Optional[str]:  # type: ignore
+        return None  # graceful degradation — Chomsky unavailable
+
 
 logger = logging.getLogger("guvna_self")
 
@@ -98,6 +107,30 @@ class GuvnaSelf:
     # NAME CAPTURE — turn after she asked "what's your name?"
     # -----------------------------------------------------------------
 
+    # Fallback lead-in phrases used ONLY when Chomsky is unavailable.
+    # Ordered longest-first so "my name is" matches before "my".
+    _NAME_LEAD_INS = [
+        "my name is", "my name's", "the name is", "the name's",
+        "they call me", "people call me", "you can call me",
+        "call me", "i'm called", "i am called",
+        "i go by", "just call me",
+        "it's", "its", "it is",
+        "i'm", "im", "i am",
+        "this is", "hey i'm", "hi i'm",
+        "hey it's", "hi it's",
+        "hey im", "hi im",
+        "pleasure", "nice to meet you",
+    ]
+
+    # Words that are never names
+    _BAD_NAME_TOKENS = {
+        "yes", "no", "ok", "okay", "sure", "hey", "hi", "hello",
+        "thanks", "nah", "idk", "what", "huh", "nothing", "nevermind",
+        "good", "fine", "great", "cool", "nice", "well",
+        "introduce", "called", "myself", "allow", "please",
+        "i", "me", "my", "am", "is", "are", "a", "an", "the",
+    }
+
     def _handle_name_capture(self, s: str, sl: str) -> Optional[Dict[str, Any]]:
         """
         Fast path: catch the name on the turn after RILIE asked for it.
@@ -105,7 +138,11 @@ class GuvnaSelf:
         Only fires if:
         - self._awaiting_name is True
         - self.user_name is not already set
-        - stimulus is 1-3 words and not a known filler/bad word
+
+        Strategy:
+        1. Try Chomsky (regex patterns + spaCy NER) — the real grammar brain.
+        2. If Chomsky is unavailable or returns nothing, fall back to
+           lead-in stripping + first-word grab.
 
         Writes:
         - self.user_name
@@ -114,25 +151,54 @@ class GuvnaSelf:
         if not self._awaiting_name or (self.user_name and self.user_name != "Mate"):
             return None
 
-        words = s.strip().strip(".,!?;:\"'").split()
-        if not words or len(words) > 3:
+        candidate = None
+
+        # --- PRIMARY: Chomsky grammar brain ---
+        if CHOMSKY_AVAILABLE:
+            try:
+                candidate = _chomsky_extract_name(s)
+            except Exception:
+                candidate = None
+
+        # --- FALLBACK: lead-in stripping + first-word grab ---
+        if not candidate:
+            cleaned = s.strip().strip(".,!?;:\"'")
+            cleaned_lower = cleaned.lower()
+
+            # Strip lead-in phrases to get the actual name
+            for phrase in self._NAME_LEAD_INS:
+                if cleaned_lower.startswith(phrase):
+                    remainder = cleaned[len(phrase):].strip().strip(".,!?;:\"'")
+                    if remainder:
+                        cleaned = remainder
+                        cleaned_lower = cleaned.lower()
+                    break
+
+            words = cleaned.split()
+            if not words or len(words) > 5:
+                return None
+
+            first = words[0].capitalize()
+            if first.lower() in self._BAD_NAME_TOKENS:
+                return None
+
+            # If they gave first + last, keep both
+            if len(words) >= 2 and words[1][0:1].isupper():
+                candidate = f"{words[0].capitalize()} {words[1].capitalize()}"
+            else:
+                candidate = first
+
+        if not candidate or len(candidate.strip()) < 2:
             return None
 
-        _bad = {
-            "yes", "no", "ok", "okay", "sure", "hey", "hi", "hello",
-            "thanks", "nah", "idk", "what", "huh", "nothing", "nevermind",
-            "good", "fine", "great", "cool", "nice", "well",
-        }
-
-        candidate = words[0].capitalize()
-        if candidate.lower() in _bad:
-            return None
+        # Clean any trailing junk Chomsky might leave
+        candidate = candidate.strip().rstrip(".,!?;:\"'")
 
         self.user_name = candidate
         self._awaiting_name = False
 
         replies = [
-            f"Nice to meet you, {self.user_name}! 🍳 What's on your mind?",
+            f"Pleasure to meet you, {self.user_name}! 🍳 What's on your mind?",
             f"{self.user_name}! Good name. What are we getting into?",
             f"Great, {self.user_name}. What's on your mind?",
         ]

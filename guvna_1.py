@@ -83,7 +83,7 @@ def load_catch44_blueprint() -> Dict[str, Any]:
         Dictionary of axiom tracks (0-69) mapped to their rules.
     """
     try:
-        with open("SOi_sauce_blueprint.md", "r") as f:
+        with open("SOi_sauc_e_SOME_KINDA_BLUEPRINT.md", "r") as f:
             content = f.read()
         
         # Parse markdown into axiom dict
@@ -107,7 +107,7 @@ def load_catch44_blueprint() -> Dict[str, Any]:
         return axioms
     
     except FileNotFoundError:
-        logger.warning("GUVNA KERNEL: SOi_sauce_blueprint.md not found — proceeding without axioms")
+        logger.warning("GUVNA KERNEL: SOi_sauc_e_SOME_KINDA_BLUEPRINT.md not found — proceeding without axioms")
         return {}
     except Exception as e:
         logger.error("GUVNA KERNEL: Failed to load blueprint: %s", e)
@@ -347,42 +347,6 @@ class Guvna(GuvnaSelf):
         """Helper stub — stitched in from guvna_2plus"""
         return {}
     
-    def _finalize_response(self, raw: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Final pass before response leaves the kitchen.
-        
-        - Apply tone signaling
-        - Memory logging
-        - Yellow gate health check
-        - Return clean response dict
-        """
-        
-        stimulus = raw.get("stimulus", "")
-        result = raw.get("result", "")
-        
-        # Tone detection
-        tone = detect_tone_from_stimulus(stimulus)
-        raw["tone"] = tone
-        
-        # Apply tone emoji to result text (not the whole dict)
-        raw["result"] = apply_tone_header(raw.get("result", ""), tone)
-        
-        # Log to memory
-        try:
-            self.conversation_memory.log_turn(
-                stimulus=stimulus,
-                response=result,
-                tone=tone,
-            )
-        except Exception as e:
-            logger.debug("GUVNA: Memory logging failed (non-fatal): %s", e)
-        
-        # Quality score (default if not set)
-        if "quality_score" not in raw:
-            raw["quality_score"] = 0.5
-        
-        # Status (default)
-        if "status" not in raw:
-            raw["status"] = "OK"
-        
-        return raw
+    # _finalize_response lives in GuvnaSelf (guvna_self.py) — THE WRITER.
+    # Do NOT define it here. The parent mixin owns it.
+    # Any stub here would shadow the real one and break tone/history/LIMO.
