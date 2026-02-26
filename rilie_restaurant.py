@@ -56,6 +56,14 @@ from rilie_innercore import (
     run_pass_pipeline,
 )
 
+# Meaning.py: semantic fingerprinting
+try:
+    from meaning import read_meaning, MeaningFingerprint
+    MEANING_AVAILABLE = True
+except ImportError:
+    MEANING_AVAILABLE = False
+    logger.warning("meaning.py not available")
+
 # ============================================================================
 # THE RESTAURANT
 # ============================================================================

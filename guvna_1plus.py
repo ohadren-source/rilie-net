@@ -19,6 +19,14 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("guvna")
 
+# Try to load meaning.py (semantic fingerprinting)
+try:
+    from meaning import read_meaning
+    MEANING_AVAILABLE = True
+except Exception as e:
+    logger.warning("meaning.py not available: %s", e)
+    MEANING_AVAILABLE = False
+
 # This file is stitched into Guvna class via guvna.py shim
 # All methods below are added to Guvna(GuvnaSelf)
 

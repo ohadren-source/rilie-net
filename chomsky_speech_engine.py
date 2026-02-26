@@ -38,6 +38,14 @@ except Exception as e:
     logger.warning("Chomsky grammar engine not available: %s", e)
     CHOMSKY_AVAILABLE = False
 
+# Try to load meaning.py (semantic fingerprinting)
+try:
+    from meaning import read_meaning
+    MEANING_AVAILABLE = True
+except Exception as e:
+    logger.warning("meaning.py not available: %s", e)
+    MEANING_AVAILABLE = False
+
 
 # ============================================================================
 # SPEECH TRANSFORMATION — deep to surface structure
@@ -72,29 +80,49 @@ def transform_response_through_chomsky(
         return deep_structure_text
     
     try:
-        # Step 1: Understand what the stimulus is asking for
+        # Step 1: Understand what the stimulus is asking for (structure)
         stimulus_holy_trinity = extract_holy_trinity_for_roux(stimulus)
         stimulus_time_bucket = infer_time_bucket(stimulus)
         
-        # Step 2: Understand what we're saying in response
+        # Step 1b: Understand what the stimulus MEANS (semantics)
+        stimulus_meaning = None
+        if MEANING_AVAILABLE:
+            try:
+                stimulus_meaning = read_meaning(stimulus)
+            except Exception as e:
+                logger.debug("Stimulus meaning read failed: %s", e)
+        
+        # Step 2: Understand what we're saying in response (structure)
         response_holy_trinity = extract_holy_trinity_for_roux(deep_structure_text)
         response_time_bucket = infer_time_bucket(deep_structure_text)
         
-        # Step 3: Apply transformational rules
+        # Step 2b: Understand what our response MEANS (semantics)
+        response_meaning = None
+        if MEANING_AVAILABLE:
+            try:
+                response_meaning = read_meaning(deep_structure_text)
+            except Exception as e:
+                logger.debug("Response meaning read failed: %s", e)
+        
+        # Step 3: Apply transformational rules (grammar + meaning)
         # This is where grammar rules reshape the raw meaning
         transformed = apply_transformational_rules(
             deep_structure_text,
             stimulus_trinity=stimulus_holy_trinity,
             stimulus_time=stimulus_time_bucket,
+            stimulus_meaning=stimulus_meaning,
             response_trinity=response_holy_trinity,
             response_time=response_time_bucket,
+            response_meaning=response_meaning,
             disclosure_level=disclosure_level,
         )
         
         logger.debug(
-            "Chomsky transform: stimulus_time=%s response_time=%s",
+            "Chomsky transform: stimulus_time=%s response_time=%s stimulus_intent=%s response_intent=%s",
             stimulus_time_bucket,
             response_time_bucket,
+            stimulus_meaning.act if stimulus_meaning else "unknown",
+            response_meaning.act if response_meaning else "unknown",
         )
         
         return transformed
@@ -114,12 +142,15 @@ def apply_transformational_rules(
     text: str,
     stimulus_trinity: list,
     stimulus_time: str,
-    response_trinity: list,
-    response_time: str,
-    disclosure_level: str,
+    stimulus_meaning=None,
+    response_trinity: list=None,
+    response_time: str=None,
+    response_meaning=None,
+    disclosure_level: str="full",
 ) -> str:
     """
     Apply Chomskyan transformational grammar rules to reshape the response.
+    Also incorporate semantic meaning (intent, weight, pulse).
     
     Dayenu: Apply rules ONCE. Return immediately. One transformation.
     
@@ -128,6 +159,7 @@ def apply_transformational_rules(
       - Respects subject/object/focus structure
       - Grounds temporally (past/present/future)
       - Matches the discourse context
+      - Respects semantic intent (GET/GIVE/SHOW)
     """
     
     result = text
@@ -154,8 +186,11 @@ def apply_transformational_rules(
     # -----------------------------------------------------------------------
     # TASTE level: more conversational, less formal
     # FULL level: direct, complete, no hedging
+    # Also respect semantic weight: if response has high weight, don't soften it
     if disclosure_level == "taste":
-        result = adjust_formality_for_taste(result)
+        # Only soften if response weight is low (not heavy matters)
+        if not (response_meaning and response_meaning.weight > 0.7):
+            result = adjust_formality_for_taste(result)
     elif disclosure_level == "full":
         result = adjust_formality_for_full(result)
     
