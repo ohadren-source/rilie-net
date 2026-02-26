@@ -435,7 +435,7 @@ def process_multi_question_parts(
             continue
         text = str(part).strip()
         try:
-            part_result = guvna_instance.process(text, maxpass=max_pass)
+            part_result = guvna_instance.process(text)
         except Exception as e:
             logger.error("Error processing multi-Q part %d: %s", i, e)
             part_result = {"result": f"Error processing question {i}", "status": "ERROR", "quality_score": 0.0, "tone": "neutral"}
@@ -564,7 +564,7 @@ def run_rilie(req: RilieRequest, request: Request) -> Dict[str, Any]:
             "quality_score": multi["quality_score"],
         }
     else:
-        result = guvna.process(stimulus, maxpass=req.max_pass)
+        result = guvna.process(stimulus)
         if is_multi_question_response(result):
             logger.info("MULTI-QUESTION detected %s...", stimulus[:120])
             parts = extract_question_parts(result)
@@ -662,7 +662,7 @@ def generate_file(req: GenerateFileRequest) -> Dict[str, Any]:
     stimulus = req.stimulus.strip()
     if not stimulus:
         return {"stimulus": "", "ext": sanitize_ext(req.ext), "content": "", "status": "EMPTY", "filename": "", "download_url": ""}
-    result = guvna.process(stimulus, maxpass=3)
+    result = guvna.process(stimulus)
     content = str(result.get("result", ""))
     ext = sanitize_ext(req.ext)
     filename = save_generated_file(ext, content)
