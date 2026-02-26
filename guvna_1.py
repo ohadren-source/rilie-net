@@ -288,7 +288,7 @@ class Guvna(GuvnaSelf):
             logger.info("GUVNA BOOT: Kernel loaded — %d axiom tracks active", len(self.catch44_blueprint))
         
         # ===== MEMORY =====
-        self.conversation_memory = ConversationMemory()
+        self.memory = ConversationMemory()
         self.photogenic_db = PhotogenicDB()
         
         # ===== DOMAINS & LIBRARY =====
