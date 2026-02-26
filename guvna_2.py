@@ -33,8 +33,159 @@ logger = logging.getLogger("guvna")
 
 
 # =====================================================================
-# FAST PATH CLASSIFIER
+# IMMEDIATE INGREDIENT EXTRACTION — GATE CHECK
 # =====================================================================
+
+def _extract_ingredients_immediate(self: "Guvna", stimulus: str) -> Dict[str, Any]:
+    """
+    Extract all ingredients on arrival — BEFORE anything else touches the stimulus.
+    
+    This is the gate check. River watches this.
+    If any ingredient is NULL, River logs it and we know where to investigate.
+    
+    Ingredients:
+    - domains: What realm is this question in?
+    - intent: GET (factual) or GIVE (emotional)?
+    - tone: Detected from stimulus
+    - anchors: Known cultural references detected
+    - pulse: Signal strength (0.0-1.0)
+    
+    Returns:
+        Dict with all extracted ingredients. Never returns None — always returns dict.
+        If extraction fails for any ingredient, that field is NULL but dict is present.
+    """
+    s = stimulus.strip()
+    sl = s.lower()
+    
+    ingredients: Dict[str, Any] = {
+        "stimulus_short": s[:60],
+        "domains": [],
+        "intent": None,
+        "tone": None,
+        "anchors": [],
+        "pulse": 0.0,
+        "extraction_status": "OK",
+    }
+    
+    try:
+        # ===== DOMAIN EXTRACTION =====
+        # Try multiple sources in order
+        domains_found: List[str] = []
+        
+        # Source 1: rilie_innercore detect_domains
+        try:
+            from rilie_innercore import detect_domains
+            inner_domains = detect_domains(sl) or []
+            if inner_domains:
+                domains_found.extend(inner_domains)
+                logger.info("GUVNA INGREDIENT: InnerCore detected domains: %s", inner_domains)
+        except Exception as e:
+            logger.debug("GUVNA INGREDIENT: InnerCore unavailable: %s", e)
+        
+        # Source 2: SOI domain lookup
+        if domains_found or not domains_found:  # Try anyway
+            try:
+                from soi_domain_map import get_tracks_for_domains
+                if domains_found:
+                    soi_tracks = get_tracks_for_domains(domains_found) or []
+                    soi_domains = [t.get("domain", "") for t in soi_tracks if isinstance(t, dict)]
+                    if soi_domains:
+                        domains_found = list(set(domains_found + soi_domains))
+                        logger.info("GUVNA INGREDIENT: SOI expanded domains: %s", soi_domains)
+            except Exception as e:
+                logger.debug("GUVNA INGREDIENT: SOI lookup failed: %s", e)
+        
+        # Source 3: Library direct lookup
+        if not domains_found:
+            try:
+                if hasattr(self, "library_index") and self.library_index:
+                    # Try to find domain matches in stimulus
+                    words = sl.split()
+                    for word in words:
+                        if len(word) > 3:
+                            matching = [d for d in self.library_index.get_all_domains() if word in d.lower()]
+                            if matching:
+                                domains_found.extend(matching[:2])  # Take top 2
+                                break
+                    if domains_found:
+                        logger.info("GUVNA INGREDIENT: Library found domains: %s", domains_found[:3])
+            except Exception as e:
+                logger.debug("GUVNA INGREDIENT: Library lookup failed: %s", e)
+        
+        # Dedupe and store
+        ingredients["domains"] = list(dict.fromkeys(domains_found))[:5]  # Top 5
+        if not ingredients["domains"]:
+            logger.warning("GUVNA INGREDIENT: NO DOMAINS EXTRACTED — %s", s[:60])
+            ingredients["extraction_status"] = "NO_DOMAINS"
+        
+        # ===== INTENT DETECTION =====
+        # GET (factual) vs GIVE (emotional)
+        if any(pattern in sl for pattern in ["what is", "explain", "tell me about", "how", "define", "when", "where"]):
+            ingredients["intent"] = "GET"
+        elif any(pattern in sl for pattern in ["feel", "think about", "opinion", "should i", "would you"]):
+            ingredients["intent"] = "GIVE"
+        else:
+            ingredients["intent"] = "UNKNOWN"
+        
+        logger.info("GUVNA INGREDIENT: Intent = %s", ingredients["intent"])
+        
+        # ===== TONE DETECTION =====
+        try:
+            from guvna_tools import detect_tone_from_stimulus
+            tone = detect_tone_from_stimulus(stimulus)
+            ingredients["tone"] = tone
+            logger.info("GUVNA INGREDIENT: Tone = %s", tone)
+        except Exception as e:
+            logger.debug("GUVNA INGREDIENT: Tone detection failed: %s", e)
+            ingredients["tone"] = "neutral"
+        
+        # ===== CULTURAL ANCHORS =====
+        # Check if stimulus mentions known artists/concepts
+        try:
+            if hasattr(self, "cultural_anchors") and self.cultural_anchors:
+                for anchor_name, anchor_data in self.cultural_anchors.items():
+                    if anchor_name.lower() in sl:
+                        ingredients["anchors"].append(anchor_name)
+                
+                if ingredients["anchors"]:
+                    logger.info("GUVNA INGREDIENT: Anchors detected: %s", ingredients["anchors"])
+        except Exception as e:
+            logger.debug("GUVNA INGREDIENT: Anchor detection failed: %s", e)
+        
+        # ===== PULSE (SIGNAL STRENGTH) =====
+        # Simple heuristic: length + punctuation + question mark
+        pulse = min(len(s) / 200.0, 1.0)  # Length factor
+        if "?" in s:
+            pulse += 0.2
+        if any(c in s for c in "!@#$%"):
+            pulse += 0.1
+        if ingredients["domains"]:
+            pulse += 0.2
+        if ingredients["intent"] != "UNKNOWN":
+            pulse += 0.1
+        
+        ingredients["pulse"] = min(pulse, 1.0)
+        logger.info("GUVNA INGREDIENT: Pulse = %.2f", ingredients["pulse"])
+        
+    except Exception as e:
+        logger.error("GUVNA INGREDIENT: Extraction failed (fatal): %s", e)
+        ingredients["extraction_status"] = "EXTRACTION_FAILED"
+    
+    # ===== RIVER LOG =====
+    logger.info(
+        "GUVNA INGREDIENT SUMMARY: domains=%d intent=%s tone=%s anchors=%d pulse=%.2f status=%s",
+        len(ingredients["domains"]),
+        ingredients["intent"],
+        ingredients["tone"],
+        len(ingredients["anchors"]),
+        ingredients["pulse"],
+        ingredients["extraction_status"],
+    )
+    
+    return ingredients
+
+
+
 def _classify_stimulus(self: "Guvna", stimulus: str) -> Optional[Dict[str, Any]]:
     """
     Route stimulus through all fast paths before waking up Kitchen.

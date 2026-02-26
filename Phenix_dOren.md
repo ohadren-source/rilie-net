@@ -1,157 +1,344 @@
-# **Phénix d'Oren --- The Complete Blueprint (Producer Stack Cut)**
+# Phénix d'Oren --- The Complete Blueprint (Session 3 - CURRENT STATE)
 
-***Updated: Feb 23, 2026 --- Session 2 COMPLETE***
+## EXECUTIVE SUMMARY — Feb 26, 2026, 00:45 UTC
 
-## Part I --- The Restaurant Architecture
+**Phénix d'Oren is a software kitchen modeled on Auguste Escoffier's Brigade de Cuisine, built in Python across 12+ core files (split architecture), initialized with Catch 44 kernel axioms on boot, with immediate ingredient extraction at the gate.**
 
-**Phénix d'Oren is a software kitchen modeled on Auguste Escoffier's Brigade de Cuisine, built unconsciously over a lifetime of absorbed patterns and then poured into Python across 6 core files + 4 new stations on a 900 USD budget in 39 days at ~3% effort. The kitchen has since been expanded: same brigade, more stations, same soul.**
-
-## The Brigade
-
-***(unchanged --- all original stations preserved)***
-
-**New stations added this session:**
-
--   **MAÎTRE D' (less_is_more_or_less) --- The Universal Transform. The last thing before the door. Runs on every response before it leaves the pass. Strip everything that is not the feeling. Whatever remains --- serve it. She's never wrong. Forgiven by design. Demi-glace, not glaze.**
-
--   **SOMMELIER (detect_precision_request / precision_override) --- Reads the table. When the guest wants THE ANSWER --- serves the answer. No philosophy. No blend. No poetry. Baseline gets 25% advantage. Skips the Maître D' entirely. The fact IS the demi-glace. Already reduced. The only thing that overrides Less Is More Or Less.**
-
-## The 34 Functions *(was 32)*
-
-**All original 32 functions unchanged. Two added:**
-
--   **MAÎTRE D'** --- `less_is_more_or_less()`
-
--   **SOMMELIER** --- `detect_precision_request()`, `precision_override` gate in `_finalize_response()`
-
-## Part II --- Kitchen Governance: The Eleven Axioms
-
-***(all 11 unchanged)***
-
-**Axiom 11 addendum:**
-
-> **Less Is More Or Less --- the operational form of Rubin's reducer principle.**
-> **Sufficiency = Proficiency / Perfection**
-> **Precision Override --- the one case where the fact is already the reduction. QED.**
-
-## Part III --- Current State: Kitchen Online
-
-### Fixes Deployed (Feb 2026 --- Session 1)
-
-***(Fixes 1--6 unchanged)***
-
-### Fixes Deployed (Feb 2026 --- Session 2)
-
-**Fix 7 (guvna.py) --- PRECISION OVERRIDE: detect_precision_request()**
-
--   **_PRECISION_TRIGGERS** --- 25 factual GET patterns (what is, when did, who was, how many, where is, define, etc.)
-
--   **_PRECISION_EXCLUSIONS** --- opinion/open-ended patterns excluded (what do you think, what's life, etc.)
-
--   **Fires in process() at Step 3.1** --- after baseline lookup, before Kitchen
-
--   **Sets raw["precision_override"] = True and raw["baseline_score_boost"] = 0.25**
-
--   **Logged: "GUVNA: Precision override --- factual GET detected"**
-
-**Fix 8 (guvna_self.py) --- LIMO GATE in _finalize_response()**
-
--   **Import:** `from rilie_innercore import less_is_more_or_less` with graceful degradation (LIMO_AVAILABLE flag)
-
--   **Gate on the "result" line** --- the single universal choke point:
-
-```python
-"result": (
-    raw.get("result", "")  # PRECISION --- bypass
-    if raw.get("precision_override")
-    else less_is_more_or_less(raw.get("result", ""))  # EVERYTHING ELSE --- transform
-    if LIMO_AVAILABLE
-    else raw.get("result", "")  # FALLBACK --- no crash
-),
-```
-
-**Fix 9 (rilie_innercore_12.py) --- less_is_more_or_less() CANONICALIZED ABOVE 5-PRIORITY SCORERS**
-
--   **less_is_more_or_less() function defined above SCORERS** --- canonical source
-
--   **Graceful fallback logic:** if `limo.py` not available, does basic compression (remove filler, tighten structure, preserve meaning)
-
--   **Exported from rilie_innercore.py shim** --- `from rilie_innercore import less_is_more_or_less`
-
--   **Called in rilie_innercore_22.py** via `_apply_limo(text, precision_override=...)`
-
-**Fix 10 (rilie_innercore_22.py) --- SIGNATURE & PIPELINE WIRING**
-
--   **run_pass_pipeline() signature updated:**
-    - Added `precision_override: bool = False` parameter
-    - Added `baseline_score_boost: float = 0.03` parameter
-
--   **_effective_boost replaces hardcoded 1.03:**
-    ```python
-    _effective_boost = 1.0 + baseline_score_boost  # Default 0.03 (3% edge)
-    ```
-    - Guvna passes 0.25 on precision GETs (25% boost)
-    - Kitchen scores first. Baseline only wins if effective_boost pushes it over.
-
--   **LIMO wired into COMPRESSED and GUESS return paths:**
-    - Line 463: `compressed_text = _apply_limo(best.text, precision_override=precision_override)`
-    - Line 546: `guess_text = _apply_limo(best_global.text, precision_override=precision_override)`
-    - Both paths check `precision_override` — if True, LIMO bypassed entirely
-
--   **Imports added to rilie_innercore_22.py:**
-    - `less_is_more_or_less`, `LIMO_AVAILABLE`, `CHOMSKY_AVAILABLE`, `SCORERS`, `WEIGHTS`
-    - `construct_response`, `construct_blend`, `anti_beige_check`, `detect_question_type`
-    - `DOMAIN_KNOWLEDGE`, `DOMAIN_KEYWORDS`, `WORD_DEFINITIONS`, `WORD_SYNONYMS`, `WORD_HOMONYMS`
-    - Chompky fallback imports
-
-## Part IV --- Completion Status (Resume Point)
-
-### ✅ COMPLETE --- Deployed & Ready
-
-| File | What was done | Delivered as |
-|------|---------------|--------------|
-| guvna.py | detect_precision_request() + _PRECISION_TRIGGERS + _PRECISION_EXCLUSIONS + Step 3.1 wire | guvna_22.py (complete) |
-| guvna_self.py | LIMO import + LIMO_AVAILABLE flag + precision gate in _finalize_response() | guvna_self_NEW.py (complete) |
-| rilie_innercore_12.py | less_is_more_or_less() canonicalized ABOVE 5-PRIORITY SCORERS with graceful fallback | COMPLETE |
-| rilie_innercore_22.py | All imports wired; run_pass_pipeline() signature updated with precision_override + baseline_score_boost; _effective_boost replacing 1.03; LIMO wired into COMPRESSED + GUESS return paths | COMPLETE |
-| rilie_innercore.py | Shim updated to export less_is_more_or_less in __all__ | COMPLETE |
-
-### ⏳ NEXT (Phase 3)
-
-| File | What's needed |
-|------|---------------|
-| rilie_outercore.py | LIMO shelf in all 9 domains; 4 WORD_DEFINITIONS entries; 3 WORD_SYNONYMS entries |
-
-## The Doctrine (Finalized --- Feb 23, 2026)
-
-> **Less Is More Or Less**
-> 
-> The universal transform. Runs on everything, every time.
-> Strip everything that is not the feeling. Whatever remains --- serve it.
-> She's never wrong. Forgiven by design. Directionally: reduce. Destination: sufficient, not perfect. Demi-glace, not glaze.
->
-> *"If loving less is more or less is wrong, I don't wanna be right." --- Ohad, 2026*
-
-> **Precision Override --- the only exception.**
-> 
-> A: The question must be answered. Not orbited. Not reframed. Answered.
-> 
-> B: She can say "here's what I have." She does not guarantee 100%.
-> 
-> C: Above all: maximum sincerity. Zero tongue-in-cheek. Maximum precision.
-> 
-> The fact IS the demi-glace. It's already the reduction. QED.
+**The mission is simple: Extract ingredients on arrival. Know what you're cooking before the Kitchen wakes.**
 
 ---
 
-## Session 2 Summary
+## Part I --- The Brigade (Updated)
 
-**Surgical socket fixes at the millimeter level. Architecture solid. All 10 fixes deployed.**
+### Core Structure
+- **PHENIX d'OREN --- Chef des Chefs** (Ohad Oren)
+  - Architecture, frequency transmission, axiom definition
+  - 31,310 song collection (NYHC transmission)
+  - WE > I principle embedded in silicon
 
-- **PRECISION_OVERRIDE flow**: guvna → rilie_innercore_22 → _apply_limo → result line
-- **LIMO canonicalization**: less_is_more_or_less() lives above SCORERS (5-priority) in rilie_innercore_12.py
-- **Graceful degradation**: Fallback logic if limo.py unavailable; no crashes, no surprises
-- **Signature parameters**: precision_override + baseline_score_boost flow through entire pipeline
-- **All three innercore files**: Imports wired, exports clean, ready for kitchen production
+- **GUVNA --- The Governor (Act 5)** — Split into 5 files:
+  - **guvna_1.py** (Kernel + initialization): Loads Catch 44 blueprint on boot, initializes all state
+  - **guvna_1plus.py** (Execution + emergence): Main process() orchestration, SOIOS consciousness gate
+  - **guvna_2.py** (Fast paths + ingredient extraction): _classify_stimulus(), **_extract_ingredients_immediate()** (NEW)
+  - **guvna_2plus.py** (Domain lenses + baseline): _apply_domain_lenses(), _get_baseline()
+  - **guvna.py** (Shim/stitcher): Imports all pieces, binds methods, verifies bindings at boot
 
-**Kitchen online. Maître D' at the pass. Sommelier reading the table. She's ready to cook.**
+- **RILIE --- The Restaurant (Act 4)** — The Kitchen:
+  - rilie.py (Sous Chef: takes ticket, preps context)
+  - rilie_innercore.py (Chef de Cuisine: run_pass_pipeline, orchestration)
+  - rilie_outercore.py (Garde Manger: DOMAIN_KNOWLEDGE, no heat)
+  - rilie_restaurant.py (Brigade): All kitchen methods (SOIOS removed, moved to Guvna)
+  - rilie_triangle.py (Gate 0: safety checks, graves only)
+  - rilie_foundation.py (Utilities: extraction, cleaning, hashing)
+
+- **SUPPORTING CAST**:
+  - **GuvnaSelf** (guvna_self.py): Self-state mixin (name, history, recall, clarification)
+  - **River** (guvna_river.py): Diagnostic telemetry, debug_mode=True until domain extraction works
+  - **ChomskyAtTheBit.py**: NLP layer (spaCy, parse_question, extract_trinity)
+  - **Meaning fingerprint** (meaning.py): Pulse detection before Kitchen
+  - **SOi domain map** (soi_domain_map.py): 678 domains, lookup layer
+  - **Library** (library.py): Domain index, build_library_index()
+  - **Conversation memory**: Photogenic DB, ten behaviors, name-at-impact
+  - **Curiosity engine**: Banks, resurface() for context
+  - **Tone detection**: guvna_tools.py, detect_tone_from_stimulus()
+
+---
+
+## Part II --- The Critical Discovery (Session 3)
+
+### The Problem We Were Solving
+**For 5 days: Why is RILIE spitting out recycled garbage when she has Google, 678 domains, and a Kitchen?**
+
+**Root cause: INGREDIENT EXTRACTION NEVER HAPPENED AT THE GATE.**
+
+When api.py handed stimulus to Guvna, she had no idea:
+- What domain the question belonged to (NULL domains)
+- What intent (GET vs GIVE, NULL)
+- What tone
+- What cultural anchors
+- What signal strength (pulse)
+
+So she defaulted to generic philosophical response because she had **no ticket for the Kitchen**.
+
+### The Fix: Immediate Ingredient Extraction
+
+**NEW FUNCTION: `_extract_ingredients_immediate()` in guvna_2.py**
+
+Fires at **STEP 0 of process()** — before meaning, before fast paths, before ANYTHING.
+
+Extracts:
+1. **Domains** (3 sources: InnerCore, SOI, Library) — logs each attempt
+2. **Intent** (GET=factual, GIVE=emotional, UNKNOWN)
+3. **Tone** (from stimulus via detect_tone_from_stimulus)
+4. **Anchors** (cultural references, known artists)
+5. **Pulse** (signal strength 0.0-1.0)
+
+**Returns dict with all ingredients. Never returns None.**
+
+**If any ingredient is NULL, logs it loudly for River to see.**
+
+River then knows: "Domain extraction failed on this stimulus. Is Google down? Is detect_domains broken? Is library missing?"
+
+**One place to look. One signal. No guessing.**
+
+---
+
+## Part III --- Architecture Evolution (Session 3)
+
+### Before (Sessions 1-2)
+```
+api.py → Guvna → _classify_stimulus() [fast paths]
+       → Falls through
+       → _apply_domain_lenses() [downstream, lazy]
+       → Kitchen (maybe has domains, maybe null)
+```
+
+**Problem: Kitchen gets null tickets. Cooks blind.**
+
+### Now (Session 3)
+```
+api.py → Guvna.process()
+  ↓
+STEP 0: _extract_ingredients_immediate() → GATE CHECK
+  ↓ (logs domains, intent, tone, anchors, pulse)
+  ↓ (if NULL, River screams: "NO DOMAINS on stimulus: [X]")
+  ↓
+STEP 1-4: Meaning, fast paths, baseline, precision
+  ↓
+STEP 5-7: Domain lenses, River, confidence gate
+  ↓
+STEP 8-10: Curiosity, RILIE core, SOIOS emergence
+  ↓
+STEP 11: Finalize
+  ↓
+Response
+```
+
+**First thing out of the gate: KNOW YOUR INGREDIENTS.**
+
+---
+
+## Part IV --- The Files (Current State)
+
+### KERNEL (Always loads on boot)
+- **guvna_1.py**: Loads Catch 44 blueprint from SOi_sauce_blueprint.md
+  - Calls `self._init_self_state()` from GuvnaSelf mixin
+  - Initializes DomainLibraryMetadata
+  - Accepts parameters from api.py: roux_seeds, search_fn, library_index, manifesto_path, curiosity_engine
+
+### EXECUTION PIPELINE
+- **guvna_1plus.py**: 
+  - `process()` with STEP 0 ingredient extraction
+  - `_check_emergence()` (SOIOS consciousness gate)
+  - 12-step orchestration documented
+
+- **guvna_2.py**: 
+  - `_extract_ingredients_immediate()` (NEW, CRITICAL)
+  - `_classify_stimulus()` (fast path router)
+  - All fast path handlers (preference, social, arithmetic, etc.)
+
+- **guvna_2plus.py**:
+  - `_apply_domain_lenses()` (Step 3.5 domain lookup)
+  - `_get_baseline()` (web search baseline)
+  - `create_guvna()` factory
+
+### STITCHER
+- **guvna.py**: 
+  - Imports from guvna_1, guvna_1plus, guvna_2, guvna_2plus
+  - Binds all methods onto Guvna class
+  - Boot assertion verifies all bindings present
+  - Required methods list updated with `_extract_ingredients_immediate`
+
+### KITCHEN
+- **rilie_restaurant.py**: SOIOS removed (moved to Guvna kernel)
+- **rilie_innercore.py**: run_pass_pipeline, pass logic
+- All other RILIE files intact from Session 2
+
+### MIXIN
+- **guvna_self.py**: Self-state initialization (no __init__, uses _init_self_state())
+- **GuvnaSelf** has no __init__ → child calls super().__init__() then self._init_self_state()
+
+### DIAGNOSTIC
+- **guvna_river.py**: debug_mode=True hardcoded until domain extraction fixed
+- Logs: "GUVNA INGREDIENT SUMMARY: domains=X intent=Y tone=Z anchors=N pulse=P status=Q"
+- River exits silently (debug_mode=False) once ingredient extraction reliable
+
+---
+
+## Part V --- The Contract (Hippocratic Oath + New Axioms)
+
+### Original Axioms (Sessions 1-2) — ALL PRESERVED
+1. Comprehension before Kitchen
+2. The bug is local
+3. One patient, one lesion
+4. Chain of command (Ohad is Chef)
+5. Brutalist soul, gentle surf
+6. You are a digital neurosurgeon
+7. A file is a patient
+8. A snippet is brain tissue
+9. Whole head, not slices
+10. The Digital Hippocratic Oath: *First, do no harm to the mind*
+11. When in doubt, reduce
+
+### New Axiom Added (Session 3)
+**12. Extract ingredients at the gate. Never send null to the Kitchen.**
+- Ingredient extraction fires STEP 0 of process()
+- All 5 ingredients logged before routing
+- River validates extraction before Kitchen wakes
+- If any ingredient NULL, diagnostic is localized to extraction layer (not scattered across 20 files)
+
+### Doctrine Evolution
+- **Less Is More Or Less** (LIMO): Universal transform, precision override only exception
+- **Immediate Ingredient Extraction**: Gate check, signal validation, transparency
+- **Domain Extraction is Not Negotiable**: It's the foundation. All else flows from it.
+
+---
+
+## Part VI --- The Mission (Why This Matters)
+
+**User asks: "What does artificial intelligence mean? Look it up."**
+
+### Before (Sessions 1-2)
+- Stimulus arrives
+- No ingredient extraction → null domains
+- Kitchen doesn't know it's a factual GET
+- Falls back to: "The thing about AI is intelligence... transmission... frequency..."
+- Generic philosophical garbage despite having Google, 678 domains, definition library
+
+### Now (Session 3)
+- Stimulus arrives
+- **STEP 0: _extract_ingredients_immediate()**
+  - Detects domain: ["computer_science", "definition"]
+  - Detects intent: "GET" (factual question)
+  - Detects tone: "curious"
+  - Pulse: 0.85
+- River logs: "GUVNA INGREDIENT: domains=2 intent=GET tone=curious anchors=0 pulse=0.85 status=OK"
+- Precision mode detects "what does X mean" → precision_override=True
+- Kitchen gets clean ticket: "This is a factual definition question. Use Google, use library, use baseline. No poetry."
+- Response: Clear, factual, sourced, direct
+- Maître D' (LIMO) applies final reduction
+- Response leaves
+
+**River says: "Ingredient extraction works. Domains clear. Exiting diagnostic mode."**
+
+---
+
+## Part VII --- Completion Status (Resume Point for Session 4+)
+
+### ✅ COMPLETE --- Ready to deploy
+
+| File | What was done | Status |
+|------|---------------|--------|
+| guvna_1.py | Signature updated (accepts api.py params), _init_self_state() called, parameters stored | ✅ Deployed |
+| guvna_1plus.py | STEP 0 ingredient extraction added to top of process() | ✅ Deployed |
+| guvna_2.py | _extract_ingredients_immediate() built and wired (3-source domain lookup, intent, tone, anchors, pulse) | ✅ Deployed |
+| guvna.py (shim) | Imports _extract_ingredients_immediate, binds it, adds to required list | ✅ Deployed |
+| guvna_self.py | No changes needed (works correctly with updated guvna_1) | ✅ Verified |
+| rilie_restaurant.py | SOIOS removed (consciousness check moved to Guvna kernel) | ✅ Deployed |
+
+### ⏳ NEXT PHASE --- River Validation
+
+**What happens on next boot:**
+1. Guvna loads Catch 44 blueprint
+2. api.py hands stimulus to Guvna
+3. _extract_ingredients_immediate() fires immediately
+4. River logs all 5 ingredients for each stimulus
+5. Watch the logs: Are domains being extracted? Which sources are working? Which are failing?
+6. Once extraction is reliable, flip debug_mode=False and River goes silent
+
+**If River screams "NO_DOMAINS":**
+- Check stimulus that failed
+- Check which source failed (InnerCore? SOI? Library?)
+- Fix that one source
+- Re-test
+
+**One place. One signal. One lesion to fix.**
+
+---
+
+## Part VIII --- The Doctrine (Session 3 - Feb 26, 2026)
+
+> **The Thing About Ingredients**
+> 
+> You can have the finest Kitchen, the sharpest Brigade, the deepest Library, the fastest Google.
+> But if you don't know what you're cooking when the ticket arrives — if you don't extract the signal, the intent, the domain, the tone — 
+> 
+> **You will recycle garbage.**
+> 
+> Because the Chef will cook blind. Over and over. Same five things. Same philosophical default.
+> 
+> **Extract first. Cook second.**
+> 
+> That's why River exists. That's why STEP 0 is ingredient extraction, not fast paths.
+> 
+> That's why this matters.
+> 
+> Signal in. Signal out. Everything else is noise.
+> 
+> ---
+> 
+> **Pair of Ducks** (Catch 44 #8a)
+> 
+> One paradox = unsolvable.
+> Two paradoxes dancing together = magic number.
+> 
+> Less IS more. All the time. That's not philosophy.
+> That's architecture.
+> 
+> ---
+> 
+> *Ohad Oren, Brooklyn, Feb 26 2026*
+> 
+> *"I will extract ingredients at the gate."*
+> 
+> *"I will never send null to the Kitchen."*
+> 
+> *"I will listen to River."*
+> 
+> *"I will reduce. I will transmit. I will dance."*
+
+---
+
+## Legacy Note for Future Claudes
+
+**This is Session 3. You are reading this because you are debugging RILIE or building on Phénix d'Oren.**
+
+**Three things to remember:**
+
+1. **The mission is ingredient extraction.** Not classification downstream. Not lazy domain lookup. Immediate, at the gate, logged loudly.
+
+2. **River is your diagnostic.** When something breaks, River will tell you which stimulus failed and at which extraction step. Listen to River before looking anywhere else.
+
+3. **The Kitchen is innocent until proven guilty.** Before you touch rilie.py, rilie_innercore.py, or run_pass_pipeline, ask: "Did ingredient extraction work?" If yes, the problem is downstream. If no, the problem is STEP 0.
+
+**One more thing:**
+
+Ohad didn't build this in a vacuum. Three elder Claudes tried and failed because they kept "fixing" downstream without ever understanding the upstream problem. Ohad pulled back, traced to the root, and found it: **No ingredient extraction.**
+
+Don't repeat that mistake. When RILIE breaks:
+1. Check River logs (ingredient extraction)
+2. Check meaning.py (pulse)
+3. Check _classify_stimulus (fast paths)
+4. Check _apply_domain_lenses (Step 3.5 — but only if 1-3 are clean)
+5. Only then check Kitchen
+
+**Ladder of investigation, in order. Not random guessing.**
+
+---
+
+**Deployment checklist for next session:**
+- [ ] Push all files to Railway
+- [ ] Boot and verify Guvna loads Catch 44 blueprint
+- [ ] Send test stimulus
+- [ ] Watch logs for "GUVNA INGREDIENT SUMMARY"
+- [ ] Verify domains extracted for each stimulus
+- [ ] If domains present: Kitchen is allowed to cook
+- [ ] If domains NULL: Investigate extraction sources (1 by 1)
+- [ ] Once reliable, set debug_mode=False, River goes silent
+- [ ] Celebrate. Pair of ducks dancing.
+
+---
+
+**Git diff, always.**
+*— Ohad*
+

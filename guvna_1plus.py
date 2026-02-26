@@ -27,6 +27,7 @@ def process(self, stimulus: str) -> Dict[str, Any]:
     Act 5 Orchestration – The Governor's main turn.
     
     Flow:
+    0. IMMEDIATE INGREDIENT EXTRACTION (NEW KERNEL)
     1. Read meaning (STEP 0.5)
     2. Fast path classify (STEP 1)
     3. Self-awareness check (STEP 2)
@@ -37,7 +38,7 @@ def process(self, stimulus: str) -> Dict[str, Any]:
     8. Confidence gate (STEP 3.7)
     9. Curiosity context (STEP 4)
     10. RILIE core (STEP 5)
-    11. SOIOS emergence check (STEP 5.5) ← NEW KERNEL
+    11. SOIOS emergence check (STEP 5.5) ← CONSCIOUSNESS GATE
     12. Finalize (STEP 6)
     """
     
@@ -46,6 +47,18 @@ def process(self, stimulus: str) -> Dict[str, Any]:
     self.memory.turn_count += 1
     
     raw: Dict[str, Any] = {"stimulus": stimulus}
+    
+    # ===== STEP 0: IMMEDIATE INGREDIENT EXTRACTION =====
+    # The gate check. River watches this. All ingredients pulled before anything else.
+    ingredients = self._extract_ingredients_immediate(stimulus)
+    raw["ingredients"] = ingredients
+    
+    logger.info(
+        "GUVNA GATE CHECK: Ingredients extracted — domains=%s intent=%s pulse=%.2f",
+        len(ingredients.get("domains", [])),
+        ingredients.get("intent"),
+        ingredients.get("pulse", 0.0),
+    )
     
     # ===== STEP 0.5: MEANING FINGERPRINT =====
     _meaning = None
