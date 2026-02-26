@@ -27,7 +27,7 @@ from guvna_self import GuvnaSelf  # type hint only
 # TOP-LEVEL IMPORT — must live here, NOT inside _respond_from_preference(),
 # to avoid the circular import that strips process() off Guvna at shim time.
 # ---------------------------------------------------------------------------
-from guvna_12 import _ALL_CULTURAL_ANCHORS, _RAKIM_KNOWLEDGE, _RILIE_TASTE
+from guvna_1 import _ALL_CULTURAL_ANCHORS, _RAKIM_KNOWLEDGE, _RILIE_TASTE
 
 logger = logging.getLogger("guvna")
 
@@ -224,7 +224,7 @@ def _respond_from_preference(
     RILIE responds to a taste/preference question about a cultural figure.
     She has opinions. She's not a search engine.
     """
-    from guvna_12 import (
+    from guvna_1 import (
         _ALL_CULTURAL_ANCHORS,
         _RAKIM_KNOWLEDGE,
         _RILIE_TASTE,

@@ -275,7 +275,7 @@ def create_guvna(
     Returns:
         Initialized Guvna instance with 678 domains loaded.
     """
-    from guvna_12 import Guvna
+    from guvna_1 import Guvna
 
     return Guvna(
         roux_seeds=roux_seeds,
