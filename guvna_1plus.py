@@ -5,6 +5,7 @@ Act 5 – The Governor (Execution + Emergence Check)
 
 Contains:
 - process() method (core orchestration)
+- _respond_from_self() method (self-awareness responses)
 - SOIOS emergence cycle integration
 - Helper methods for processing steps
 
@@ -15,7 +16,11 @@ then finalizes the response.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Dict, List, Optional
+
+from guvna_tools import _is_about_me
+from guvna_1 import detect_precision_request
 
 logger = logging.getLogger("guvna")
 
@@ -29,6 +34,11 @@ except Exception as e:
 
 # This file is stitched into Guvna class via guvna.py shim
 # All methods below are added to Guvna(GuvnaSelf)
+
+
+# _respond_from_self lives in guvna_2.py and is bound via the shim.
+# No need to define it here — self._respond_from_self() resolves at runtime.
+
 
 def process(self, stimulus: str) -> Dict[str, Any]:
     """
@@ -355,3 +365,4 @@ def _check_emergence(
 # These are marked for stitching:
 # Guvna.process = process
 # Guvna._check_emergence = _check_emergence
+# _respond_from_self lives in guvna_2.py — bound via shim, not here
