@@ -315,7 +315,7 @@ class Guvna(GuvnaSelf):
         self.rilie_self_state = RilieSelfState()
         self.social_state = SocialState()
         self.wit_state = WitState()
-        self.language_mode = LanguageMode.LITERAL
+        self.language_mode = detect_language_mode("")  # Empty for now, detect from stimulus later
         
         # ===== TASTE & ANCHORS =====
         self.taste = _RILIE_TASTE
