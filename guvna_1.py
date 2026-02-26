@@ -364,8 +364,8 @@ class Guvna(GuvnaSelf):
         tone = detect_tone_from_stimulus(stimulus)
         raw["tone"] = tone
         
-        # Apply tone emoji
-        raw = apply_tone_header(raw, tone)
+        # Apply tone emoji to result text (not the whole dict)
+        raw["result"] = apply_tone_header(raw.get("result", ""), tone)
         
         # Log to memory
         try:
