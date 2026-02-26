@@ -412,10 +412,10 @@ class GuvnaSelf:
             "turn_count": self.turn_count,
             "user_name": self.user_name,
             "library_metadata": {
-                "total_domains": self.library_metadata.total_domains,
-                "files_loaded": len(self.library_metadata.files),
-                "boole_substrate": self.library_metadata.boole_substrate,
-                "core_tracks": self.library_metadata.core_tracks,
+                "total_domains": self.domain_metadata.total_domains,
+                "files_loaded": len(self.domain_metadata.files),
+                "boole_substrate": self.domain_metadata.boole_substrate,
+                "core_tracks": self.domain_metadata.core_tracks,
             },
         }
 
