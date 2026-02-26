@@ -4,15 +4,18 @@ guvna.py
 
 Shim / Brain Stitcher – Act 5 The Governor lives in multiple files:
 
-- guvna_12.py     → core class Guvna (init, process, metadata, doctrine)
-- guvna_2.py      → fast paths, preference, social, utility
-- guvna_2plus.py  → domain lenses, baseline, factory
-- guvna_river.py  → The River (early lookup telemetry, no cooking)
+- guvna_1.py       → Kernel + initialization (CATCH 44 blueprint loading)
+- guvna_1plus.py   → Execution (process method + SOIOS emergence check)
+- guvna_2.py       → fast paths, preference, social, utility
+- guvna_2plus.py   → domain lenses, baseline, factory
+- guvna_river.py   → The River (early lookup telemetry, no cooking)
 
 This shim:
 
 - Exposes Guvna and LibraryIndex to the rest of the system.
-- Binds all extension functions from guvna_2.py and guvna_2plus.py onto the Guvna class.
+- Loads blueprint and axioms on boot.
+- Binds all extension functions from guvna_2.py, guvna_2plus.py, and guvna_1plus.py onto the Guvna class.
+- Wires SOIOS emergence check into process().
 - Keeps api.py stable: `from guvna import Guvna, LibraryIndex` still works.
 
 """
@@ -21,7 +24,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from guvna_12 import Guvna, LibraryIndex  # core Governor
+from guvna_1 import Guvna, LibraryIndex  # core Governor (kernel + init)
+from guvna_1plus import process, _check_emergence  # execution + emergence check
 
 from guvna_2 import (
     classify_stimulus,
@@ -42,6 +46,13 @@ from guvna_2plus import (
 )
 
 from guvna_river import guvna_river  # The River – lookup only, no Kitchen
+
+# ---------------------------------------------------------------------------
+# Stitch guvna_1plus (process + emergence) onto Guvna
+# ---------------------------------------------------------------------------
+
+Guvna.process = process  # type: ignore[attr-defined]
+Guvna._check_emergence = _check_emergence  # type: ignore[attr-defined]
 
 # ---------------------------------------------------------------------------
 # Stitch guvna_2 fast paths onto Guvna
@@ -81,24 +92,15 @@ Guvna._get_baseline = get_baseline  # type: ignore[attr-defined]
 # River hook – bind as staticmethod so no extra `self` is passed
 # ---------------------------------------------------------------------------
 
-# guvna_river is defined as:
-# def guvna_river(*, stimulus, meaning, get_baseline, apply_domain_lenses,
-#                 compute_domain_and_factsfirst, debug_mode=False) -> Optional[Dict[str, Any]]
-
-# In guvna_12.Guvna.process we call:
-# self.guvna_river(stimulus=..., meaning=..., get_baseline=self._get_baseline, ...)
-
-# Binding as staticmethod keeps that keyword-only signature intact.
 Guvna.guvna_river = staticmethod(guvna_river)  # type: ignore[attr-defined]
 
 # ---------------------------------------------------------------------------
 # BOOT ASSERTION — catch missing bindings before first request hits
-# If anything above failed silently, this explodes at deploy time not at
-# turn 2 of a conversation. Railway build log will show exactly what's missing.
 # ---------------------------------------------------------------------------
 
 _required = [
     "process",
+    "_check_emergence",
     "_classify_stimulus",
     "_handle_preference",
     "_respond_from_preference_rakim_track",
@@ -120,7 +122,7 @@ if _missing:
     raise RuntimeError(
         f"GUVNA SHIM INCOMPLETE — kitchen closed before she opened.\n"
         f"Missing bindings: {_missing}\n"
-        f"Check guvna_12.py, guvna_2.py, guvna_2plus.py, and guvna_river.py."
+        f"Check guvna_1.py, guvna_1plus.py, guvna_2.py, guvna_2plus.py, and guvna_river.py."
     )
 
 __all__ = ["Guvna", "LibraryIndex"]

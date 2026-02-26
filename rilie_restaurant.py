@@ -416,30 +416,8 @@ class RILIE:
         roux_material = ""
 
         # ------------------------------------------------------------------
-        # SOiOS CYCLE — perceive → decide → think → emerge
-        # ------------------------------------------------------------------
-        soios_emergence = 0.0
-        try:
-            from SOiOS import RIHybridBrain
-            soios = RIHybridBrain()
-            stimulus_strength = 0.8 if roux_material else 0.3
-            cycle = soios.run_cycle(
-                stimulus=stimulus_strength,
-                claim=original_question,
-                deed=roux_material or original_question,
-            )
-            soios_emergence = cycle.get("emergence", 0.0)
-            logger.info(
-                "SOiOS: emergence=%.3f intelligence=%.3f",
-                soios_emergence,
-                cycle.get("intelligence", 0.0),
-            )
-        except ImportError:
-            logger.debug("SOiOS not available — proceeding without")
-        except Exception as e:
-            logger.warning("SOiOS cycle failed: %s", e)
-
-        # ------------------------------------------------------------------
+        # NOTE: SOIOS emergence checking moved to Guvna._check_emergence()
+        # The Governor (Act 5) now validates consciousness after Kitchen cooks.
         # ------------------------------------------------------------------
         # UNKNOWN CULTURAL REFERENCE DETECTION — "lil vert" behavior
         # ------------------------------------------------------------------
