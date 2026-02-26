@@ -244,7 +244,11 @@ class Guvna(GuvnaSelf):
 
     def __init__(
         self,
+        roux_seeds: Optional[Dict[str, Dict[str, Any]]] = None,
         search_fn: Optional[SearchFn] = None,
+        library_index: Optional[LibraryIndex] = None,
+        manifesto_path: Optional[str] = None,
+        curiosity_engine: Optional[Any] = None,
         debug: bool = False,
     ):
         """
@@ -256,10 +260,24 @@ class Guvna(GuvnaSelf):
         3. Boot library indices
         4. Wire up RILIE (The Restaurant)
         5. Set up social/emotional state
+        
+        Parameters from api.py:
+        - roux_seeds: Roux material seeds
+        - search_fn: Search function for baseline lookups
+        - library_index: Pre-built library index (optional)
+        - manifesto_path: Path to manifesto file
+        - curiosity_engine: Curiosity engine instance (optional)
+        - debug: Debug mode flag
         """
         
-        # Initialize parent (GuvnaSelf)
+        # Initialize parent (GuvnaSelf) and self-state
         super().__init__()
+        self._init_self_state()
+        
+        # Store api.py parameters
+        self.roux_seeds = roux_seeds
+        self.manifesto_path = manifesto_path
+        self.debug = debug
         
         # ===== KERNEL: LOAD CATCH 44 AXIOMS =====
         self.catch44_blueprint = load_catch44_blueprint()
@@ -276,7 +294,7 @@ class Guvna(GuvnaSelf):
         # ===== DOMAINS & LIBRARY =====
         self.domain_metadata = DomainLibraryMetadata()
         self.domain_index = build_domain_index()
-        self.library_index: LibraryIndex = build_library_index()
+        self.library_index = library_index or build_library_index()
         
         logger.info("GUVNA BOOT: Library loaded — %d domains across 21 files",
                     self.domain_metadata.total_domains)
@@ -286,8 +304,8 @@ class Guvna(GuvnaSelf):
         logger.info("GUVNA BOOT: RILIE initialized (Kitchen ready)")
         
         # ===== CURIOSITY ENGINE =====
-        self.curiosity_engine = None
-        if search_curiosity:
+        self.curiosity_engine = curiosity_engine
+        if not curiosity_engine and search_curiosity:
             try:
                 self.curiosity_engine = search_curiosity
             except Exception as e:
@@ -309,10 +327,6 @@ class Guvna(GuvnaSelf):
         
         # ===== SEARCH =====
         self.search_fn = search_fn
-        
-        # ===== DEBUG =====
-        self.debug = debug
-        self.turn_count = 0
         
         logger.info("GUVNA BOOT COMPLETE: Governor ready, kernel loaded, brigade standing by")
     
