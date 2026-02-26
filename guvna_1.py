@@ -312,7 +312,7 @@ class Guvna(GuvnaSelf):
                 logger.warning("GUVNA BOOT: Curiosity engine setup failed: %s", e)
         
         # ===== STATE =====
-        self.rilie_self_state = RilieSelfState()
+        self.self_state = RilieSelfState()
         self.social_state = SocialState()
         self.wit_state = WitState()
         self.language_mode = detect_language_mode("")  # Empty for now, detect from stimulus later
