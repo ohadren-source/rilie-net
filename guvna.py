@@ -29,7 +29,7 @@ from guvna_1plus import process, _check_emergence  # execution + emergence check
 
 from guvna_2 import (
     classify_stimulus,
-    extract_ingredients_immediate,
+    _extract_ingredients_immediate,
     handle_preference,
     respond_from_preference_rakim_track,
     respond_from_preference,
@@ -59,7 +59,7 @@ Guvna._check_emergence = _check_emergence  # type: ignore[attr-defined]
 # Stitch guvna_2 fast paths onto Guvna
 # ---------------------------------------------------------------------------
 
-Guvna._extract_ingredients_immediate = extract_ingredients_immediate  # type: ignore[attr-defined]
+Guvna._extract_ingredients_immediate = _extract_ingredients_immediate  # type: ignore[attr-defined]
 
 Guvna._classify_stimulus = classify_stimulus  # type: ignore[attr-defined]
 
