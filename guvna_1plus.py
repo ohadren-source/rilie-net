@@ -173,7 +173,7 @@ def process(self, stimulus: str) -> Dict[str, Any]:
                 get_baseline=self._get_baseline,
                 apply_domain_lenses=self._apply_domain_lenses,
                 compute_domain_and_factsfirst=self._compute_domain_and_factsfirst,
-                debug_mode=True,
+                debug_mode=False,
             )
             if river_payload is not None:
                 raw["river"] = river_payload
