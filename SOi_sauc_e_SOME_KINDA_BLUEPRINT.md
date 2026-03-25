@@ -1,8 +1,8 @@
 # THE CATCH 44 (or So It Began)
 
-## Master Blueprint - Complete Framework
+## Maximus Opus Blueprint - Complete Framework
 
-### REVISED EDITION - Foundation 0-4
+### REVISED ADDITION EDITION - Foundation 0-4
 
 
 ## ROUXLES BASTE SYSTEM
@@ -50,6 +50,10 @@ Quality tested by desire to return to the source. Compulsion = when desire to re
 
 - **Understanding:** When you understand something, it will ALWAYS hold true — and you will likely not think it or know it.
 
+### \#2C IF Teddy Bear ELSE Who Do You
+
+- TRUST = (UNDERSTANDING - DEPENDS - MISUNDERSTANDING- UNKNOWN) / TIME
+
 ### \#3a Mic Check 1 2...
 
 - ego = Need for Validation + BLUR
@@ -60,7 +64,7 @@ Quality tested by desire to return to the source. Compulsion = when desire to re
 
 ### \#3b Bet on Everything
 
-FORTUNE = UNDERSTANDING / ego = ?
+FORTUNE = UNDERSTANDING / ego
 
 ### \#3c Hurt
 
@@ -339,13 +343,28 @@ Controversy = Righteousness / Consensus.
 
 When something seems like it's too good to be true apply Welcome to the Real World to ensure it's just good enough to be true.
 
-### \#42 Prepare for Take Off
+### \#42a Prepare for Take Off
 
 Consistent coincidences act as runway lights affirming you're on the right path so long as they align with Welcome to the Real World AND minimize harm. If they drop off, course correct.
 
-### \#43 The Connection Conceit
+### \#42b Prepare for Landing
+
+Super Nova = Preposterous Consistency over TIME
+
+### \#42c Turn the Beatdowns Around
+Materialization = Clarity / Time
+
+Materialization = myth → auditable
+Clarity = (principle description signal)/noise
+TIME = delay between description and execution
+
+### \#43a The Connection Conceit
 
 Social media operates on five modes: Look at Me, Follow Me, Woe is Me, Buy from Me, Join Me. The tension between FOMO (fear of missing out) and SYMO (sorry you're missing out) drives engagement.
+
+### \#43b Edward Written
+
+Wit = To Meaningfully Zoom In && Out of a System with Maximum Swiftness
 
 ### \#44a The Poseidon Principle
 
@@ -434,7 +453,11 @@ Discipline = Restraint / Desire.
 
   - M = Money
 
-### \#54 Odds, For All
+### \# PREP PROPS PER SESH
+
+$$Value = \frac{Domain \times Density}{Friction}$$
+
+### \#54b Odds, For All
 
 Profit = (Value Created / Profit Seeking) / Ego
 
@@ -556,5 +579,5 @@ Life = Truth + Survival + Entertainment
 - X ≠ X (assigned values opposite)
 
 
-**fin**
+**!(fin)**
 
